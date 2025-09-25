@@ -1,25 +1,42 @@
-use macroquad::prelude::*;
+use std::time::Duration;
 
-#[macroquad::main("Twin Stick Shooter")]
+use macroquad::prelude::{
+    get_frame_time,
+    clear_background,
+    draw_text,
+    next_frame,
+    get_fps,
+    BLACK,
+    WHITE,
+};
+use untitled::{game::GameState, systems::{BehaviorSystem, CollisionSystem, CombatSystem, MovementSystem}};
+
+#[macroquad::main("Untitled")]
 async fn main() {
-    let mut player_x = screen_width() / 2.0;
-    let mut player_y = screen_height() / 2.0;
-    let player_speed = 200.0;
+    // Initialize game state
+    let mut game_state = GameState::new(
+        Duration::from_millis(10),
+        vec![
+            Box::new(BehaviorSystem::new()),
+            Box::new(CombatSystem::new()),
+            Box::new(MovementSystem::new()),
+            Box::new(CollisionSystem::new()),
+        ]
+    );
 
     loop {
-        // Handle input
-        if is_key_down(KeyCode::W) { player_y -= player_speed * get_frame_time(); }
-        if is_key_down(KeyCode::S) { player_y += player_speed * get_frame_time(); }
-        if is_key_down(KeyCode::A) { player_x -= player_speed * get_frame_time(); }
-        if is_key_down(KeyCode::D) { player_x += player_speed * get_frame_time(); }
+        let dt = get_frame_time();
 
-        // Keep player on screen
-        player_x = player_x.clamp(10.0, screen_width() - 10.0);
-        player_y = player_y.clamp(10.0, screen_height() - 10.0);
+        // Update game logic
+        game_state.tick(dt);
 
-        // Clear and draw
+        // Render everything
         clear_background(BLACK);
-        draw_circle(player_x, player_y, 10.0, WHITE);
+        game_state.render();
+
+        // Debug info
+        draw_text(&format!("FPS: {:.0}", get_fps()), 10.0, 20.0, 20.0, WHITE);
+        draw_text(&format!("Entities: {}", game_state.entity_count()), 10.0, 40.0, 20.0, WHITE);
 
         next_frame().await;
     }

@@ -10,6 +10,7 @@ mod combat;
 mod enemy;
 mod player;
 mod world;
+mod ui;
 
 // Import everything we need
 use components::*;
@@ -20,6 +21,7 @@ use combat::*;
 use enemy::*;
 use player::*;
 use world::*;
+use ui::*;
 
 fn main() {
     App::new()
@@ -41,7 +43,7 @@ fn main() {
         .insert_resource(EnemySpawnTimer {
             timer: Timer::from_seconds(ENEMY_SPAWN_RATE, TimerMode::Repeating),
         })
-        .add_systems(Startup, (disable_gravity, setup))
+        .add_systems(Startup, (disable_gravity, setup, setup_health_bar))
         .add_systems(Update, (
             // Player systems
             player_movement,
@@ -52,6 +54,10 @@ fn main() {
             spawn_enemies,
             enemy_ai,
             laser_sight_system,
+
+            // UI systems
+            update_health_bar,
+            update_health_bar_color,
 
             // Combat systems
             detect_projectile_collisions,

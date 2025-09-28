@@ -93,3 +93,7 @@ pub struct LaserSight {
     pub is_active: bool,
     pub target_pos: Vec2,
 }
+
+/// Health bar UI component
+#[derive(Component)]
+pub struct HealthBar;

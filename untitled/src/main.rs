@@ -11,6 +11,7 @@ mod enemy;
 mod player;
 mod world;
 mod ui;
+mod sounds;
 
 // Import everything we need
 use constants::*;
@@ -21,6 +22,7 @@ use enemy::*;
 use player::*;
 use world::*;
 use ui::*;
+use sounds::*;
 
 fn main() {
     App::new()
@@ -46,7 +48,7 @@ fn main() {
         })
         .insert_resource(Score::default())
         .insert_resource(GameState::default())
-        .add_systems(Startup, (disable_gravity, setup, setup_health_bar, setup_score_display))
+        .add_systems(Startup, (disable_gravity, setup, setup_health_bar, setup_score_display, load_sounds))
         .add_systems(Update, (
             // Player systems
             player_movement.run_if(resource_equals(GameState::Playing)),

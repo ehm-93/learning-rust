@@ -6,6 +6,7 @@ use crate::{
     events::*,
     constants::*,
     resources::*,
+    sounds::*,
 };
 
 /// Detects collisions between projectiles and other entities, emitting impact events
@@ -274,6 +275,7 @@ pub fn handle_grenade_explosions(
     time: Res<Time>,
     mut grenades: Query<(Entity, &Transform, &mut Grenade)>,
     mut explosion_events: EventWriter<GrenadeExplosionEvent>,
+    game_sounds: Res<GameSounds>,
 ) {
     for (entity, transform, mut grenade) in grenades.iter_mut() {
         grenade.fuse_timer.tick(time.delta());
@@ -300,6 +302,9 @@ pub fn handle_grenade_explosions(
                     end_radius: EXPLOSION_END_SIZE,
                 },
             ));
+
+            // Play explosion sound effect
+            play_sound(&mut commands, game_sounds.explosion_01.clone(), 0.8);
 
             // Remove the grenade
             commands.entity(entity).despawn();

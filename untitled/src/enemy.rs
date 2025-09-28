@@ -4,6 +4,7 @@ use crate::{
     components::*,
     constants::*,
     resources::*,
+    sounds::*,
 };
 
 /// Configuration for enemy archetype properties
@@ -85,6 +86,7 @@ impl EnemyArchetype {
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<ColorMaterial>>,
         laser_sight: Option<&mut LaserSight>,
+        game_sounds: &Res<GameSounds>,
     ) {
         match self {
             EnemyArchetype::SmallMelee => {
@@ -94,13 +96,13 @@ impl EnemyArchetype {
                 self.big_melee_behavior(context, velocity);
             },
             EnemyArchetype::Shotgunner => {
-                self.shotgunner_behavior(context, ai, velocity, commands, meshes, materials);
+                self.shotgunner_behavior(context, ai, velocity, commands, meshes, materials, game_sounds);
             },
             EnemyArchetype::Sniper => {
-                self.sniper_behavior(context, ai, velocity, commands, meshes, materials, laser_sight);
+                self.sniper_behavior(context, ai, velocity, commands, meshes, materials, laser_sight, game_sounds);
             },
             EnemyArchetype::MachineGunner => {
-                self.machine_gunner_behavior(context, ai, velocity, commands, meshes, materials);
+                self.machine_gunner_behavior(context, ai, velocity, commands, meshes, materials, game_sounds);
             },
         }
     }
@@ -126,6 +128,7 @@ impl EnemyArchetype {
         commands: &mut Commands,
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<ColorMaterial>>,
+        game_sounds: &Res<GameSounds>,
     ) {
         let config = ArchetypeConfig::for_archetype(*self);
 
@@ -145,6 +148,7 @@ impl EnemyArchetype {
         // Shooting behavior
         if ai.timer.finished() {
             spawn_shotgun_spread(commands, meshes, materials, context.enemy_pos, context.direction_to_player);
+            play_sound(commands, game_sounds.gun_03.clone(), 0.4);
             ai.timer.reset();
         }
     }
@@ -159,6 +163,7 @@ impl EnemyArchetype {
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<ColorMaterial>>,
         laser_sight: Option<&mut LaserSight>,
+        game_sounds: &Res<GameSounds>,
     ) {
         let config = ArchetypeConfig::for_archetype(*self);
 
@@ -187,6 +192,7 @@ impl EnemyArchetype {
         if ai.timer.finished() && context.distance_to_player <= config.preferred_distance {
             let bullet_velocity = context.direction_to_player * SNIPER_BULLET_SPEED;
             spawn_enemy_bullet(commands, meshes, materials, context.enemy_pos, bullet_velocity, Color::srgb(0.0, 1.0, 0.5));
+            play_sound(commands, game_sounds.gun_02.clone(), 0.6);
             ai.timer.reset();
         }
     }
@@ -200,6 +206,7 @@ impl EnemyArchetype {
         commands: &mut Commands,
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<ColorMaterial>>,
+        game_sounds: &Res<GameSounds>,
     ) {
         let config = ArchetypeConfig::for_archetype(*self);
 
@@ -225,6 +232,7 @@ impl EnemyArchetype {
             );
             let bullet_velocity = jittered_direction * ENEMY_BULLET_SPEED;
             spawn_enemy_bullet(commands, meshes, materials, context.enemy_pos, bullet_velocity, Color::srgb(0.8, 0.2, 0.8));
+            play_sound(commands, game_sounds.gun_01.clone(), 0.3);
             ai.timer.reset();
         }
     }
@@ -394,6 +402,7 @@ pub fn enemy_ai(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    game_sounds: Res<GameSounds>,
     time: Res<Time>,
 ) {
     if let Ok(player_transform) = player_query.single() {
@@ -423,6 +432,7 @@ pub fn enemy_ai(
                 &mut meshes,
                 &mut materials,
                 laser_sight.as_deref_mut(),
+                &game_sounds,
             );
         }
     }

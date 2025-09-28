@@ -5,6 +5,7 @@ use crate::{
     components::*,
     constants::*,
     resources::*,
+    sounds::*,
 };
 
 /// Handles player movement based on WASD input
@@ -99,6 +100,7 @@ pub fn shoot_projectiles(
     camera_q: Query<(&Camera, &GlobalTransform)>,
     player_query: Query<(&Transform, &Velocity), (With<Player>, Without<Camera>)>,
     mut fire_timer: ResMut<FireTimer>,
+    game_sounds: Res<GameSounds>,
     time: Res<Time>,
 ) {
     // Update the fire rate timer
@@ -145,6 +147,9 @@ pub fn shoot_projectiles(
                 // Enable collision events
                 ActiveEvents::COLLISION_EVENTS,
             ));
+
+            // Play gun sound effect
+            play_sound(&mut commands, game_sounds.gun_01.clone(), 0.5);
 
             // Reset the fire timer for the next shot
             fire_timer.timer.reset();

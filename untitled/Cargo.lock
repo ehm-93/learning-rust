@@ -4465,6 +4465,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_rapier2d",
+ "fastrand",
  "rand 0.9.2",
 ]
 

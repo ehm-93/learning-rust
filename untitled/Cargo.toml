@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 bevy = "0.16"
 bevy_rapier2d = "0.31"
+fastrand = "2.3.0"
 rand = "0.9"
 
 # Enable max optimizations for dependencies, but not for our code:

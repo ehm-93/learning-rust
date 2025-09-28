@@ -19,6 +19,9 @@ enum Team {
 struct Player;
 
 #[derive(Component)]
+struct Enemy;
+
+#[derive(Component)]
 struct Projectile {
     lifetime: Timer,
     team: Team,
@@ -39,6 +42,7 @@ fn detect_projectile_collisions(
     mut impact_events: EventWriter<ProjectileImpactEvent>,
     projectiles: Query<&Projectile>,
     players: Query<&Player>,
+    enemies: Query<&Enemy>,
     obstacles: Query<&Obstacle>,
     boundaries: Query<&Boundary>,
 ) {
@@ -59,8 +63,8 @@ fn detect_projectile_collisions(
                     continue;
                 }
 
-                // Emit impact event for obstacles and boundaries
-                if obstacles.contains(target) || boundaries.contains(target) {
+                // Emit impact event for obstacles, boundaries, and enemies
+                if obstacles.contains(target) || boundaries.contains(target) || enemies.contains(target) {
                     impact_events.write(ProjectileImpactEvent {
                         projectile,
                         target,
@@ -75,8 +79,30 @@ fn detect_projectile_collisions(
 fn handle_projectile_impacts(
     mut impact_events: EventReader<ProjectileImpactEvent>,
     mut commands: Commands,
+    projectile_query: Query<&Transform, With<Projectile>>,
+    enemy_query: Query<&Transform, (With<Enemy>, Without<Projectile>)>,
+    mut enemy_velocities: Query<&mut Velocity, With<Enemy>>,
 ) {
     for impact in impact_events.read() {
+        // Get projectile and target positions for knockback calculation
+        let knockback_direction = if let (Ok(projectile_transform), Ok(target_transform)) =
+            (projectile_query.get(impact.projectile), enemy_query.get(impact.target)) {
+            // Calculate knockback direction from projectile to target
+            let direction = (target_transform.translation.truncate() -
+                           projectile_transform.translation.truncate()).normalize_or_zero();
+            Some(direction)
+        } else {
+            None
+        };
+
+        // Apply knockback to enemy if this was a projectile-enemy collision
+        if let Some(direction) = knockback_direction {
+            if let Ok(mut enemy_velocity) = enemy_velocities.get_mut(impact.target) {
+                // Apply knockback impulse
+                enemy_velocity.linvel += direction * KNOCKBACK_FORCE;
+            }
+        }
+
         // Clean up the projectile
         if let Ok(mut entity) = commands.get_entity(impact.projectile) {
             entity.despawn();
@@ -96,6 +122,11 @@ struct FireTimer {
     timer: Timer,
 }
 
+#[derive(Resource)]
+struct EnemySpawnTimer {
+    timer: Timer,
+}
+
 const PLAYER_SPEED: f32 = 200.0;
 const PLAYER_RADIUS: f32 = 10.0;
 const PROJECTILE_SPEED: f32 = 800.0;
@@ -110,6 +141,11 @@ const CURSOR_BIAS_DISTANCE: f32 = 150.0; // Maximum distance cursor can bias cam
 const MAP_WIDTH: f32 = 1200.0; // Total map width
 const MAP_HEIGHT: f32 = 900.0; // Total map height
 const WALL_THICKNESS: f32 = 20.0; // Thickness of boundary walls
+const ENEMY_RADIUS: f32 = 8.0; // Enemy size
+const ENEMY_SPEED: f32 = 120.0; // Enemy movement speed
+const ENEMY_SPAWN_RATE: f32 = 2.0; // Seconds between enemy spawns
+const MAX_ENEMIES: usize = 8; // Maximum enemies on screen
+const KNOCKBACK_FORCE: f32 = 200.0; // Knockback impulse strength
 
 // Team relationship system
 fn can_teams_damage(attacker: Team, target: Team) -> bool {
@@ -139,10 +175,15 @@ fn main() {
         .insert_resource(FireTimer {
             timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
         })
+        .insert_resource(EnemySpawnTimer {
+            timer: Timer::from_seconds(ENEMY_SPAWN_RATE, TimerMode::Repeating),
+        })
         .add_systems(Startup, (disable_gravity, setup))
         .add_systems(Update, (
             player_movement,
             shoot_projectiles,
+            spawn_enemies,
+            enemy_ai,
             cleanup_projectiles,
             camera_follow,
             detect_projectile_collisions,
@@ -395,6 +436,104 @@ fn cleanup_projectiles(
 
         if projectile.lifetime.finished() {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn spawn_enemies(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut spawn_timer: ResMut<EnemySpawnTimer>,
+    time: Res<Time>,
+    enemies: Query<&Enemy>,
+    player_query: Query<&Transform, With<Player>>,
+) {
+    // Update the spawn timer
+    spawn_timer.timer.tick(time.delta());
+
+    // Only spawn if timer is ready and we haven't hit the enemy limit
+    if spawn_timer.timer.finished() && enemies.iter().count() < MAX_ENEMIES {
+        if let Ok(player_transform) = player_query.single() {
+            let player_pos = player_transform.translation.truncate();
+
+            // Choose a random spawn position around the map edges, away from player
+            let spawn_pos = get_enemy_spawn_position(player_pos);
+
+            // Spawn enemy as a red circle
+            commands.spawn((
+                Mesh2d(meshes.add(Circle::new(ENEMY_RADIUS))),
+                MeshMaterial2d(materials.add(Color::srgb(1.0, 0.3, 0.3))), // Red enemy
+                Transform::from_translation(spawn_pos.extend(0.0)),
+                Enemy,
+                Team::Enemy,
+                RigidBody::Dynamic,
+                Collider::ball(ENEMY_RADIUS),
+                LockedAxes::ROTATION_LOCKED,
+                Velocity::zero(),
+            ));
+
+            // Reset the spawn timer
+            spawn_timer.timer.reset();
+        }
+    }
+}
+
+fn get_enemy_spawn_position(player_pos: Vec2) -> Vec2 {
+    use std::f32::consts::PI;
+
+    // Spawn enemies around the map edges, at least 200 units away from player
+    let min_distance = 200.0;
+    let max_attempts = 10;
+
+    for _ in 0..max_attempts {
+        // Generate random angle
+        let angle = fastrand::f32() * 2.0 * PI;
+
+        // Choose distance from map center (spawn near edges)
+        let spawn_distance = 300.0 + fastrand::f32() * 200.0; // Between 300-500 units from center
+
+        let spawn_pos = Vec2::new(
+            angle.cos() * spawn_distance,
+            angle.sin() * spawn_distance,
+        );
+
+        // Check if spawn position is far enough from player
+        if spawn_pos.distance(player_pos) >= min_distance {
+            // Make sure it's within map bounds (with some margin)
+            let half_width = MAP_WIDTH / 2.0 - 50.0;
+            let half_height = MAP_HEIGHT / 2.0 - 50.0;
+
+            if spawn_pos.x.abs() <= half_width && spawn_pos.y.abs() <= half_height {
+                return spawn_pos;
+            }
+        }
+    }
+
+    // Fallback: spawn at a fixed position if random attempts fail
+    Vec2::new(400.0, 300.0)
+}
+
+fn enemy_ai(
+    mut enemy_query: Query<(&Transform, &mut Velocity), (With<Enemy>, Without<Player>)>,
+    player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
+    time: Res<Time>,
+) {
+    if let Ok(player_transform) = player_query.single() {
+        let player_pos = player_transform.translation.truncate();
+
+        for (enemy_transform, mut enemy_velocity) in enemy_query.iter_mut() {
+            let enemy_pos = enemy_transform.translation.truncate();
+
+            // Calculate direction to player
+            let direction_to_player = (player_pos - enemy_pos).normalize_or_zero();
+
+            // Simple chase behavior - move toward player
+            let desired_velocity = direction_to_player * ENEMY_SPEED;
+
+            // Apply some smoothing to the velocity change for better movement feel
+            let velocity_change = (desired_velocity - enemy_velocity.linvel) * 5.0 * time.delta().as_secs_f32();
+            enemy_velocity.linvel += velocity_change;
         }
     }
 }

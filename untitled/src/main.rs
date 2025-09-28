@@ -1,5 +1,12 @@
 use bevy::prelude::*;
-use avian2d::prelude::*;
+use bevy_rapier2d::prelude::*;
+
+// Custom event for projectile impacts
+#[derive(Event)]
+struct ProjectileImpactEvent {
+    projectile: Entity,
+    target: Entity,
+}
 
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
 enum Team {
@@ -14,7 +21,6 @@ struct Player;
 #[derive(Component)]
 struct Projectile {
     lifetime: Timer,
-    bounces_remaining: u32,
     team: Team,
 }
 
@@ -27,6 +33,64 @@ struct MainCamera;
 #[derive(Component)]
 struct Boundary;
 
+// Detect projectile collisions and emit custom events
+fn detect_projectile_collisions(
+    mut collision_events: EventReader<CollisionEvent>,
+    mut impact_events: EventWriter<ProjectileImpactEvent>,
+    projectiles: Query<&Projectile>,
+    players: Query<&Player>,
+    obstacles: Query<&Obstacle>,
+    boundaries: Query<&Boundary>,
+) {
+    for collision_event in collision_events.read() {
+        if let CollisionEvent::Started(entity1, entity2, _) = collision_event {
+            // Check if either entity is a projectile
+            let projectile_and_other = if projectiles.contains(*entity1) {
+                Some((*entity1, *entity2))
+            } else if projectiles.contains(*entity2) {
+                Some((*entity2, *entity1))
+            } else {
+                None
+            };
+
+            if let Some((projectile, target)) = projectile_and_other {
+                // Don't emit events for player-projectile collisions (friendly fire prevention)
+                if players.contains(target) {
+                    continue;
+                }
+
+                // Emit impact event for obstacles and boundaries
+                if obstacles.contains(target) || boundaries.contains(target) {
+                    impact_events.write(ProjectileImpactEvent {
+                        projectile,
+                        target,
+                    });
+                }
+            }
+        }
+    }
+}
+
+// Handle projectile impact events
+fn handle_projectile_impacts(
+    mut impact_events: EventReader<ProjectileImpactEvent>,
+    mut commands: Commands,
+) {
+    for impact in impact_events.read() {
+        // Clean up the projectile
+        if let Ok(mut entity) = commands.get_entity(impact.projectile) {
+            entity.despawn();
+        }
+
+        // Here you could add impact effects, damage, etc.
+        // For example:
+        // - Spawn particle effects at impact location
+        // - Play impact sounds
+        // - Deal damage to destructible targets
+        // - Create explosion effects
+    }
+}
+
 #[derive(Resource)]
 struct FireTimer {
     timer: Timer,
@@ -37,14 +101,10 @@ const PLAYER_RADIUS: f32 = 10.0;
 const PROJECTILE_SPEED: f32 = 800.0;
 const PROJECTILE_SIZE: f32 = 3.0;
 const PROJECTILE_LIFETIME: f32 = 3.0;
-const FIRE_RATE: f32 = 0.1; // 10 shots per second
+const FIRE_RATE: f32 = 0.2; // 5 shots per second
 const OBSTACLE_WIDTH: f32 = 40.0;
 const OBSTACLE_HEIGHT: f32 = 80.0;
-const MAX_BOUNCES: u32 = 3;
-const BOUNCE_RESTITUTION: f32 = 0.8; // How much velocity is retained after bounce
-const PROJECTILE_FRICTION: f32 = 0.98; // Friction coefficient (98% speed retained per frame)
-const MIN_PROJECTILE_SPEED: f32 = 150.0; // Minimum speed before despawning
-const CAMERA_FOLLOW_SPEED: f32 = 2.0; // How fast camera follows player
+const CAMERA_FOLLOW_SPEED: f32 = 5.0; // How fast camera follows player
 const CURSOR_BIAS_STRENGTH: f32 = 1.0; // How much cursor position affects camera
 const CURSOR_BIAS_DISTANCE: f32 = 150.0; // Maximum distance cursor can bias camera
 const MAP_WIDTH: f32 = 1200.0; // Total map width
@@ -65,23 +125,36 @@ fn can_teams_damage(attacker: Team, target: Team) -> bool {
 
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Combat Sandbox - Player Movement".to_string(),
-                    resolution: (800.0, 600.0).into(),
-                    ..default()
-                }),
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Combat Sandbox - Player Movement".to_string(),
+                resolution: (800.0, 600.0).into(),
                 ..default()
             }),
-            PhysicsPlugins::default(),
-        ))
+            ..default()
+        }))
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugins(RapierDebugRenderPlugin::default())
+        .add_event::<ProjectileImpactEvent>()
         .insert_resource(FireTimer {
             timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
         })
-        .add_systems(Startup, setup)
-        .add_systems(Update, (player_movement, shoot_projectiles, track_bounces, monitor_projectile_speed, cleanup_projectiles, camera_follow))
+        .add_systems(Startup, (disable_gravity, setup))
+        .add_systems(Update, (
+            player_movement,
+            shoot_projectiles,
+            cleanup_projectiles,
+            camera_follow,
+            detect_projectile_collisions,
+            handle_projectile_impacts,
+        ))
         .run();
+}
+
+fn disable_gravity(mut query: Query<&mut RapierConfiguration>) {
+    for mut config in &mut query {
+        config.gravity = Vec2::ZERO;
+    }
 }
 
 fn setup(
@@ -103,9 +176,11 @@ fn setup(
         Player,
         Team::Player,
         RigidBody::Dynamic,
-        Collider::circle(PLAYER_RADIUS),
+        Collider::ball(PLAYER_RADIUS),
         // Lock rotation so the player doesn't spin
         LockedAxes::ROTATION_LOCKED,
+        // Add Velocity component for movement
+        Velocity::zero(),
     ));
 
     // Spawn obstacles as gray rectangles with varied rotations
@@ -124,8 +199,8 @@ fn setup(
             MeshMaterial2d(materials.add(Color::srgb(0.5, 0.5, 0.5))), // Gray obstacles
             Transform::from_translation(pos.extend(0.0)).with_rotation(Quat::from_rotation_z(rotation)),
             Obstacle,
-            RigidBody::Static,
-            Collider::rectangle(OBSTACLE_WIDTH, OBSTACLE_HEIGHT),
+            RigidBody::Fixed,
+            Collider::cuboid(OBSTACLE_WIDTH / 2.0, OBSTACLE_HEIGHT / 2.0),
         ));
     }
 
@@ -140,8 +215,8 @@ fn setup(
         MeshMaterial2d(materials.add(Color::srgba(0.2, 0.2, 0.2, 0.3))), // Semi-transparent dark gray
         Transform::from_translation(Vec3::new(0.0, half_height + half_thickness, -0.1)),
         Boundary,
-        RigidBody::Static,
-        Collider::rectangle(MAP_WIDTH + WALL_THICKNESS, WALL_THICKNESS),
+        RigidBody::Fixed,
+        Collider::cuboid((MAP_WIDTH + WALL_THICKNESS) / 2.0, WALL_THICKNESS / 2.0),
     ));
 
     // Bottom wall
@@ -150,8 +225,8 @@ fn setup(
         MeshMaterial2d(materials.add(Color::srgba(0.2, 0.2, 0.2, 0.3))),
         Transform::from_translation(Vec3::new(0.0, -half_height - half_thickness, -0.1)),
         Boundary,
-        RigidBody::Static,
-        Collider::rectangle(MAP_WIDTH + WALL_THICKNESS, WALL_THICKNESS),
+        RigidBody::Fixed,
+        Collider::cuboid((MAP_WIDTH + WALL_THICKNESS) / 2.0, WALL_THICKNESS / 2.0),
     ));
 
     // Left wall
@@ -160,8 +235,8 @@ fn setup(
         MeshMaterial2d(materials.add(Color::srgba(0.2, 0.2, 0.2, 0.3))),
         Transform::from_translation(Vec3::new(-half_width - half_thickness, 0.0, -0.1)),
         Boundary,
-        RigidBody::Static,
-        Collider::rectangle(WALL_THICKNESS, MAP_HEIGHT),
+        RigidBody::Fixed,
+        Collider::cuboid(WALL_THICKNESS / 2.0, MAP_HEIGHT / 2.0),
     ));
 
     // Right wall
@@ -170,14 +245,14 @@ fn setup(
         MeshMaterial2d(materials.add(Color::srgba(0.2, 0.2, 0.2, 0.3))),
         Transform::from_translation(Vec3::new(half_width + half_thickness, 0.0, -0.1)),
         Boundary,
-        RigidBody::Static,
-        Collider::rectangle(WALL_THICKNESS, MAP_HEIGHT),
+        RigidBody::Fixed,
+        Collider::cuboid(WALL_THICKNESS / 2.0, MAP_HEIGHT / 2.0),
     ));
 }
 
 fn player_movement(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut LinearVelocity, With<Player>>,
+    mut query: Query<&mut Velocity, With<Player>>,
 ) {
     for mut velocity in query.iter_mut() {
         let mut direction = Vec2::ZERO;
@@ -202,7 +277,7 @@ fn player_movement(
         }
 
         // Apply velocity
-        velocity.0 = direction * PLAYER_SPEED;
+        velocity.linvel = direction * PLAYER_SPEED;
     }
 }
 
@@ -214,7 +289,7 @@ fn shoot_projectiles(
     mouse_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
-    player_query: Query<(&Transform, &LinearVelocity), (With<Player>, Without<Camera>)>,
+    player_query: Query<(&Transform, &Velocity), (With<Player>, Without<Camera>)>,
     mut fire_timer: ResMut<FireTimer>,
     time: Res<Time>,
 ) {
@@ -240,11 +315,11 @@ fn shoot_projectiles(
             }
 
             // Calculate spawn position on the edge of the player closest to the cursor
-            let spawn_offset = shoot_direction * (PLAYER_RADIUS + PROJECTILE_SIZE + 1.0); // Small gap to prevent collision
+            let spawn_offset = shoot_direction * (PLAYER_RADIUS + PROJECTILE_SIZE * 2.0 + 5.0); // Larger gap to prevent collision with player
             let spawn_pos = player_pos + spawn_offset;
 
             // Calculate projectile velocity: base velocity + player momentum
-            let projectile_velocity = (shoot_direction * PROJECTILE_SPEED) + player_velocity.0;
+            let projectile_velocity = (shoot_direction * PROJECTILE_SPEED) + player_velocity.linvel;
 
             // Spawn projectile
             commands.spawn((
@@ -253,18 +328,13 @@ fn shoot_projectiles(
                 Transform::from_translation(spawn_pos.extend(0.1)),
                 Projectile {
                     lifetime: Timer::from_seconds(PROJECTILE_LIFETIME, TimerMode::Once),
-                    bounces_remaining: MAX_BOUNCES,
                     team: Team::Player,
                 },
                 RigidBody::Dynamic,
-                Collider::circle(PROJECTILE_SIZE),
-                LinearVelocity(projectile_velocity),
-                // Enable bouncing with restitution
-                Restitution::new(BOUNCE_RESTITUTION),
-                // Add gentle friction via linear damping
-                LinearDamping(1.0 - PROJECTILE_FRICTION),
-                // Disable gravity for projectiles
-                GravityScale(0.0),
+                Collider::ball(PROJECTILE_SIZE * 1.2), // Slightly larger collision detection
+                Velocity::linear(projectile_velocity),
+                // Enable collision events
+                ActiveEvents::COLLISION_EVENTS,
             ));
 
             // Reset the fire timer for the next shot
@@ -273,58 +343,7 @@ fn shoot_projectiles(
     }
 }
 
-fn track_bounces(
-    mut commands: Commands,
-    mut collision_events: EventReader<CollisionStarted>,
-    mut projectiles: Query<&mut Projectile>,
-    obstacles: Query<&Obstacle>,
-    boundaries: Query<&Boundary>,
-    entities_with_teams: Query<&Team>,
-) {
-    for CollisionStarted(entity1, entity2) in collision_events.read() {
-        // Check if one entity is a projectile and the other is an obstacle or boundary
-        let projectile_entity =
-            if projectiles.contains(*entity1) && (obstacles.contains(*entity2) || boundaries.contains(*entity2)) {
-                *entity1
-            } else if projectiles.contains(*entity2) && (obstacles.contains(*entity1) || boundaries.contains(*entity1)) {
-                *entity2
-            } else {
-                // Check for projectile vs entity with team (for future damage system)
-                if projectiles.contains(*entity1) && entities_with_teams.contains(*entity2) {
-                    // Future: Check if teams can damage each other using can_teams_damage()
-                    // For now, just handle bouncing for obstacles
-                    continue;
-                } else if projectiles.contains(*entity2) && entities_with_teams.contains(*entity1) {
-                    // Future: Check if teams can damage each other using can_teams_damage()
-                    // For now, just handle bouncing for obstacles
-                    continue;
-                } else {
-                    continue; // Not a relevant collision
-                }
-            };
 
-        if let Ok(mut projectile) = projectiles.get_mut(projectile_entity) {
-            if projectile.bounces_remaining > 0 {
-                projectile.bounces_remaining -= 1;
-            } else {
-                // No bounces left, despawn the projectile
-                commands.entity(projectile_entity).despawn();
-            }
-        }
-    }
-}fn monitor_projectile_speed(
-    mut commands: Commands,
-    projectiles: Query<(Entity, &LinearVelocity), With<Projectile>>,
-) {
-    for (entity, velocity) in projectiles.iter() {
-        let speed = velocity.0.length();
-
-        // Despawn projectiles that are moving too slowly
-        if speed < MIN_PROJECTILE_SPEED {
-            commands.entity(entity).despawn();
-        }
-    }
-}
 
 fn camera_follow(
     mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,

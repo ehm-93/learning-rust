@@ -70,9 +70,9 @@ fn main() {
             handle_projectile_impacts.run_if(resource_equals(GameState::Playing)),
             detect_enemy_player_collisions.run_if(resource_equals(GameState::Playing)),
             process_damage.run_if(resource_equals(GameState::Playing)),
-            handle_hit_flash.run_if(resource_equals(GameState::Playing)),
+            handle_hit_flash.run_if(resource_equals(GameState::Playing)), // Run before cleanup
+            cleanup_dead_entities, // Run after hit flash
             update_hit_flash,
-            cleanup_dead_entities,
             cleanup_projectiles.run_if(resource_equals(GameState::Playing)),
         ))
         .run();

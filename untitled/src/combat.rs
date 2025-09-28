@@ -148,7 +148,7 @@ pub fn process_damage(
     for damage_event in damage_events.read() {
         if let Ok(mut health) = health_query.get_mut(damage_event.target) {
             health.take_damage(damage_event.damage);
-            
+
             // Trigger hit flash for enemies
             if enemy_query.contains(damage_event.target) {
                 hit_flash_events.write(HitFlashEvent {
@@ -216,16 +216,19 @@ pub fn handle_hit_flash(
     materials: Res<Assets<ColorMaterial>>,
 ) {
     for flash_event in hit_flash_events.read() {
+        // Check if the entity still exists and is an enemy
         if let Ok(material_handle) = enemy_query.get(flash_event.target) {
             // Get the original color from the material
             if let Some(material) = materials.get(&material_handle.0) {
                 let original_color = material.color;
-                
-                // Add hit flash component
-                commands.entity(flash_event.target).insert(HitFlash {
-                    timer: Timer::from_seconds(HIT_FLASH_DURATION, TimerMode::Once),
-                    original_color,
-                });
+
+                // Safely try to add hit flash component, ignore if entity doesn't exist
+                if let Ok(mut entity_commands) = commands.get_entity(flash_event.target) {
+                    entity_commands.insert(HitFlash {
+                        timer: Timer::from_seconds(HIT_FLASH_DURATION, TimerMode::Once),
+                        original_color,
+                    });
+                }
             }
         }
     }
@@ -240,7 +243,7 @@ pub fn update_hit_flash(
 ) {
     for (entity, mut hit_flash, material_handle) in flash_query.iter_mut() {
         hit_flash.timer.tick(time.delta());
-        
+
         if let Some(material) = materials.get_mut(&material_handle.0) {
             if hit_flash.timer.finished() {
                 // Flash finished, restore original color and remove component
@@ -250,7 +253,7 @@ pub fn update_hit_flash(
                 // Flash in progress, interpolate between flash color and original
                 let progress = hit_flash.timer.elapsed_secs() / hit_flash.timer.duration().as_secs_f32();
                 let flash_color = Color::srgb(1.0, 0.3, 0.3); // Bright red flash
-                
+
                 // Interpolate from flash color back to original
                 material.color = Color::srgb(
                     flash_color.to_srgba().red * (1.0 - progress) + hit_flash.original_color.to_srgba().red * progress,

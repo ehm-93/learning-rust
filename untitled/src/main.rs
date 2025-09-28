@@ -7,7 +7,11 @@ struct Player;
 #[derive(Component)]
 struct Projectile {
     lifetime: Timer,
+    bounces_remaining: u32,
 }
+
+#[derive(Component)]
+struct Obstacle;
 
 #[derive(Resource)]
 struct FireTimer {
@@ -20,6 +24,12 @@ const PROJECTILE_SPEED: f32 = 800.0;
 const PROJECTILE_SIZE: f32 = 3.0;
 const PROJECTILE_LIFETIME: f32 = 3.0;
 const FIRE_RATE: f32 = 0.1; // 10 shots per second
+const OBSTACLE_WIDTH: f32 = 40.0;
+const OBSTACLE_HEIGHT: f32 = 80.0;
+const MAX_BOUNCES: u32 = 3;
+const BOUNCE_RESTITUTION: f32 = 0.8; // How much velocity is retained after bounce
+const PROJECTILE_FRICTION: f32 = 0.98; // Friction coefficient (98% speed retained per frame)
+const MIN_PROJECTILE_SPEED: f32 = 150.0; // Minimum speed before despawning
 
 fn main() {
     App::new()
@@ -38,7 +48,7 @@ fn main() {
             timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
         })
         .add_systems(Startup, setup)
-        .add_systems(Update, (player_movement, shoot_projectiles, cleanup_projectiles))
+        .add_systems(Update, (player_movement, shoot_projectiles, track_bounces, monitor_projectile_speed, cleanup_projectiles))
         .run();
 }
 
@@ -61,6 +71,27 @@ fn setup(
         // Lock rotation so the player doesn't spin
         LockedAxes::ROTATION_LOCKED,
     ));
+
+    // Spawn obstacles as gray rectangles with varied rotations
+    let obstacle_data = [
+        (Vec2::new(150.0, 100.0), 0.3),
+        (Vec2::new(-150.0, -100.0), -0.7),
+        (Vec2::new(200.0, -150.0), 0.5),
+        (Vec2::new(-200.0, 150.0), -0.2),
+        (Vec2::new(0.0, 200.0), 0.8),
+        (Vec2::new(0.0, -200.0), -0.4),
+    ];
+
+    for (pos, rotation) in obstacle_data {
+        commands.spawn((
+            Mesh2d(meshes.add(Rectangle::new(OBSTACLE_WIDTH, OBSTACLE_HEIGHT))),
+            MeshMaterial2d(materials.add(Color::srgb(0.5, 0.5, 0.5))), // Gray obstacles
+            Transform::from_translation(pos.extend(0.0)).with_rotation(Quat::from_rotation_z(rotation)),
+            Obstacle,
+            RigidBody::Static,
+            Collider::rectangle(OBSTACLE_WIDTH, OBSTACLE_HEIGHT),
+        ));
+    }
 }
 
 fn player_movement(
@@ -141,16 +172,63 @@ fn shoot_projectiles(
                 Transform::from_translation(spawn_pos.extend(0.1)),
                 Projectile {
                     lifetime: Timer::from_seconds(PROJECTILE_LIFETIME, TimerMode::Once),
+                    bounces_remaining: MAX_BOUNCES,
                 },
                 RigidBody::Dynamic,
                 Collider::circle(PROJECTILE_SIZE),
                 LinearVelocity(projectile_velocity),
+                // Enable bouncing with restitution
+                Restitution::new(BOUNCE_RESTITUTION),
+                // Add gentle friction via linear damping
+                LinearDamping(1.0 - PROJECTILE_FRICTION),
                 // Disable gravity for projectiles
                 GravityScale(0.0),
             ));
 
             // Reset the fire timer for the next shot
             fire_timer.timer.reset();
+        }
+    }
+}
+
+fn track_bounces(
+    mut commands: Commands,
+    mut collision_events: EventReader<CollisionStarted>,
+    mut projectiles: Query<&mut Projectile>,
+    obstacles: Query<&Obstacle>,
+) {
+    for CollisionStarted(entity1, entity2) in collision_events.read() {
+        // Check if one entity is a projectile and the other is an obstacle
+        let (projectile_entity, _obstacle_entity) =
+            if projectiles.contains(*entity1) && obstacles.contains(*entity2) {
+                (*entity1, *entity2)
+            } else if projectiles.contains(*entity2) && obstacles.contains(*entity1) {
+                (*entity2, *entity1)
+            } else {
+                continue; // Not a projectile-obstacle collision
+            };
+
+        if let Ok(mut projectile) = projectiles.get_mut(projectile_entity) {
+            if projectile.bounces_remaining > 0 {
+                projectile.bounces_remaining -= 1;
+            } else {
+                // No bounces left, despawn the projectile
+                commands.entity(projectile_entity).despawn();
+            }
+        }
+    }
+}
+
+fn monitor_projectile_speed(
+    mut commands: Commands,
+    projectiles: Query<(Entity, &LinearVelocity), With<Projectile>>,
+) {
+    for (entity, velocity) in projectiles.iter() {
+        let speed = velocity.0.length();
+
+        // Despawn projectiles that are moving too slowly
+        if speed < MIN_PROJECTILE_SPEED {
+            commands.entity(entity).despawn();
         }
     }
 }

@@ -13,7 +13,7 @@ pub struct GameSounds {
 pub fn load_sounds(mut commands: Commands, asset_server: Res<AssetServer>) {
     let sounds = GameSounds {
         gun_01: asset_server.load("sound/gun_01.wav"),
-        gun_02: asset_server.load("sound/gun_02.ogg"),
+        gun_02: asset_server.load("sound/gun_02.wav"),
         gun_03: asset_server.load("sound/gun_03.wav"),
         explosion_01: asset_server.load("sound/explosion_01.wav"),
     };

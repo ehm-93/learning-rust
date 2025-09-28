@@ -43,29 +43,34 @@ fn main() {
         .insert_resource(EnemySpawnTimer {
             timer: Timer::from_seconds(ENEMY_SPAWN_RATE, TimerMode::Repeating),
         })
-        .add_systems(Startup, (disable_gravity, setup, setup_health_bar))
+        .insert_resource(Score::default())
+        .insert_resource(GameState::default())
+        .add_systems(Startup, (disable_gravity, setup, setup_health_bar, setup_score_display))
         .add_systems(Update, (
             // Player systems
-            player_movement,
-            shoot_projectiles,
+            player_movement.run_if(resource_equals(GameState::Playing)),
+            shoot_projectiles.run_if(resource_equals(GameState::Playing)),
             camera_follow,
 
             // Enemy systems
-            spawn_enemies,
-            enemy_ai,
-            laser_sight_system,
+            spawn_enemies.run_if(resource_equals(GameState::Playing)),
+            enemy_ai.run_if(resource_equals(GameState::Playing)),
+            laser_sight_system.run_if(resource_equals(GameState::Playing)),
 
             // UI systems
             update_health_bar,
             update_health_bar_color,
+            update_score_display,
+            show_game_over_overlay,
+            handle_restart_button,
 
             // Combat systems
-            detect_projectile_collisions,
-            handle_projectile_impacts,
-            detect_enemy_player_collisions,
-            process_damage,
+            detect_projectile_collisions.run_if(resource_equals(GameState::Playing)),
+            handle_projectile_impacts.run_if(resource_equals(GameState::Playing)),
+            detect_enemy_player_collisions.run_if(resource_equals(GameState::Playing)),
+            process_damage.run_if(resource_equals(GameState::Playing)),
             cleanup_dead_entities,
-            cleanup_projectiles,
+            cleanup_projectiles.run_if(resource_equals(GameState::Playing)),
         ))
         .run();
 }

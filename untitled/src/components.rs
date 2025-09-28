@@ -137,3 +137,15 @@ impl Dash {
         }
     }
 }
+
+/// Score display UI component
+#[derive(Component)]
+pub struct ScoreText;
+
+/// Game over overlay UI component
+#[derive(Component)]
+pub struct GameOverOverlay;
+
+/// Restart button UI component
+#[derive(Component)]
+pub struct RestartButton;

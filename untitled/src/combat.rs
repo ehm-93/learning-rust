@@ -5,6 +5,7 @@ use crate::{
     components::*,
     events::*,
     constants::*,
+    resources::*,
 };
 
 /// Detects collisions between projectiles and other entities, emitting impact events
@@ -152,10 +153,29 @@ pub fn process_damage(
 /// Cleans up entities that have died (health <= 0)
 pub fn cleanup_dead_entities(
     mut commands: Commands,
-    health_query: Query<(Entity, &Health)>,
+    health_query: Query<(Entity, &Health, Option<&Enemy>, Option<&Player>)>,
+    mut score: ResMut<Score>,
+    mut game_state: ResMut<GameState>,
 ) {
-    for (entity, health) in health_query.iter() {
+    for (entity, health, enemy, player) in health_query.iter() {
         if health.is_dead() {
+            // Award points for killing enemies
+            if let Some(enemy_component) = enemy {
+                let points = match enemy_component.archetype {
+                    EnemyArchetype::SmallMelee => 10,
+                    EnemyArchetype::BigMelee => 50,
+                    EnemyArchetype::Shotgunner => 30,
+                    EnemyArchetype::Sniper => 75,
+                    EnemyArchetype::MachineGunner => 40,
+                };
+                score.current += points;
+            }
+            
+            // Check if player died
+            if player.is_some() {
+                *game_state = GameState::GameOver;
+            }
+            
             commands.entity(entity).despawn();
         }
     }

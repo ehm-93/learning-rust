@@ -45,7 +45,7 @@ pub const SHOTGUNNER_PELLETS: usize = 5;
 pub const SNIPER_HEALTH: f32 = 20.0;
 pub const SNIPER_SPEED: f32 = 100.0;
 pub const SNIPER_RADIUS: f32 = 8.0;
-pub const SNIPER_RANGE: f32 = 300.0;
+pub const SNIPER_RANGE: f32 = 500.0;
 pub const SNIPER_FIRE_RATE: f32 = 1.5;
 
 pub const MACHINE_GUNNER_HEALTH: f32 = 40.0;

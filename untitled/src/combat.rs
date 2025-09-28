@@ -170,12 +170,12 @@ pub fn cleanup_dead_entities(
                 };
                 score.current += points;
             }
-            
+
             // Check if player died
             if player.is_some() {
                 *game_state = GameState::GameOver;
             }
-            
+
             commands.entity(entity).despawn();
         }
     }

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use crate::{
     components::*,
     resources::*,
@@ -208,7 +209,9 @@ pub fn handle_restart_button(
     mut game_state: ResMut<GameState>,
     overlay_query: Query<Entity, With<GameOverOverlay>>,
     entities_query: Query<Entity, (Or<(With<Enemy>, With<Projectile>)>, Without<Player>, Without<MainCamera>)>,
-    mut player_query: Query<&mut Health, With<Player>>,
+    mut player_query: Query<(&mut Health, &mut Transform, &mut Velocity, &mut Dash), With<Player>>,
+    mut fire_timer: ResMut<FireTimer>,
+    mut enemy_spawn_timer: ResMut<EnemySpawnTimer>,
 ) {
     for interaction in &mut interaction_query {
         if *interaction == Interaction::Pressed {
@@ -226,10 +229,25 @@ pub fn handle_restart_button(
                 commands.entity(entity).despawn();
             }
 
-            // Reset player health
-            if let Ok(mut health) = player_query.single_mut() {
+            // Reset player state completely
+            if let Ok((mut health, mut transform, mut velocity, mut dash)) = player_query.single_mut() {
+                // Reset health
                 health.current = health.max;
+                
+                // Reset position to center
+                transform.translation = Vec3::new(0.0, 0.0, 0.0);
+                
+                // Reset velocity
+                velocity.linvel = Vec2::ZERO;
+                velocity.angvel = 0.0;
+                
+                // Reset dash state
+                *dash = Dash::new();
             }
+            
+            // Reset timers
+            fire_timer.timer.reset();
+            enemy_spawn_timer.timer.reset();
         }
     }
 }

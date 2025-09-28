@@ -13,6 +13,9 @@ struct Projectile {
 #[derive(Component)]
 struct Obstacle;
 
+#[derive(Component)]
+struct MainCamera;
+
 #[derive(Resource)]
 struct FireTimer {
     timer: Timer,
@@ -30,6 +33,9 @@ const MAX_BOUNCES: u32 = 3;
 const BOUNCE_RESTITUTION: f32 = 0.8; // How much velocity is retained after bounce
 const PROJECTILE_FRICTION: f32 = 0.98; // Friction coefficient (98% speed retained per frame)
 const MIN_PROJECTILE_SPEED: f32 = 150.0; // Minimum speed before despawning
+const CAMERA_FOLLOW_SPEED: f32 = 2.0; // How fast camera follows player
+const CURSOR_BIAS_STRENGTH: f32 = 1.0; // How much cursor position affects camera
+const CURSOR_BIAS_DISTANCE: f32 = 150.0; // Maximum distance cursor can bias camera
 
 fn main() {
     App::new()
@@ -48,7 +54,7 @@ fn main() {
             timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
         })
         .add_systems(Startup, setup)
-        .add_systems(Update, (player_movement, shoot_projectiles, track_bounces, monitor_projectile_speed, cleanup_projectiles))
+        .add_systems(Update, (player_movement, shoot_projectiles, track_bounces, monitor_projectile_speed, cleanup_projectiles, camera_follow))
         .run();
 }
 
@@ -57,8 +63,11 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    // Spawn 2D camera
-    commands.spawn(Camera2d);
+    // Spawn 2D camera with following component
+    commands.spawn((
+        Camera2d,
+        MainCamera,
+    ));
 
     // Spawn player as a white circle
     commands.spawn((
@@ -229,6 +238,46 @@ fn monitor_projectile_speed(
         // Despawn projectiles that are moving too slowly
         if speed < MIN_PROJECTILE_SPEED {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn camera_follow(
+    mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
+    player_query: Query<&Transform, (With<Player>, Without<MainCamera>)>,
+    windows: Query<&Window>,
+    time: Res<Time>,
+) {
+    if let (Ok(mut camera_transform), Ok(player_transform)) =
+        (camera_query.get_single_mut(), player_query.get_single()) {
+
+        let player_pos = player_transform.translation.truncate();
+        let mut target_pos = player_pos;
+
+        // Add cursor bias to camera position
+        if let Ok(window) = windows.get_single() {
+            if let Some(cursor_pos) = window.cursor_position() {
+                // Convert cursor position to normalized coordinates (-1 to 1)
+                let window_size = Vec2::new(window.width(), window.height());
+                let mut cursor_normalized = (cursor_pos - window_size / 2.0) / (window_size / 2.0);
+
+                // Flip Y axis to match world coordinates (screen Y goes down, world Y goes up)
+                cursor_normalized.y = -cursor_normalized.y;
+
+                // Apply cursor bias
+                let cursor_bias = cursor_normalized * CURSOR_BIAS_DISTANCE * CURSOR_BIAS_STRENGTH;
+                target_pos += cursor_bias;
+            }
+        }
+
+        // Smoothly move camera towards target position
+        let current_pos = camera_transform.translation.truncate();
+        let direction = target_pos - current_pos;
+        let move_distance = direction.length() * CAMERA_FOLLOW_SPEED * time.delta().as_secs_f32();
+
+        if direction.length() > 0.1 {
+            let new_pos = current_pos + direction.normalize() * move_distance;
+            camera_transform.translation = new_pos.extend(camera_transform.translation.z);
         }
     }
 }

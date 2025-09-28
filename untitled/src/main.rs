@@ -18,8 +18,48 @@ enum Team {
 #[derive(Component)]
 struct Player;
 
+#[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
+enum EnemyArchetype {
+    SmallMelee,
+    BigMelee,
+    Shotgunner,
+    Sniper,
+    MachineGunner,
+}
+
 #[derive(Component)]
-struct Enemy;
+struct Enemy {
+    archetype: EnemyArchetype,
+}
+
+#[derive(Component)]
+struct AIBehavior {
+    state: AIState,
+    timer: Timer,
+    preferred_distance: f32,
+    last_shot_time: f32,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum AIState {
+    Idle,
+    Chasing,
+    Approaching,
+    Fleeing,
+    Circling,
+    Shooting,
+}
+
+impl AIBehavior {
+    fn new(preferred_distance: f32, behavior_interval: f32) -> Self {
+        Self {
+            state: AIState::Idle,
+            timer: Timer::from_seconds(behavior_interval, TimerMode::Repeating),
+            preferred_distance,
+            last_shot_time: 0.0,
+        }
+    }
+}
 
 #[derive(Component)]
 struct Projectile {
@@ -49,11 +89,11 @@ impl Health {
             max: max_health,
         }
     }
-    
+
     fn take_damage(&mut self, damage: f32) {
         self.current = (self.current - damage).max(0.0);
     }
-    
+
     fn is_dead(&self) -> bool {
         self.current <= 0.0
     }
@@ -88,17 +128,24 @@ fn detect_projectile_collisions(
             };
 
             if let Some((projectile, target)) = projectile_and_other {
-                // Don't emit events for player-projectile collisions (friendly fire prevention)
-                if players.contains(target) {
-                    continue;
-                }
+                if let Ok(projectile_data) = projectiles.get(projectile) {
+                    // Handle team-based collision logic
+                    let should_collide = if obstacles.contains(target) || boundaries.contains(target) {
+                        true // Always collide with obstacles and boundaries
+                    } else if players.contains(target) && projectile_data.team == Team::Enemy {
+                        true // Enemy bullets can hit players
+                    } else if enemies.contains(target) && projectile_data.team == Team::Player {
+                        true // Player bullets can hit enemies
+                    } else {
+                        false // No friendly fire
+                    };
 
-                // Emit impact event for obstacles, boundaries, and enemies
-                if obstacles.contains(target) || boundaries.contains(target) || enemies.contains(target) {
-                    impact_events.write(ProjectileImpactEvent {
-                        projectile,
-                        target,
-                    });
+                    if should_collide {
+                        impact_events.write(ProjectileImpactEvent {
+                            projectile,
+                            target,
+                        });
+                    }
                 }
             }
         }
@@ -110,34 +157,43 @@ fn handle_projectile_impacts(
     mut impact_events: EventReader<ProjectileImpactEvent>,
     mut damage_events: EventWriter<DamageEvent>,
     mut commands: Commands,
-    projectile_query: Query<&Transform, With<Projectile>>,
+    projectile_query: Query<(&Transform, &Projectile)>,
     enemy_query: Query<&Transform, (With<Enemy>, Without<Projectile>)>,
+    player_query: Query<&Transform, (With<Player>, Without<Projectile>)>,
     mut enemy_velocities: Query<&mut Velocity, With<Enemy>>,
 ) {
     for impact in impact_events.read() {
-        // Get projectile and target positions for knockback calculation
-        let knockback_direction = if let (Ok(projectile_transform), Ok(target_transform)) = 
-            (projectile_query.get(impact.projectile), enemy_query.get(impact.target)) {
-            // Calculate knockback direction from projectile to target
-            let direction = (target_transform.translation.truncate() - 
-                           projectile_transform.translation.truncate()).normalize_or_zero();
-            Some(direction)
-        } else {
-            None
-        };
+        if let Ok((projectile_transform, projectile_data)) = projectile_query.get(impact.projectile) {
+            // Handle enemy being hit by player projectile
+            if let Ok(target_transform) = enemy_query.get(impact.target) {
+                if projectile_data.team == Team::Player {
+                    // Calculate knockback direction
+                    let direction = (target_transform.translation.truncate() -
+                                   projectile_transform.translation.truncate()).normalize_or_zero();
 
-        // Apply knockback to enemy if this was a projectile-enemy collision
-        if let Some(direction) = knockback_direction {
-            if let Ok(mut enemy_velocity) = enemy_velocities.get_mut(impact.target) {
-                // Apply knockback impulse
-                enemy_velocity.linvel += direction * KNOCKBACK_FORCE;
+                    // Apply knockback to enemy
+                    if let Ok(mut enemy_velocity) = enemy_velocities.get_mut(impact.target) {
+                        enemy_velocity.linvel += direction * KNOCKBACK_FORCE;
+                    }
+
+                    // Deal damage to enemy
+                    damage_events.write(DamageEvent {
+                        target: impact.target,
+                        damage: PROJECTILE_DAMAGE,
+                    });
+                }
             }
-            
-            // Deal damage to enemy
-            damage_events.write(DamageEvent {
-                target: impact.target,
-                damage: PROJECTILE_DAMAGE,
-            });
+
+            // Handle player being hit by enemy projectile
+            if let Ok(_target_transform) = player_query.get(impact.target) {
+                if projectile_data.team == Team::Enemy {
+                    // Deal damage to player
+                    damage_events.write(DamageEvent {
+                        target: impact.target,
+                        damage: ENEMY_BULLET_DAMAGE,
+                    });
+                }
+            }
         }
 
         // Clean up the projectile
@@ -169,15 +225,47 @@ const CURSOR_BIAS_DISTANCE: f32 = 150.0; // Maximum distance cursor can bias cam
 const MAP_WIDTH: f32 = 1200.0; // Total map width
 const MAP_HEIGHT: f32 = 900.0; // Total map height
 const WALL_THICKNESS: f32 = 20.0; // Thickness of boundary walls
-const ENEMY_RADIUS: f32 = 8.0; // Enemy size
-const ENEMY_SPEED: f32 = 120.0; // Enemy movement speed
 const ENEMY_SPAWN_RATE: f32 = 2.0; // Seconds between enemy spawns
 const MAX_ENEMIES: usize = 8; // Maximum enemies on screen
 const KNOCKBACK_FORCE: f32 = 200.0; // Knockback impulse strength
 const PLAYER_MAX_HEALTH: f32 = 100.0; // Player health
-const ENEMY_MAX_HEALTH: f32 = 20.0; // Enemy health
 const PROJECTILE_DAMAGE: f32 = 10.0; // Damage per projectile hit
 const ENEMY_CONTACT_DAMAGE: f32 = 25.0; // Damage when enemy touches player
+
+// Enemy archetype constants
+const SMALL_MELEE_HEALTH: f32 = 10.0;
+const SMALL_MELEE_SPEED: f32 = 250.0;
+const SMALL_MELEE_RADIUS: f32 = 6.0;
+
+const BIG_MELEE_HEALTH: f32 = 80.0;
+const BIG_MELEE_SPEED: f32 = 60.0;
+const BIG_MELEE_RADIUS: f32 = 18.0;
+
+const SHOTGUNNER_HEALTH: f32 = 30.0;
+const SHOTGUNNER_SPEED: f32 = 140.0;
+const SHOTGUNNER_RADIUS: f32 = 10.0;
+const SHOTGUNNER_RANGE: f32 = 80.0;
+const SHOTGUNNER_FIRE_RATE: f32 = 2.0;
+const SHOTGUNNER_PELLETS: usize = 5;
+
+const SNIPER_HEALTH: f32 = 20.0;
+const SNIPER_SPEED: f32 = 100.0;
+const SNIPER_RADIUS: f32 = 8.0;
+const SNIPER_RANGE: f32 = 300.0;
+const SNIPER_FIRE_RATE: f32 = 1.5;
+
+const MACHINE_GUNNER_HEALTH: f32 = 40.0;
+const MACHINE_GUNNER_SPEED: f32 = 160.0;
+const MACHINE_GUNNER_RADIUS: f32 = 9.0;
+const MACHINE_GUNNER_RANGE: f32 = 150.0;
+const MACHINE_GUNNER_FIRE_RATE: f32 = 0.15;
+
+// Enemy projectile constants
+const ENEMY_BULLET_SPEED: f32 = 600.0;
+const ENEMY_BULLET_DAMAGE: f32 = 15.0;
+const ENEMY_BULLET_LIFETIME: f32 = 2.0;
+const SNIPER_BULLET_SPEED: f32 = 1200.0;
+const SHOTGUN_BULLET_SPEED: f32 = 400.0;
 
 // Team relationship system
 fn can_teams_damage(attacker: Team, target: Team) -> bool {
@@ -499,16 +587,48 @@ fn spawn_enemies(
             // Choose a random spawn position around the map edges, away from player
             let spawn_pos = get_enemy_spawn_position(player_pos);
 
-            // Spawn enemy as a red circle
+            // Choose random archetype
+            let archetype = match fastrand::usize(0..5) {
+                0 => EnemyArchetype::SmallMelee,
+                1 => EnemyArchetype::BigMelee,
+                2 => EnemyArchetype::Shotgunner,
+                3 => EnemyArchetype::Sniper,
+                _ => EnemyArchetype::MachineGunner,
+            };
+
+            let (health, radius, color) = match archetype {
+                EnemyArchetype::SmallMelee => (SMALL_MELEE_HEALTH, SMALL_MELEE_RADIUS, Color::srgb(1.0, 0.2, 0.2)), // Bright red
+                EnemyArchetype::BigMelee => (BIG_MELEE_HEALTH, BIG_MELEE_RADIUS, Color::srgb(0.6, 0.1, 0.1)), // Dark red
+                EnemyArchetype::Shotgunner => (SHOTGUNNER_HEALTH, SHOTGUNNER_RADIUS, Color::srgb(1.0, 0.5, 0.0)), // Orange
+                EnemyArchetype::Sniper => (SNIPER_HEALTH, SNIPER_RADIUS, Color::srgb(0.0, 0.8, 0.2)), // Green
+                EnemyArchetype::MachineGunner => (MACHINE_GUNNER_HEALTH, MACHINE_GUNNER_RADIUS, Color::srgb(0.8, 0.0, 0.8)), // Purple
+            };
+
+            let behavior_interval = match archetype {
+                EnemyArchetype::Shotgunner => SHOTGUNNER_FIRE_RATE,
+                EnemyArchetype::Sniper => SNIPER_FIRE_RATE,
+                EnemyArchetype::MachineGunner => MACHINE_GUNNER_FIRE_RATE,
+                _ => 1.0,
+            };
+
+            let preferred_distance = match archetype {
+                EnemyArchetype::SmallMelee | EnemyArchetype::BigMelee => 0.0,
+                EnemyArchetype::Shotgunner => SHOTGUNNER_RANGE,
+                EnemyArchetype::Sniper => SNIPER_RANGE,
+                EnemyArchetype::MachineGunner => MACHINE_GUNNER_RANGE,
+            };
+
+            // Spawn enemy with archetype-specific properties
             commands.spawn((
-                Mesh2d(meshes.add(Circle::new(ENEMY_RADIUS))),
-                MeshMaterial2d(materials.add(Color::srgb(1.0, 0.3, 0.3))), // Red enemy
+                Mesh2d(meshes.add(Circle::new(radius))),
+                MeshMaterial2d(materials.add(color)),
                 Transform::from_translation(spawn_pos.extend(0.0)),
-                Enemy,
+                Enemy { archetype },
                 Team::Enemy,
-                Health::new(ENEMY_MAX_HEALTH),
+                Health::new(health),
+                AIBehavior::new(preferred_distance, behavior_interval),
                 RigidBody::Dynamic,
-                Collider::ball(ENEMY_RADIUS),
+                Collider::ball(radius),
                 LockedAxes::ROTATION_LOCKED,
                 Velocity::zero(),
                 // Enable collision events for damage detection
@@ -557,21 +677,83 @@ fn get_enemy_spawn_position(player_pos: Vec2) -> Vec2 {
 }
 
 fn enemy_ai(
-    mut enemy_query: Query<(&Transform, &mut Velocity), (With<Enemy>, Without<Player>)>,
+    mut enemy_query: Query<(&Transform, &mut Velocity, &Enemy, &mut AIBehavior), Without<Player>>,
     player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     time: Res<Time>,
 ) {
     if let Ok(player_transform) = player_query.single() {
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, mut enemy_velocity) in enemy_query.iter_mut() {
+        for (enemy_transform, mut enemy_velocity, enemy, mut ai_behavior) in enemy_query.iter_mut() {
             let enemy_pos = enemy_transform.translation.truncate();
-
-            // Calculate direction to player
+            let distance_to_player = enemy_pos.distance(player_pos);
             let direction_to_player = (player_pos - enemy_pos).normalize_or_zero();
 
-            // Simple chase behavior - move toward player
-            let desired_velocity = direction_to_player * ENEMY_SPEED;
+            // Update AI timer
+            ai_behavior.timer.tick(time.delta());
+
+            // Get archetype-specific speed
+            let speed = match enemy.archetype {
+                EnemyArchetype::SmallMelee => SMALL_MELEE_SPEED,
+                EnemyArchetype::BigMelee => BIG_MELEE_SPEED,
+                EnemyArchetype::Shotgunner => SHOTGUNNER_SPEED,
+                EnemyArchetype::Sniper => SNIPER_SPEED,
+                EnemyArchetype::MachineGunner => MACHINE_GUNNER_SPEED,
+            };
+
+            let desired_velocity = match enemy.archetype {
+                EnemyArchetype::SmallMelee | EnemyArchetype::BigMelee => {
+                    // Simple chase behavior
+                    direction_to_player * speed
+                },
+                EnemyArchetype::Shotgunner => {
+                    if distance_to_player > ai_behavior.preferred_distance {
+                        // Approach player
+                        direction_to_player * speed
+                    } else {
+                        // Stop and shoot shotgun spread
+                        if ai_behavior.timer.finished() {
+                            spawn_shotgun_spread(&mut commands, &mut meshes, &mut materials, enemy_pos, direction_to_player);
+                            ai_behavior.timer.reset();
+                        }
+                        Vec2::ZERO
+                    }
+                },
+                EnemyArchetype::Sniper => {
+                    if distance_to_player < ai_behavior.preferred_distance {
+                        // Flee from player
+                        -direction_to_player * speed
+                    } else {
+                        // Stop and snipe
+                        if ai_behavior.timer.finished() && distance_to_player > 100.0 {
+                            spawn_sniper_bullet(&mut commands, &mut meshes, &mut materials, enemy_pos, direction_to_player);
+                            ai_behavior.timer.reset();
+                        }
+                        Vec2::ZERO
+                    }
+                },
+                EnemyArchetype::MachineGunner => {
+                    // Circle strafe around player
+                    let circle_distance = 120.0;
+                    let angle_offset = time.elapsed().as_secs_f32() * 2.0; // Adjust speed of circling
+                    let target_pos = player_pos + Vec2::new(
+                        (angle_offset).cos() * circle_distance,
+                        (angle_offset).sin() * circle_distance,
+                    );
+                    let direction_to_circle = (target_pos - enemy_pos).normalize_or_zero();
+
+                    // Shoot rapid fire while circling
+                    if ai_behavior.timer.finished() && distance_to_player < MACHINE_GUNNER_RANGE {
+                        spawn_machine_gun_bullet(&mut commands, &mut meshes, &mut materials, enemy_pos, direction_to_player);
+                        ai_behavior.timer.reset();
+                    }
+
+                    direction_to_circle * speed
+                },
+            };
 
             // Apply some smoothing to the velocity change for better movement feel
             let velocity_change = (desired_velocity - enemy_velocity.linvel) * 5.0 * time.delta().as_secs_f32();
@@ -580,7 +762,69 @@ fn enemy_ai(
     }
 }
 
-fn detect_enemy_player_collisions(
+fn spawn_shotgun_spread(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    spawn_pos: Vec2,
+    base_direction: Vec2,
+) {
+    for i in 0..SHOTGUNNER_PELLETS {
+        let spread_angle = (i as f32 - (SHOTGUNNER_PELLETS as f32 - 1.0) / 2.0) * 0.3; // 0.3 radians spread
+        let direction = Vec2::new(
+            base_direction.x * spread_angle.cos() - base_direction.y * spread_angle.sin(),
+            base_direction.x * spread_angle.sin() + base_direction.y * spread_angle.cos(),
+        );
+
+        let bullet_velocity = direction * SHOTGUN_BULLET_SPEED;
+        spawn_enemy_bullet(commands, meshes, materials, spawn_pos, bullet_velocity, Color::srgb(1.0, 0.7, 0.0));
+    }
+}
+
+fn spawn_sniper_bullet(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    spawn_pos: Vec2,
+    direction: Vec2,
+) {
+    let bullet_velocity = direction * SNIPER_BULLET_SPEED;
+    spawn_enemy_bullet(commands, meshes, materials, spawn_pos, bullet_velocity, Color::srgb(0.0, 1.0, 0.5));
+}
+
+fn spawn_machine_gun_bullet(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    spawn_pos: Vec2,
+    direction: Vec2,
+) {
+    let bullet_velocity = direction * ENEMY_BULLET_SPEED;
+    spawn_enemy_bullet(commands, meshes, materials, spawn_pos, bullet_velocity, Color::srgb(0.8, 0.2, 0.8));
+}
+
+fn spawn_enemy_bullet(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    spawn_pos: Vec2,
+    velocity: Vec2,
+    color: Color,
+) {
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::new(PROJECTILE_SIZE * 0.8))), // Slightly smaller than player bullets
+        MeshMaterial2d(materials.add(color)),
+        Transform::from_translation(spawn_pos.extend(0.1)),
+        Projectile {
+            lifetime: Timer::from_seconds(ENEMY_BULLET_LIFETIME, TimerMode::Once),
+            team: Team::Enemy,
+        },
+        RigidBody::Dynamic,
+        Collider::ball(PROJECTILE_SIZE * 0.8),
+        Velocity::linear(velocity),
+        ActiveEvents::COLLISION_EVENTS,
+    ));
+}fn detect_enemy_player_collisions(
     mut collision_events: EventReader<CollisionEvent>,
     mut damage_events: EventWriter<DamageEvent>,
     players: Query<Entity, With<Player>>,

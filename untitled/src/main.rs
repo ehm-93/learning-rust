@@ -16,6 +16,9 @@ struct Obstacle;
 #[derive(Component)]
 struct MainCamera;
 
+#[derive(Component)]
+struct Boundary;
+
 #[derive(Resource)]
 struct FireTimer {
     timer: Timer,
@@ -36,6 +39,9 @@ const MIN_PROJECTILE_SPEED: f32 = 150.0; // Minimum speed before despawning
 const CAMERA_FOLLOW_SPEED: f32 = 2.0; // How fast camera follows player
 const CURSOR_BIAS_STRENGTH: f32 = 1.0; // How much cursor position affects camera
 const CURSOR_BIAS_DISTANCE: f32 = 150.0; // Maximum distance cursor can bias camera
+const MAP_WIDTH: f32 = 1200.0; // Total map width
+const MAP_HEIGHT: f32 = 900.0; // Total map height
+const WALL_THICKNESS: f32 = 20.0; // Thickness of boundary walls
 
 fn main() {
     App::new()
@@ -101,6 +107,51 @@ fn setup(
             Collider::rectangle(OBSTACLE_WIDTH, OBSTACLE_HEIGHT),
         ));
     }
+
+    // Spawn boundary walls (invisible but solid)
+    let half_width = MAP_WIDTH / 2.0;
+    let half_height = MAP_HEIGHT / 2.0;
+    let half_thickness = WALL_THICKNESS / 2.0;
+
+    // Top wall
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(MAP_WIDTH + WALL_THICKNESS, WALL_THICKNESS))),
+        MeshMaterial2d(materials.add(Color::srgba(0.2, 0.2, 0.2, 0.3))), // Semi-transparent dark gray
+        Transform::from_translation(Vec3::new(0.0, half_height + half_thickness, -0.1)),
+        Boundary,
+        RigidBody::Static,
+        Collider::rectangle(MAP_WIDTH + WALL_THICKNESS, WALL_THICKNESS),
+    ));
+
+    // Bottom wall
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(MAP_WIDTH + WALL_THICKNESS, WALL_THICKNESS))),
+        MeshMaterial2d(materials.add(Color::srgba(0.2, 0.2, 0.2, 0.3))),
+        Transform::from_translation(Vec3::new(0.0, -half_height - half_thickness, -0.1)),
+        Boundary,
+        RigidBody::Static,
+        Collider::rectangle(MAP_WIDTH + WALL_THICKNESS, WALL_THICKNESS),
+    ));
+
+    // Left wall
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(WALL_THICKNESS, MAP_HEIGHT))),
+        MeshMaterial2d(materials.add(Color::srgba(0.2, 0.2, 0.2, 0.3))),
+        Transform::from_translation(Vec3::new(-half_width - half_thickness, 0.0, -0.1)),
+        Boundary,
+        RigidBody::Static,
+        Collider::rectangle(WALL_THICKNESS, MAP_HEIGHT),
+    ));
+
+    // Right wall
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(WALL_THICKNESS, MAP_HEIGHT))),
+        MeshMaterial2d(materials.add(Color::srgba(0.2, 0.2, 0.2, 0.3))),
+        Transform::from_translation(Vec3::new(half_width + half_thickness, 0.0, -0.1)),
+        Boundary,
+        RigidBody::Static,
+        Collider::rectangle(WALL_THICKNESS, MAP_HEIGHT),
+    ));
 }
 
 fn player_movement(
@@ -205,16 +256,17 @@ fn track_bounces(
     mut collision_events: EventReader<CollisionStarted>,
     mut projectiles: Query<&mut Projectile>,
     obstacles: Query<&Obstacle>,
+    boundaries: Query<&Boundary>,
 ) {
     for CollisionStarted(entity1, entity2) in collision_events.read() {
-        // Check if one entity is a projectile and the other is an obstacle
-        let (projectile_entity, _obstacle_entity) =
-            if projectiles.contains(*entity1) && obstacles.contains(*entity2) {
-                (*entity1, *entity2)
-            } else if projectiles.contains(*entity2) && obstacles.contains(*entity1) {
-                (*entity2, *entity1)
+        // Check if one entity is a projectile and the other is an obstacle or boundary
+        let projectile_entity =
+            if projectiles.contains(*entity1) && (obstacles.contains(*entity2) || boundaries.contains(*entity2)) {
+                *entity1
+            } else if projectiles.contains(*entity2) && (obstacles.contains(*entity1) || boundaries.contains(*entity1)) {
+                *entity2
             } else {
-                continue; // Not a projectile-obstacle collision
+                continue; // Not a projectile collision with obstacle or boundary
             };
 
         if let Ok(mut projectile) = projectiles.get_mut(projectile_entity) {

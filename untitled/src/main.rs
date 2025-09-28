@@ -13,7 +13,6 @@ mod world;
 mod ui;
 mod sounds;
 mod line_of_sight;
-mod lighting;
 
 // Import everything we need
 use constants::*;
@@ -25,7 +24,6 @@ use player::*;
 use world::*;
 use ui::*;
 use sounds::*;
-use lighting::*;
 
 fn main() {
     App::new()
@@ -64,9 +62,6 @@ fn main() {
             spawn_enemies.run_if(resource_equals(GameState::Playing)),
             enemy_ai.run_if(resource_equals(GameState::Playing)),
             laser_sight_system.run_if(resource_equals(GameState::Playing)),
-
-            // Shadow casting system
-            cast_shadows.run_if(resource_equals(GameState::Playing)),
 
             // UI systems
             update_health_bar,

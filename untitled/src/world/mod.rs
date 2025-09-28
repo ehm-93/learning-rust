@@ -42,7 +42,6 @@ pub fn setup(
         Health::new(PLAYER_MAX_HEALTH),
         Dash::new(),
         GrenadeThrower::new(),
-        LightSource::new(600.0, std::f32::consts::PI * 0.5), // 600 units range, 90 degree cone
         RigidBody::Dynamic,
         Collider::ball(PLAYER_RADIUS),
         // Lock rotation so the player doesn't spin

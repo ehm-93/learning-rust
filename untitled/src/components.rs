@@ -205,28 +205,3 @@ impl LineOfSight {
         }
     }
 }
-
-/// Component marking an entity as a light source for shadow casting
-#[derive(Component)]
-pub struct LightSource {
-    /// Maximum distance shadows can be cast
-    pub range: f32,
-    /// Light cone angle in radians (full cone, not half-angle)
-    pub cone_angle: f32,
-}
-
-impl LightSource {
-    pub fn new(range: f32, cone_angle: f32) -> Self {
-        Self { range, cone_angle }
-    }
-}
-
-/// Component marking shadow mesh entities for cleanup
-#[derive(Component)]
-pub struct ShadowMesh;
-
-/// Component marking the darkness/light mask mesh
-#[derive(Component)]
-pub struct LightMask;
-
-

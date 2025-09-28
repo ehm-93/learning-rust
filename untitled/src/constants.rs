@@ -8,7 +8,7 @@ pub const PROJECTILE_SPEED: f32 = 800.0;
 pub const PROJECTILE_SIZE: f32 = 3.0;
 pub const PROJECTILE_LIFETIME: f32 = 3.0;
 pub const PROJECTILE_DAMAGE: f32 = 10.0;
-pub const FIRE_RATE: f32 = 0.2; // 5 shots per second
+pub const FIRE_RATE: f32 = 0.1; // 10 shots per second
 
 // World constants
 pub const MAP_WIDTH: f32 = 1200.0;

@@ -185,7 +185,7 @@ impl EnemyArchetype {
 
         // Shooting behavior
         if ai.timer.finished() && context.distance_to_player <= config.preferred_distance {
-            let bullet_velocity = context.direction_to_player * ENEMY_BULLET_SPEED;
+            let bullet_velocity = context.direction_to_player * SNIPER_BULLET_SPEED;
             spawn_enemy_bullet(commands, meshes, materials, context.enemy_pos, bullet_velocity, Color::srgb(0.0, 1.0, 0.5));
             ai.timer.reset();
         }
@@ -217,7 +217,13 @@ impl EnemyArchetype {
 
         // Rapid fire behavior
         if ai.timer.finished() {
-            let bullet_velocity = context.direction_to_player * ENEMY_BULLET_SPEED;
+            // Add jitter/spread to machine gun bullets for realistic spray
+            let jitter_angle = (fastrand::f32() - 0.5) * 0.2; // ±0.1 radians (~±6 degrees)
+            let jittered_direction = Vec2::new(
+                context.direction_to_player.x * jitter_angle.cos() - context.direction_to_player.y * jitter_angle.sin(),
+                context.direction_to_player.x * jitter_angle.sin() + context.direction_to_player.y * jitter_angle.cos(),
+            );
+            let bullet_velocity = jittered_direction * ENEMY_BULLET_SPEED;
             spawn_enemy_bullet(commands, meshes, materials, context.enemy_pos, bullet_velocity, Color::srgb(0.8, 0.2, 0.8));
             ai.timer.reset();
         }
@@ -379,7 +385,7 @@ fn spawn_shotgun_spread(
     base_direction: Vec2,
 ) {
     for i in 0..SHOTGUNNER_PELLETS {
-        let spread_angle = (i as f32 - (SHOTGUNNER_PELLETS as f32 - 1.0) / 2.0) * 0.3; // 0.3 radians spread
+        let spread_angle = (i as f32 - (SHOTGUNNER_PELLETS as f32 - 1.0) / 2.0) * 0.15; // 0.15 radians spread
         let direction = Vec2::new(
             base_direction.x * spread_angle.cos() - base_direction.y * spread_angle.sin(),
             base_direction.x * spread_angle.sin() + base_direction.y * spread_angle.cos(),

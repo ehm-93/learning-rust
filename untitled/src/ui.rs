@@ -3,6 +3,7 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     components::*,
     resources::*,
+    constants::*,
 };
 
 /// Sets up the health bar UI elements
@@ -205,6 +206,8 @@ pub fn setup_game_over_overlay(
 pub fn handle_restart_button(
     mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut score: ResMut<Score>,
     mut game_state: ResMut<GameState>,
     overlay_query: Query<Entity, With<GameOverOverlay>>,
@@ -243,6 +246,22 @@ pub fn handle_restart_button(
                 
                 // Reset dash state
                 *dash = Dash::new();
+            } else {
+                // Player doesn't exist, spawn a new one
+                commands.spawn((
+                    Mesh2d(meshes.add(Circle::new(PLAYER_RADIUS))),
+                    MeshMaterial2d(materials.add(Color::WHITE)),
+                    Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+                    Player,
+                    Team::Player,
+                    Health::new(PLAYER_MAX_HEALTH),
+                    Dash::new(),
+                    RigidBody::Dynamic,
+                    Collider::ball(PLAYER_RADIUS),
+                    LockedAxes::ROTATION_LOCKED,
+                    Velocity::zero(),
+                    ActiveEvents::COLLISION_EVENTS,
+                ));
             }
             
             // Reset timers

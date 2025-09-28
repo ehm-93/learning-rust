@@ -171,11 +171,14 @@ pub fn cleanup_dead_entities(
                 score.current += points;
             }
 
-            // Check if player died
+            // Check if player died - set game over but don't despawn player
             if player.is_some() {
                 *game_state = GameState::GameOver;
+                // Don't despawn the player - we need them for restart
+                continue;
             }
 
+            // Only despawn enemies and other entities, not the player
             commands.entity(entity).despawn();
         }
     }

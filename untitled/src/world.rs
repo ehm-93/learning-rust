@@ -34,6 +34,7 @@ pub fn setup(
         Team::Player,
         Health::new(PLAYER_MAX_HEALTH),
         Dash::new(),
+        GrenadeThrower::new(),
         RigidBody::Dynamic,
         Collider::ball(PLAYER_RADIUS),
         // Lock rotation so the player doesn't spin

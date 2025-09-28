@@ -152,6 +152,73 @@ pub fn shoot_projectiles(
     }
 }
 
+/// Handles player grenade throwing mechanics
+pub fn throw_grenades(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window>,
+    camera_q: Query<(&Camera, &GlobalTransform)>,
+    mut player_query: Query<(&Transform, &Velocity, &mut GrenadeThrower), (With<Player>, Without<Camera>)>,
+    time: Res<Time>,
+) {
+    // Update grenade cooldown timer
+    for (_, _, mut grenade_thrower) in player_query.iter_mut() {
+        grenade_thrower.cooldown_timer.tick(time.delta());
+    }
+
+    // Check if right mouse button was just pressed
+    if mouse_input.just_pressed(MouseButton::Right) {
+        if let Ok((player_transform, player_velocity, mut grenade_thrower)) = player_query.single_mut() {
+            if grenade_thrower.can_throw() {
+                let player_pos = player_transform.translation.truncate();
+
+                // Get mouse position in world coordinates for throw direction
+                let mut throw_direction = Vec2::Y; // Default upward direction
+
+                if let (Ok(window), Ok((camera, camera_transform))) = (windows.single(), camera_q.single()) {
+                    if let Some(cursor_pos) = window.cursor_position() {
+                        if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
+                            throw_direction = (world_pos - player_pos).normalize();
+                        }
+                    }
+                }
+
+                // Calculate spawn position on the edge of the player
+                let spawn_offset = throw_direction * (PLAYER_RADIUS + GRENADE_SIZE * 2.0 + 5.0);
+                let spawn_pos = player_pos + spawn_offset;
+
+                // Calculate grenade velocity: base velocity + player momentum (reduced)
+                let grenade_velocity = (throw_direction * GRENADE_SPEED) + (player_velocity.linvel * 0.3);
+
+                // Spawn grenade
+                commands.spawn((
+                    Mesh2d(meshes.add(Circle::new(GRENADE_SIZE))),
+                    MeshMaterial2d(materials.add(Color::srgb(0.2, 0.8, 0.2))), // Green grenade
+                    Transform::from_translation(spawn_pos.extend(0.1)),
+                    Grenade {
+                        fuse_timer: Timer::from_seconds(GRENADE_FUSE_TIME, TimerMode::Once),
+                        team: Team::Player,
+                    },
+                    RigidBody::Dynamic,
+                    Collider::ball(GRENADE_SIZE),
+                    Restitution::coefficient(GRENADE_BOUNCE), // Make it bouncy
+                    Velocity::linear(grenade_velocity),
+                    ActiveEvents::COLLISION_EVENTS,
+                    Damping {
+                        linear_damping: GRENADE_DAMPING,
+                        angular_damping: 0.0,
+                    },
+                ));
+
+                // Reset grenade cooldown
+                grenade_thrower.throw_grenade();
+            }
+        }
+    }
+}
+
 /// Camera system that follows the player with cursor bias
 pub fn camera_follow(
     mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,

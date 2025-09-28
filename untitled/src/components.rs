@@ -156,3 +156,41 @@ pub struct HitFlash {
     pub timer: Timer,
     pub original_color: Color,
 }
+
+/// Grenade component with fuse timer
+#[derive(Component)]
+pub struct Grenade {
+    pub fuse_timer: Timer,
+    pub team: Team,
+}
+
+/// Grenade throwing capability component
+#[derive(Component)]
+pub struct GrenadeThrower {
+    pub cooldown_timer: Timer,
+}
+
+impl GrenadeThrower {
+    pub fn new() -> Self {
+        use crate::constants::*;
+        Self {
+            cooldown_timer: Timer::from_seconds(GRENADE_THROW_COOLDOWN, TimerMode::Once),
+        }
+    }
+
+    pub fn can_throw(&self) -> bool {
+        self.cooldown_timer.finished()
+    }
+
+    pub fn throw_grenade(&mut self) {
+        self.cooldown_timer.reset();
+    }
+}
+
+/// Explosion visual effect component
+#[derive(Component)]
+pub struct ExplosionEffect {
+    pub timer: Timer,
+    pub start_radius: f32,
+    pub end_radius: f32,
+}

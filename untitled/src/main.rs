@@ -37,6 +37,7 @@ fn main() {
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()
         .add_event::<HitFlashEvent>()
+        .add_event::<GrenadeExplosionEvent>()
         .insert_resource(FireTimer {
             timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
         })
@@ -50,6 +51,7 @@ fn main() {
             // Player systems
             player_movement.run_if(resource_equals(GameState::Playing)),
             shoot_projectiles.run_if(resource_equals(GameState::Playing)),
+            throw_grenades.run_if(resource_equals(GameState::Playing)),
             camera_follow,
 
             // Enemy systems
@@ -63,11 +65,16 @@ fn main() {
             update_score_display,
             show_game_over_overlay,
             handle_restart_button,
-
+        ))
+        .add_systems(Update, (
             // Combat systems
             detect_projectile_collisions.run_if(resource_equals(GameState::Playing)),
             handle_projectile_impacts.run_if(resource_equals(GameState::Playing)),
             detect_enemy_player_collisions.run_if(resource_equals(GameState::Playing)),
+            handle_grenade_explosions.run_if(resource_equals(GameState::Playing)),
+            process_grenade_explosions.run_if(resource_equals(GameState::Playing)),
+            update_explosion_effects.run_if(resource_equals(GameState::Playing)),
+            manage_grenade_speed.run_if(resource_equals(GameState::Playing)),
             process_damage.run_if(resource_equals(GameState::Playing)),
             handle_hit_flash.run_if(resource_equals(GameState::Playing)), // Run before cleanup
             cleanup_dead_entities, // Run after hit flash

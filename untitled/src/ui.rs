@@ -212,7 +212,7 @@ pub fn handle_restart_button(
     mut game_state: ResMut<GameState>,
     overlay_query: Query<Entity, With<GameOverOverlay>>,
     entities_query: Query<Entity, (Or<(With<Enemy>, With<Projectile>)>, Without<Player>, Without<MainCamera>)>,
-    mut player_query: Query<(&mut Health, &mut Transform, &mut Velocity, &mut Dash), With<Player>>,
+    mut player_query: Query<(&mut Health, &mut Transform, &mut Velocity, &mut Dash, &mut GrenadeThrower), With<Player>>,
     mut fire_timer: ResMut<FireTimer>,
     mut enemy_spawn_timer: ResMut<EnemySpawnTimer>,
 ) {
@@ -233,7 +233,7 @@ pub fn handle_restart_button(
             }
 
             // Reset player state completely
-            if let Ok((mut health, mut transform, mut velocity, mut dash)) = player_query.single_mut() {
+            if let Ok((mut health, mut transform, mut velocity, mut dash, mut grenade_thrower)) = player_query.single_mut() {
                 // Reset health
                 health.current = health.max;
 
@@ -246,6 +246,9 @@ pub fn handle_restart_button(
 
                 // Reset dash state
                 *dash = Dash::new();
+
+                // Reset grenade thrower state
+                *grenade_thrower = GrenadeThrower::new();
             } else {
                 // Player doesn't exist, spawn a new one
                 commands.spawn((
@@ -256,6 +259,7 @@ pub fn handle_restart_button(
                     Team::Player,
                     Health::new(PLAYER_MAX_HEALTH),
                     Dash::new(),
+                    GrenadeThrower::new(),
                     RigidBody::Dynamic,
                     Collider::ball(PLAYER_RADIUS),
                     LockedAxes::ROTATION_LOCKED,

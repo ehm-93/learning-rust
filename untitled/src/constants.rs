@@ -5,7 +5,6 @@ pub const PLAYER_MAX_HEALTH: f32 = 100.0;
 
 // Dash constants
 pub const DASH_SPEED: f32 = 800.0;
-pub const DASH_DISTANCE: f32 = 120.0;
 pub const DASH_DURATION: f32 = 0.2; // 0.2 seconds
 pub const DASH_COOLDOWN: f32 = 1.5; // 1.5 seconds cooldown
 pub const DASH_IFRAME_DURATION: f32 = 0.15; // Invincibility for most of dash
@@ -74,3 +73,19 @@ pub const SHOTGUN_BULLET_SPEED: f32 = 400.0;
 
 // Hit flash constants
 pub const HIT_FLASH_DURATION: f32 = 0.15; // Duration of hit flash in seconds
+
+// Grenade constants
+pub const GRENADE_SPEED: f32 = 400.0;
+pub const GRENADE_SIZE: f32 = 4.0;
+pub const GRENADE_FUSE_TIME: f32 = 1.5; // Time before explosion
+pub const GRENADE_DAMAGE: f32 = 100.0;
+pub const GRENADE_EXPLOSION_RADIUS: f32 = 120.0;
+pub const GRENADE_THROW_COOLDOWN: f32 = 3.0; // 3 seconds between grenades
+pub const GRENADE_BOUNCE: f32 = 0.7; // Restitution coefficient (bounciness)
+pub const GRENADE_DAMPING: f32 = 0.75; // Damping coefficient
+pub const GRENADE_MIN_SPEED: f32 = 75.0; // Minimum speed before grenade stops moving
+
+// Explosion visual constants
+pub const EXPLOSION_DURATION: f32 = 0.3; // How long explosion animation lasts
+pub const EXPLOSION_START_SIZE: f32 = 5.0; // Initial explosion radius
+pub const EXPLOSION_END_SIZE: f32 = 120.0; // Final explosion radius

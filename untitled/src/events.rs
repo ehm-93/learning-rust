@@ -19,3 +19,12 @@ pub struct DamageEvent {
 pub struct HitFlashEvent {
     pub target: Entity,
 }
+
+/// Event fired when a grenade explodes
+#[derive(Event)]
+pub struct GrenadeExplosionEvent {
+    pub position: Vec2,
+    pub damage: f32,
+    pub radius: f32,
+    pub team: crate::components::Team,
+}

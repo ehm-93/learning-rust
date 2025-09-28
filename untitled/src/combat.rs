@@ -212,19 +212,20 @@ pub fn cleanup_projectiles(
 pub fn handle_hit_flash(
     mut hit_flash_events: EventReader<HitFlashEvent>,
     mut commands: Commands,
-    enemy_query: Query<&MeshMaterial2d<ColorMaterial>, With<Enemy>>,
+    enemy_query: Query<(Entity, &MeshMaterial2d<ColorMaterial>, &Health), With<Enemy>>,
     materials: Res<Assets<ColorMaterial>>,
 ) {
     for flash_event in hit_flash_events.read() {
-        // Check if the entity still exists and is an enemy
-        if let Ok(material_handle) = enemy_query.get(flash_event.target) {
-            // Get the original color from the material
-            if let Some(material) = materials.get(&material_handle.0) {
-                let original_color = material.color;
+        // Check if the entity still exists, is an enemy, and is still alive
+        if let Ok((entity, material_handle, health)) = enemy_query.get(flash_event.target) {
+            // Only add hit flash if the enemy is still alive (prevents adding flash to dead entities)
+            if !health.is_dead() {
+                // Get the original color from the material
+                if let Some(material) = materials.get(&material_handle.0) {
+                    let original_color = material.color;
 
-                // Safely try to add hit flash component, ignore if entity doesn't exist
-                if let Ok(mut entity_commands) = commands.get_entity(flash_event.target) {
-                    entity_commands.insert(HitFlash {
+                    // Add hit flash component - entity is guaranteed to exist since we just queried it
+                    commands.entity(entity).insert(HitFlash {
                         timer: Timer::from_seconds(HIT_FLASH_DURATION, TimerMode::Once),
                         original_color,
                     });
@@ -260,6 +261,147 @@ pub fn update_hit_flash(
                     flash_color.to_srgba().green * (1.0 - progress) + hit_flash.original_color.to_srgba().green * progress,
                     flash_color.to_srgba().blue * (1.0 - progress) + hit_flash.original_color.to_srgba().blue * progress,
                 );
+            }
+        }
+    }
+}
+
+/// Handles grenade fuse timers and triggers explosions
+pub fn handle_grenade_explosions(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    time: Res<Time>,
+    mut grenades: Query<(Entity, &Transform, &mut Grenade)>,
+    mut explosion_events: EventWriter<GrenadeExplosionEvent>,
+) {
+    for (entity, transform, mut grenade) in grenades.iter_mut() {
+        grenade.fuse_timer.tick(time.delta());
+
+        if grenade.fuse_timer.finished() {
+            let explosion_pos = transform.translation.truncate();
+
+            // Trigger explosion event
+            explosion_events.write(GrenadeExplosionEvent {
+                position: explosion_pos,
+                damage: GRENADE_DAMAGE,
+                radius: GRENADE_EXPLOSION_RADIUS,
+                team: grenade.team,
+            });
+
+            // Spawn visual explosion effect
+            commands.spawn((
+                Mesh2d(meshes.add(Circle::new(EXPLOSION_START_SIZE))),
+                MeshMaterial2d(materials.add(Color::srgba(1.0, 1.0, 0.0, 0.8))), // Yellow with some transparency
+                Transform::from_translation(explosion_pos.extend(0.2)), // Slightly above other objects
+                ExplosionEffect {
+                    timer: Timer::from_seconds(EXPLOSION_DURATION, TimerMode::Once),
+                    start_radius: EXPLOSION_START_SIZE,
+                    end_radius: EXPLOSION_END_SIZE,
+                },
+            ));
+
+            // Remove the grenade
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Handles grenade explosion events by dealing area damage
+pub fn process_grenade_explosions(
+    mut explosion_events: EventReader<GrenadeExplosionEvent>,
+    mut damage_events: EventWriter<DamageEvent>,
+    mut hit_flash_events: EventWriter<HitFlashEvent>,
+    entities: Query<(Entity, &Transform, Option<&Enemy>, Option<&Player>)>,
+) {
+    for explosion in explosion_events.read() {
+        // Find all entities within the explosion radius
+        for (entity, transform, enemy, player) in entities.iter() {
+            let distance = explosion.position.distance(transform.translation.truncate());
+
+            if distance <= explosion.radius {
+                // Check team affiliation to avoid friendly fire
+                let should_damage = match explosion.team {
+                    Team::Player => {
+                        // Player grenades can damage enemies but not the player
+                        enemy.is_some()
+                    },
+                    Team::Enemy => {
+                        // Enemy grenades can damage players but not enemies
+                        player.is_some()
+                    },
+                    Team::Neutral => {
+                        // Neutral grenades damage everyone
+                        enemy.is_some() || player.is_some()
+                    },
+                };
+
+                if should_damage {
+                    // Calculate damage falloff based on distance
+                    let damage_multiplier = 1.0 - (distance / explosion.radius);
+                    let final_damage = explosion.damage * damage_multiplier;
+
+                    // Deal damage
+                    damage_events.write(DamageEvent {
+                        target: entity,
+                        damage: final_damage,
+                    });
+
+                    // Trigger hit flash for enemies
+                    if enemy.is_some() {
+                        hit_flash_events.write(HitFlashEvent {
+                            target: entity,
+                        });
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// System to stop grenades when they reach minimum speed
+pub fn manage_grenade_speed(
+    mut grenade_query: Query<&mut Velocity, With<Grenade>>,
+) {
+    for mut velocity in grenade_query.iter_mut() {
+        let speed = velocity.linvel.length();
+
+        // If grenade is moving slower than minimum speed, stop it completely
+        if speed > 0.0 && speed < GRENADE_MIN_SPEED {
+            velocity.linvel = Vec2::ZERO;
+            velocity.angvel = 0.0;
+        }
+    }
+}
+
+/// System to update explosion visual effects
+pub fn update_explosion_effects(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut explosion_query: Query<(Entity, &mut ExplosionEffect, &mut Mesh2d, &MeshMaterial2d<ColorMaterial>)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for (entity, mut explosion, mut mesh2d, material_handle) in explosion_query.iter_mut() {
+        explosion.timer.tick(time.delta());
+
+        if explosion.timer.finished() {
+            // Remove the explosion effect when finished
+            commands.entity(entity).despawn();
+        } else {
+            // Calculate progress (0.0 to 1.0)
+            let progress = explosion.timer.elapsed_secs() / explosion.timer.duration().as_secs_f32();
+
+            // Interpolate radius from start to end
+            let current_radius = explosion.start_radius + (explosion.end_radius - explosion.start_radius) * progress;
+
+            // Update the mesh to the new size
+            mesh2d.0 = meshes.add(Circle::new(current_radius));
+
+            // Fade out the explosion (reduce alpha over time)
+            if let Some(material) = materials.get_mut(&material_handle.0) {
+                let alpha = 0.8 * (1.0 - progress); // Start at 0.8, fade to 0
+                material.color = Color::srgba(1.0, 1.0, 0.0, alpha);
             }
         }
     }

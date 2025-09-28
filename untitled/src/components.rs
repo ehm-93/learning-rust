@@ -86,3 +86,10 @@ pub struct MainCamera;
 /// Map boundary marker component
 #[derive(Component)]
 pub struct Boundary;
+
+/// Laser sight component for snipers
+#[derive(Component)]
+pub struct LaserSight {
+    pub is_active: bool,
+    pub target_pos: Vec2,
+}

@@ -51,6 +51,7 @@ fn main() {
             // Enemy systems
             spawn_enemies,
             enemy_ai,
+            laser_sight_system,
 
             // Combat systems
             detect_projectile_collisions,

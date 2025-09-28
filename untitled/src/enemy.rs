@@ -84,6 +84,7 @@ impl EnemyArchetype {
         commands: &mut Commands,
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<ColorMaterial>>,
+        laser_sight: Option<&mut LaserSight>,
     ) {
         match self {
             EnemyArchetype::SmallMelee => {
@@ -96,7 +97,7 @@ impl EnemyArchetype {
                 self.shotgunner_behavior(context, ai, velocity, commands, meshes, materials);
             },
             EnemyArchetype::Sniper => {
-                self.sniper_behavior(context, ai, velocity, commands, meshes, materials);
+                self.sniper_behavior(context, ai, velocity, commands, meshes, materials, laser_sight);
             },
             EnemyArchetype::MachineGunner => {
                 self.machine_gunner_behavior(context, ai, velocity, commands, meshes, materials);
@@ -157,6 +158,7 @@ impl EnemyArchetype {
         commands: &mut Commands,
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<ColorMaterial>>,
+        laser_sight: Option<&mut LaserSight>,
     ) {
         let config = ArchetypeConfig::for_archetype(*self);
 
@@ -167,6 +169,18 @@ impl EnemyArchetype {
         } else {
             // Stop moving when at good range
             velocity.linvel = Vec2::ZERO;
+        }
+
+        // Laser sight behavior
+        if let Some(laser) = laser_sight {
+            let in_range = context.distance_to_player <= config.preferred_distance;
+            let ready_to_shoot = ai.timer.remaining().as_secs_f32() < 1.0; // Show laser 1 second before shooting
+
+            laser.is_active = in_range && ready_to_shoot;
+            if laser.is_active {
+                // Target the player's position
+                laser.target_pos = context.enemy_pos + context.direction_to_player * context.distance_to_player;
+            }
         }
 
         // Shooting behavior
@@ -243,7 +257,7 @@ pub fn spawn_enemies(
             let config = ArchetypeConfig::for_archetype(archetype);
 
             // Spawn enemy with archetype-specific properties
-            commands.spawn((
+            let mut entity_commands = commands.spawn((
                 Mesh2d(meshes.add(Circle::new(config.radius))),
                 MeshMaterial2d(materials.add(config.color)),
                 Transform::from_translation(spawn_pos.extend(0.0)),
@@ -258,6 +272,14 @@ pub fn spawn_enemies(
                 // Enable collision events for damage detection
                 ActiveEvents::COLLISION_EVENTS,
             ));
+
+            // Add laser sight component for snipers
+            if matches!(archetype, EnemyArchetype::Sniper) {
+                entity_commands.insert(LaserSight {
+                    is_active: false,
+                    target_pos: Vec2::ZERO,
+                });
+            }
 
             // Reset the spawn timer
             spawn_timer.timer.reset();
@@ -303,7 +325,13 @@ fn get_enemy_spawn_position(player_pos: Vec2) -> Vec2 {
 
 /// AI system that controls enemy behavior based on their archetype
 pub fn enemy_ai(
-    mut enemy_query: Query<(&Transform, &mut Velocity, &Enemy, &mut AIBehavior), Without<Player>>,
+    mut enemy_query: Query<(
+        &Transform,
+        &mut Velocity,
+        &Enemy,
+        &mut AIBehavior,
+        Option<&mut LaserSight>
+    ), Without<Player>>,
     player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -313,7 +341,7 @@ pub fn enemy_ai(
     if let Ok(player_transform) = player_query.single() {
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, mut enemy_velocity, enemy, mut ai_behavior) in enemy_query.iter_mut() {
+        for (enemy_transform, mut enemy_velocity, enemy, mut ai_behavior, mut laser_sight) in enemy_query.iter_mut() {
             let enemy_pos = enemy_transform.translation.truncate();
             let distance_to_player = enemy_pos.distance(player_pos);
             let direction_to_player = (player_pos - enemy_pos).normalize_or_zero();
@@ -336,6 +364,7 @@ pub fn enemy_ai(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
+                laser_sight.as_deref_mut(),
             );
         }
     }
@@ -383,4 +412,23 @@ fn spawn_enemy_bullet(
         Velocity::linear(velocity),
         ActiveEvents::COLLISION_EVENTS,
     ));
+}
+
+/// System to render laser sights for snipers
+pub fn laser_sight_system(
+    mut gizmos: Gizmos,
+    laser_query: Query<(&Transform, &LaserSight), With<Enemy>>,
+) {
+    for (transform, laser) in laser_query.iter() {
+        if laser.is_active {
+            let start_pos = transform.translation.truncate();
+            let end_pos = laser.target_pos;
+
+            // Draw red laser line
+            gizmos.line_2d(start_pos, end_pos, Color::srgb(1.0, 0.0, 0.0));
+
+            // Draw small targeting dot at the end
+            gizmos.circle_2d(end_pos, 3.0, Color::srgb(1.0, 0.2, 0.0));
+        }
+    }
 }

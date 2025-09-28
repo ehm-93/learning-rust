@@ -1,6 +1,13 @@
 use bevy::prelude::*;
 use avian2d::prelude::*;
 
+#[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
+enum Team {
+    Player,
+    Enemy,
+    Neutral,
+}
+
 #[derive(Component)]
 struct Player;
 
@@ -8,6 +15,7 @@ struct Player;
 struct Projectile {
     lifetime: Timer,
     bounces_remaining: u32,
+    team: Team,
 }
 
 #[derive(Component)]
@@ -42,6 +50,18 @@ const CURSOR_BIAS_DISTANCE: f32 = 150.0; // Maximum distance cursor can bias cam
 const MAP_WIDTH: f32 = 1200.0; // Total map width
 const MAP_HEIGHT: f32 = 900.0; // Total map height
 const WALL_THICKNESS: f32 = 20.0; // Thickness of boundary walls
+
+// Team relationship system
+fn can_teams_damage(attacker: Team, target: Team) -> bool {
+    match (attacker, target) {
+        (Team::Player, Team::Enemy) => true,
+        (Team::Enemy, Team::Player) => true,
+        (Team::Player, Team::Player) => false,
+        (Team::Enemy, Team::Enemy) => false,
+        (_, Team::Neutral) => false,
+        (Team::Neutral, _) => false,
+    }
+}
 
 fn main() {
     App::new()
@@ -81,6 +101,7 @@ fn setup(
         MeshMaterial2d(materials.add(Color::WHITE)),
         Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
         Player,
+        Team::Player,
         RigidBody::Dynamic,
         Collider::circle(PLAYER_RADIUS),
         // Lock rotation so the player doesn't spin
@@ -204,13 +225,13 @@ fn shoot_projectiles(
     let is_shooting = keyboard_input.pressed(KeyCode::Space) || mouse_input.pressed(MouseButton::Left);
 
     if is_shooting && fire_timer.timer.finished() {
-        if let Ok((player_transform, player_velocity)) = player_query.get_single() {
+        if let Ok((player_transform, player_velocity)) = player_query.single() {
             let player_pos = player_transform.translation.truncate();
 
             // Get mouse position in world coordinates
             let mut shoot_direction = Vec2::Y; // Default upward direction
 
-            if let (Ok(window), Ok((camera, camera_transform))) = (windows.get_single(), camera_q.get_single()) {
+            if let (Ok(window), Ok((camera, camera_transform))) = (windows.single(), camera_q.single()) {
                 if let Some(cursor_pos) = window.cursor_position() {
                     if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
                         shoot_direction = (world_pos - player_pos).normalize();
@@ -233,6 +254,7 @@ fn shoot_projectiles(
                 Projectile {
                     lifetime: Timer::from_seconds(PROJECTILE_LIFETIME, TimerMode::Once),
                     bounces_remaining: MAX_BOUNCES,
+                    team: Team::Player,
                 },
                 RigidBody::Dynamic,
                 Collider::circle(PROJECTILE_SIZE),
@@ -257,6 +279,7 @@ fn track_bounces(
     mut projectiles: Query<&mut Projectile>,
     obstacles: Query<&Obstacle>,
     boundaries: Query<&Boundary>,
+    entities_with_teams: Query<&Team>,
 ) {
     for CollisionStarted(entity1, entity2) in collision_events.read() {
         // Check if one entity is a projectile and the other is an obstacle or boundary
@@ -266,7 +289,18 @@ fn track_bounces(
             } else if projectiles.contains(*entity2) && (obstacles.contains(*entity1) || boundaries.contains(*entity1)) {
                 *entity2
             } else {
-                continue; // Not a projectile collision with obstacle or boundary
+                // Check for projectile vs entity with team (for future damage system)
+                if projectiles.contains(*entity1) && entities_with_teams.contains(*entity2) {
+                    // Future: Check if teams can damage each other using can_teams_damage()
+                    // For now, just handle bouncing for obstacles
+                    continue;
+                } else if projectiles.contains(*entity2) && entities_with_teams.contains(*entity1) {
+                    // Future: Check if teams can damage each other using can_teams_damage()
+                    // For now, just handle bouncing for obstacles
+                    continue;
+                } else {
+                    continue; // Not a relevant collision
+                }
             };
 
         if let Ok(mut projectile) = projectiles.get_mut(projectile_entity) {
@@ -278,9 +312,7 @@ fn track_bounces(
             }
         }
     }
-}
-
-fn monitor_projectile_speed(
+}fn monitor_projectile_speed(
     mut commands: Commands,
     projectiles: Query<(Entity, &LinearVelocity), With<Projectile>>,
 ) {
@@ -301,13 +333,13 @@ fn camera_follow(
     time: Res<Time>,
 ) {
     if let (Ok(mut camera_transform), Ok(player_transform)) =
-        (camera_query.get_single_mut(), player_query.get_single()) {
+        (camera_query.single_mut(), player_query.single()) {
 
         let player_pos = player_transform.translation.truncate();
         let mut target_pos = player_pos;
 
         // Add cursor bias to camera position
-        if let Ok(window) = windows.get_single() {
+        if let Ok(window) = windows.single() {
             if let Some(cursor_pos) = window.cursor_position() {
                 // Convert cursor position to normalized coordinates (-1 to 1)
                 let window_size = Vec2::new(window.width(), window.height());

@@ -5,7 +5,6 @@ use bevy::prelude::*;
 pub enum Team {
     Player,
     Enemy,
-    Neutral,
 }
 
 /// Player marker component
@@ -32,14 +31,12 @@ pub struct Enemy {
 #[derive(Component)]
 pub struct AIBehavior {
     pub timer: Timer,
-    pub preferred_distance: f32,
 }
 
 impl AIBehavior {
-    pub fn new(preferred_distance: f32, behavior_interval: f32) -> Self {
+    pub fn new(behavior_interval: f32) -> Self {
         Self {
             timer: Timer::from_seconds(behavior_interval, TimerMode::Repeating),
-            preferred_distance,
         }
     }
 }
@@ -75,17 +72,9 @@ impl Health {
     }
 }
 
-/// Static obstacle marker component
-#[derive(Component)]
-pub struct Obstacle;
-
 /// Main camera marker component
 #[derive(Component)]
 pub struct MainCamera;
-
-/// Map boundary marker component
-#[derive(Component)]
-pub struct Boundary;
 
 /// Laser sight component for snipers
 #[derive(Component)]
@@ -194,3 +183,9 @@ pub struct ExplosionEffect {
     pub start_radius: f32,
     pub end_radius: f32,
 }
+
+/// Dungeon wall marker component
+#[derive(Component)]
+pub struct DungeonWall;
+
+

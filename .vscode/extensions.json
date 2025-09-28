@@ -4,6 +4,8 @@
     "tamasfe.even-better-toml",
     "rust-lang.rust-analyzer",
     "vadimcn.vscode-lldb",
-    "usernamehw.errorlens"
+    "usernamehw.errorlens",
+    "bierner.markdown-mermaid",
+    "yzhang.markdown-all-in-one"
   ]
 }

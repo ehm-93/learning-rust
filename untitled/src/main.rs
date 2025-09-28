@@ -48,6 +48,7 @@ fn main() {
         })
         .insert_resource(Score::default())
         .insert_resource(GameState::default())
+        .insert_resource(DungeonParams::default())
         .add_systems(Startup, (disable_gravity, setup, setup_health_bar, setup_score_display, load_sounds))
         .add_systems(Update, (
             // Player systems

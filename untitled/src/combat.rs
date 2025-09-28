@@ -14,10 +14,6 @@ pub fn detect_projectile_collisions(
     mut collision_events: EventReader<CollisionEvent>,
     mut impact_events: EventWriter<ProjectileImpactEvent>,
     projectiles: Query<&Projectile>,
-    players: Query<&Player>,
-    enemies: Query<&Enemy>,
-    obstacles: Query<&Obstacle>,
-    boundaries: Query<&Boundary>,
 ) {
     for collision_event in collision_events.read() {
         if let CollisionEvent::Started(entity1, entity2, _) = collision_event {
@@ -31,25 +27,10 @@ pub fn detect_projectile_collisions(
             };
 
             if let Some((projectile, target)) = projectile_and_other {
-                if let Ok(projectile_data) = projectiles.get(projectile) {
-                    // Handle team-based collision logic
-                    let should_collide = if obstacles.contains(target) || boundaries.contains(target) {
-                        true // Always collide with obstacles and boundaries
-                    } else if players.contains(target) && projectile_data.team == Team::Enemy {
-                        true // Enemy bullets can hit players
-                    } else if enemies.contains(target) && projectile_data.team == Team::Player {
-                        true // Player bullets can hit enemies
-                    } else {
-                        false // No friendly fire
-                    };
-
-                    if should_collide {
-                        impact_events.write(ProjectileImpactEvent {
-                            projectile,
-                            target,
-                        });
-                    }
-                }
+                impact_events.write(ProjectileImpactEvent {
+                    projectile,
+                    target,
+                });
             }
         }
     }
@@ -99,9 +80,9 @@ pub fn handle_projectile_impacts(
             }
         }
 
-        // Clean up the projectile
+        // Clean up the projectile (use try_despawn to avoid errors if already despawned)
         if let Ok(mut entity) = commands.get_entity(impact.projectile) {
-            entity.despawn();
+            entity.try_despawn();
         }
     }
 }
@@ -204,7 +185,7 @@ pub fn cleanup_projectiles(
         projectile.lifetime.tick(time.delta());
 
         if projectile.lifetime.finished() {
-            commands.entity(entity).despawn();
+            commands.entity(entity).try_despawn();
         }
     }
 }
@@ -334,10 +315,6 @@ pub fn process_grenade_explosions(
                     Team::Enemy => {
                         // Enemy grenades can damage players but not enemies
                         player.is_some()
-                    },
-                    Team::Neutral => {
-                        // Neutral grenades damage everyone
-                        enemy.is_some() || player.is_some()
                     },
                 };
 

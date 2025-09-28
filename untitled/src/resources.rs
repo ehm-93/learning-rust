@@ -25,3 +25,16 @@ pub enum GameState {
     Playing,
     GameOver,
 }
+
+/// Dungeon generation parameters
+#[derive(Resource)]
+pub struct DungeonParams {
+    // Fields removed as they were unused - keeping struct for future expansion
+}
+
+impl Default for DungeonParams {
+    fn default() -> Self {
+        Self {
+        }
+    }
+}

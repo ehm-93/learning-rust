@@ -147,7 +147,10 @@ impl EnemyArchetype {
 
         // Shooting behavior
         if ai.timer.finished() {
-            spawn_shotgun_spread(commands, meshes, materials, context.enemy_pos, context.direction_to_player);
+            // Spawn shotgun spread outside the enemy to prevent immediate collision
+            let spawn_offset = context.direction_to_player * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
+            let bullet_spawn_pos = context.enemy_pos + spawn_offset;
+            spawn_shotgun_spread(commands, meshes, materials, bullet_spawn_pos, context.direction_to_player);
             play_sound(commands, game_sounds.gun_03.clone(), 0.4);
             ai.timer.reset();
         }
@@ -191,7 +194,10 @@ impl EnemyArchetype {
         // Shooting behavior
         if ai.timer.finished() && context.distance_to_player <= config.preferred_distance {
             let bullet_velocity = context.direction_to_player * SNIPER_BULLET_SPEED;
-            spawn_enemy_bullet(commands, meshes, materials, context.enemy_pos, bullet_velocity, Color::srgb(0.0, 1.0, 0.5));
+            // Spawn bullet outside the enemy to prevent immediate collision
+            let spawn_offset = context.direction_to_player * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
+            let bullet_spawn_pos = context.enemy_pos + spawn_offset;
+            spawn_enemy_bullet(commands, meshes, materials, bullet_spawn_pos, bullet_velocity, Color::srgb(0.0, 1.0, 0.5));
             play_sound(commands, game_sounds.gun_02.clone(), 0.6);
             ai.timer.reset();
         }
@@ -231,7 +237,10 @@ impl EnemyArchetype {
                 context.direction_to_player.x * jitter_angle.sin() + context.direction_to_player.y * jitter_angle.cos(),
             );
             let bullet_velocity = jittered_direction * ENEMY_BULLET_SPEED;
-            spawn_enemy_bullet(commands, meshes, materials, context.enemy_pos, bullet_velocity, Color::srgb(0.8, 0.2, 0.8));
+            // Spawn bullet outside the enemy to prevent immediate collision
+            let spawn_offset = jittered_direction * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
+            let bullet_spawn_pos = context.enemy_pos + spawn_offset;
+            spawn_enemy_bullet(commands, meshes, materials, bullet_spawn_pos, bullet_velocity, Color::srgb(0.8, 0.2, 0.8));
             play_sound(commands, game_sounds.gun_01.clone(), 0.3);
             ai.timer.reset();
         }
@@ -313,7 +322,7 @@ fn spawn_single_enemy(
         Enemy { archetype },
         Team::Enemy,
         Health::new(config.health),
-        AIBehavior::new(config.preferred_distance, config.fire_rate),
+        AIBehavior::new(config.fire_rate),
         RigidBody::Dynamic,
         Collider::ball(config.radius),
         LockedAxes::ROTATION_LOCKED,

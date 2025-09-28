@@ -4,7 +4,6 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     components::*,
     constants::*,
-    resources::*,
 };
 
 /// Disables gravity for the 2D physics world

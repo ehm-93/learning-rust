@@ -140,6 +140,7 @@ pub fn shoot_projectiles(
                 },
                 RigidBody::Dynamic,
                 Collider::ball(PROJECTILE_SIZE * 1.2), // Slightly larger collision detection
+                Sensor, // Make projectile a sensor so it doesn't physically interact with other projectiles
                 Velocity::linear(projectile_velocity),
                 // Enable collision events
                 ActiveEvents::COLLISION_EVENTS,

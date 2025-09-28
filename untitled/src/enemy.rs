@@ -467,6 +467,7 @@ fn spawn_enemy_bullet(
         },
         RigidBody::Dynamic,
         Collider::ball(PROJECTILE_SIZE * 0.8),
+        Sensor, // Make projectile a sensor so it doesn't physically interact with other projectiles
         Velocity::linear(velocity),
         ActiveEvents::COLLISION_EVENTS,
     ));

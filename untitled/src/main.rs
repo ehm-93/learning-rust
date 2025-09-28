@@ -13,7 +13,6 @@ mod world;
 mod ui;
 
 // Import everything we need
-use components::*;
 use constants::*;
 use events::*;
 use resources::*;

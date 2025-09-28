@@ -5,6 +5,7 @@ use crate::{
     constants::*,
     resources::*,
     sounds::*,
+    line_of_sight::*,
 };
 
 /// Configuration for enemy archetype properties
@@ -72,6 +73,8 @@ pub struct BehaviorContext {
     pub enemy_pos: Vec2,
     pub distance_to_player: f32,
     pub direction_to_player: Vec2,
+    pub has_line_of_sight: bool,
+    pub last_known_player_pos: Option<Vec2>,
 }
 
 /// Enemy behavior implementations for each archetype
@@ -110,13 +113,37 @@ impl EnemyArchetype {
     /// Small melee enemy behavior - charge directly at player
     fn small_melee_behavior(&self, context: &BehaviorContext, velocity: &mut Velocity) {
         let config = ArchetypeConfig::for_archetype(*self);
-        velocity.linvel = context.direction_to_player * config.speed;
+
+        // Only move if we have line of sight or a last known position
+        if context.has_line_of_sight {
+            // Direct pursuit - can see player
+            velocity.linvel = context.direction_to_player * config.speed;
+        } else if let Some(last_pos) = context.last_known_player_pos {
+            // Move towards last known position
+            let direction_to_last_pos = (last_pos - context.enemy_pos).normalize_or_zero();
+            velocity.linvel = direction_to_last_pos * config.speed * 0.7; // Slower when searching
+        } else {
+            // No idea where player is, stop moving
+            velocity.linvel = Vec2::ZERO;
+        }
     }
 
     /// Big melee enemy behavior - charge at player with higher health/damage
     fn big_melee_behavior(&self, context: &BehaviorContext, velocity: &mut Velocity) {
         let config = ArchetypeConfig::for_archetype(*self);
-        velocity.linvel = context.direction_to_player * config.speed;
+
+        // Only move if we have line of sight or a last known position
+        if context.has_line_of_sight {
+            // Direct pursuit - can see player
+            velocity.linvel = context.direction_to_player * config.speed;
+        } else if let Some(last_pos) = context.last_known_player_pos {
+            // Move towards last known position
+            let direction_to_last_pos = (last_pos - context.enemy_pos).normalize_or_zero();
+            velocity.linvel = direction_to_last_pos * config.speed * 0.7; // Slower when searching
+        } else {
+            // No idea where player is, stop moving
+            velocity.linvel = Vec2::ZERO;
+        }
     }
 
     /// Shotgunner behavior - maintain distance and fire spreads
@@ -132,27 +159,37 @@ impl EnemyArchetype {
     ) {
         let config = ArchetypeConfig::for_archetype(*self);
 
-        // Positioning behavior
-        if context.distance_to_player > config.preferred_distance + 20.0 {
-            // Too far, move closer
-            velocity.linvel = context.direction_to_player * config.speed;
-        } else if context.distance_to_player < config.preferred_distance - 20.0 {
-            // Too close, back away
-            velocity.linvel = -context.direction_to_player * config.speed;
-        } else {
-            // At good distance, strafe around player
-            let perpendicular = Vec2::new(-context.direction_to_player.y, context.direction_to_player.x);
-            velocity.linvel = perpendicular * config.speed * 0.5;
-        }
+        // Only act if we have line of sight
+        if context.has_line_of_sight {
+            // Positioning behavior
+            if context.distance_to_player > config.preferred_distance + 20.0 {
+                // Too far, move closer
+                velocity.linvel = context.direction_to_player * config.speed;
+            } else if context.distance_to_player < config.preferred_distance - 20.0 {
+                // Too close, back away
+                velocity.linvel = -context.direction_to_player * config.speed;
+            } else {
+                // At good distance, strafe around player
+                let perpendicular = Vec2::new(-context.direction_to_player.y, context.direction_to_player.x);
+                velocity.linvel = perpendicular * config.speed * 0.5;
+            }
 
-        // Shooting behavior
-        if ai.timer.finished() {
-            // Spawn shotgun spread outside the enemy to prevent immediate collision
-            let spawn_offset = context.direction_to_player * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
-            let bullet_spawn_pos = context.enemy_pos + spawn_offset;
-            spawn_shotgun_spread(commands, meshes, materials, bullet_spawn_pos, context.direction_to_player);
-            play_sound(commands, game_sounds.gun_03.clone(), 0.4);
-            ai.timer.reset();
+            // Shooting behavior - only shoot if we can see the player
+            if ai.timer.finished() {
+                // Spawn shotgun spread outside the enemy to prevent immediate collision
+                let spawn_offset = context.direction_to_player * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
+                let bullet_spawn_pos = context.enemy_pos + spawn_offset;
+                spawn_shotgun_spread(commands, meshes, materials, bullet_spawn_pos, context.direction_to_player);
+                play_sound(commands, game_sounds.gun_03.clone(), 0.4);
+                ai.timer.reset();
+            }
+        } else if let Some(last_pos) = context.last_known_player_pos {
+            // Move towards last known position but don't shoot
+            let direction_to_last_pos = (last_pos - context.enemy_pos).normalize_or_zero();
+            velocity.linvel = direction_to_last_pos * config.speed * 0.6;
+        } else {
+            // No line of sight and no last known position, stop
+            velocity.linvel = Vec2::ZERO;
         }
     }
 
@@ -170,36 +207,53 @@ impl EnemyArchetype {
     ) {
         let config = ArchetypeConfig::for_archetype(*self);
 
-        // Positioning behavior - maintain long distance
-        if context.distance_to_player < config.preferred_distance {
-            // Back away to maintain range
-            velocity.linvel = -context.direction_to_player * config.speed;
-        } else {
-            // Stop moving when at good range
-            velocity.linvel = Vec2::ZERO;
-        }
-
-        // Laser sight behavior
-        if let Some(laser) = laser_sight {
-            let in_range = context.distance_to_player <= config.preferred_distance;
-            let ready_to_shoot = ai.timer.remaining().as_secs_f32() < 1.0; // Show laser 1 second before shooting
-
-            laser.is_active = in_range && ready_to_shoot;
-            if laser.is_active {
-                // Target the player's position
-                laser.target_pos = context.enemy_pos + context.direction_to_player * context.distance_to_player;
+        // Only act if we have line of sight
+        if context.has_line_of_sight {
+            // Positioning behavior - maintain long distance
+            if context.distance_to_player < config.preferred_distance {
+                // Back away to maintain range
+                velocity.linvel = -context.direction_to_player * config.speed;
+            } else {
+                // Stop moving when at good range
+                velocity.linvel = Vec2::ZERO;
             }
-        }
 
-        // Shooting behavior
-        if ai.timer.finished() && context.distance_to_player <= config.preferred_distance {
-            let bullet_velocity = context.direction_to_player * SNIPER_BULLET_SPEED;
-            // Spawn bullet outside the enemy to prevent immediate collision
-            let spawn_offset = context.direction_to_player * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
-            let bullet_spawn_pos = context.enemy_pos + spawn_offset;
-            spawn_enemy_bullet(commands, meshes, materials, bullet_spawn_pos, bullet_velocity, Color::srgb(0.0, 1.0, 0.5));
-            play_sound(commands, game_sounds.gun_02.clone(), 0.6);
-            ai.timer.reset();
+            // Laser sight behavior - only show if we can see the player
+            if let Some(laser) = laser_sight {
+                let in_range = context.distance_to_player <= config.preferred_distance;
+                let ready_to_shoot = ai.timer.remaining().as_secs_f32() < 1.0; // Show laser 1 second before shooting
+
+                laser.is_active = in_range && ready_to_shoot;
+                if laser.is_active {
+                    // Target the player's position
+                    laser.target_pos = context.enemy_pos + context.direction_to_player * context.distance_to_player;
+                }
+            }
+
+            // Shooting behavior - only shoot if we can see the player
+            if ai.timer.finished() && context.distance_to_player <= config.preferred_distance {
+                let bullet_velocity = context.direction_to_player * SNIPER_BULLET_SPEED;
+                // Spawn bullet outside the enemy to prevent immediate collision
+                let spawn_offset = context.direction_to_player * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
+                let bullet_spawn_pos = context.enemy_pos + spawn_offset;
+                spawn_enemy_bullet(commands, meshes, materials, bullet_spawn_pos, bullet_velocity, Color::srgb(0.0, 1.0, 0.5));
+                play_sound(commands, game_sounds.gun_02.clone(), 0.6);
+                ai.timer.reset();
+            }
+        } else {
+            // No line of sight - disable laser and search behavior
+            if let Some(laser) = laser_sight {
+                laser.is_active = false;
+            }
+
+            if let Some(last_pos) = context.last_known_player_pos {
+                // Move towards last known position but don't shoot
+                let direction_to_last_pos = (last_pos - context.enemy_pos).normalize_or_zero();
+                velocity.linvel = direction_to_last_pos * config.speed * 0.5;
+            } else {
+                // No line of sight and no last known position, stop
+                velocity.linvel = Vec2::ZERO;
+            }
         }
     }
 
@@ -216,33 +270,43 @@ impl EnemyArchetype {
     ) {
         let config = ArchetypeConfig::for_archetype(*self);
 
-        // Positioning behavior
-        if context.distance_to_player > config.preferred_distance + 30.0 {
-            // Move closer
-            velocity.linvel = context.direction_to_player * config.speed;
-        } else if context.distance_to_player < config.preferred_distance - 30.0 {
-            // Back away
-            velocity.linvel = -context.direction_to_player * config.speed;
-        } else {
-            // At good distance, slow movement
-            velocity.linvel = context.direction_to_player * config.speed * 0.2;
-        }
+        // Only act if we have line of sight
+        if context.has_line_of_sight {
+            // Positioning behavior
+            if context.distance_to_player > config.preferred_distance + 30.0 {
+                // Move closer
+                velocity.linvel = context.direction_to_player * config.speed;
+            } else if context.distance_to_player < config.preferred_distance - 30.0 {
+                // Back away
+                velocity.linvel = -context.direction_to_player * config.speed;
+            } else {
+                // At good distance, slow movement
+                velocity.linvel = context.direction_to_player * config.speed * 0.2;
+            }
 
-        // Rapid fire behavior
-        if ai.timer.finished() {
-            // Add jitter/spread to machine gun bullets for realistic spray
-            let jitter_angle = (fastrand::f32() - 0.5) * 0.2; // ±0.1 radians (~±6 degrees)
-            let jittered_direction = Vec2::new(
-                context.direction_to_player.x * jitter_angle.cos() - context.direction_to_player.y * jitter_angle.sin(),
-                context.direction_to_player.x * jitter_angle.sin() + context.direction_to_player.y * jitter_angle.cos(),
-            );
-            let bullet_velocity = jittered_direction * ENEMY_BULLET_SPEED;
-            // Spawn bullet outside the enemy to prevent immediate collision
-            let spawn_offset = jittered_direction * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
-            let bullet_spawn_pos = context.enemy_pos + spawn_offset;
-            spawn_enemy_bullet(commands, meshes, materials, bullet_spawn_pos, bullet_velocity, Color::srgb(0.8, 0.2, 0.8));
-            play_sound(commands, game_sounds.gun_01.clone(), 0.3);
-            ai.timer.reset();
+            // Rapid fire behavior - only shoot if we can see the player
+            if ai.timer.finished() {
+                // Add jitter/spread to machine gun bullets for realistic spray
+                let jitter_angle = (fastrand::f32() - 0.5) * 0.2; // ±0.1 radians (~±6 degrees)
+                let jittered_direction = Vec2::new(
+                    context.direction_to_player.x * jitter_angle.cos() - context.direction_to_player.y * jitter_angle.sin(),
+                    context.direction_to_player.x * jitter_angle.sin() + context.direction_to_player.y * jitter_angle.cos(),
+                );
+                let bullet_velocity = jittered_direction * ENEMY_BULLET_SPEED;
+                // Spawn bullet outside the enemy to prevent immediate collision
+                let spawn_offset = jittered_direction * (config.radius + PROJECTILE_SIZE * 2.0 + 5.0);
+                let bullet_spawn_pos = context.enemy_pos + spawn_offset;
+                spawn_enemy_bullet(commands, meshes, materials, bullet_spawn_pos, bullet_velocity, Color::srgb(0.8, 0.2, 0.8));
+                play_sound(commands, game_sounds.gun_01.clone(), 0.3);
+                ai.timer.reset();
+            }
+        } else if let Some(last_pos) = context.last_known_player_pos {
+            // Move towards last known position but don't shoot
+            let direction_to_last_pos = (last_pos - context.enemy_pos).normalize_or_zero();
+            velocity.linvel = direction_to_last_pos * config.speed * 0.6;
+        } else {
+            // No line of sight and no last known position, stop
+            velocity.linvel = Vec2::ZERO;
         }
     }
 }
@@ -323,6 +387,7 @@ fn spawn_single_enemy(
         Team::Enemy,
         Health::new(config.health),
         AIBehavior::new(config.fire_rate),
+        LineOfSight::new(),
         RigidBody::Dynamic,
         Collider::ball(config.radius),
         LockedAxes::ROTATION_LOCKED,
@@ -405,7 +470,8 @@ pub fn enemy_ai(
         &mut Velocity,
         &Enemy,
         &mut AIBehavior,
-        Option<&mut LaserSight>
+        Option<&mut LaserSight>,
+        &mut LineOfSight
     ), Without<Player>>,
     player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
     mut commands: Commands,
@@ -413,20 +479,48 @@ pub fn enemy_ai(
     mut materials: ResMut<Assets<ColorMaterial>>,
     game_sounds: Res<GameSounds>,
     time: Res<Time>,
+    rapier_context: ReadRapierContext,
 ) {
     if let Ok(player_transform) = player_query.single() {
         let player_pos = player_transform.translation.truncate();
 
-        for (enemy_transform, mut enemy_velocity, enemy, mut ai_behavior, mut laser_sight) in enemy_query.iter_mut() {
+        for (enemy_transform, mut enemy_velocity, enemy, mut ai_behavior, mut laser_sight, mut los) in enemy_query.iter_mut() {
             let enemy_pos = enemy_transform.translation.truncate();
             let distance_to_player = enemy_pos.distance(player_pos);
             let direction_to_player = (player_pos - enemy_pos).normalize_or_zero();
+
+            // Update line of sight check
+            los.los_check_timer.tick(time.delta());
+            if los.los_check_timer.finished() {
+                let config = ArchetypeConfig::for_archetype(enemy.archetype);
+                let has_los = has_line_of_sight(
+                    enemy_pos,
+                    player_pos,
+                    config.radius,
+                    PLAYER_RADIUS,
+                    &rapier_context,
+                );
+
+                los.has_los_to_player = has_los;
+
+                // Update last known position if we can see the player
+                if has_los {
+                    los.last_known_player_position = Some(player_pos);
+                }
+
+                los.los_check_timer.reset();
+            }
+
+            // Get line of sight information
+            let (has_los, last_known_pos) = (los.has_los_to_player, los.last_known_player_position);
 
             // Create behavior context
             let context = BehaviorContext {
                 enemy_pos,
                 distance_to_player,
                 direction_to_player,
+                has_line_of_sight: has_los,
+                last_known_player_pos: last_known_pos,
             };
 
             // Update AI timer

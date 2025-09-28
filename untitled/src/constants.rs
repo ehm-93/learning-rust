@@ -100,3 +100,6 @@ pub const ROOM_SIZE_Y: usize = 6; // J: Room height in grid cells
 pub const ROOM_FLOOR_COLOR: [f32; 3] = [0.4, 0.3, 0.25]; // Darker, warmer brown for rooms
 pub const CORRIDOR_FLOOR_COLOR: [f32; 3] = [0.3, 0.35, 0.4]; // Cooler bluish-gray for corridors
 pub const WALL_COLOR: [f32; 3] = [0.6, 0.6, 0.7]; // Existing wall color
+
+// Line of sight constants
+pub const LOS_MAX_RANGE: f32 = 800.0; // Maximum line of sight range

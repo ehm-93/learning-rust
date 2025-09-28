@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use rand::{rng, Rng};
 use serde::{Deserialize, Serialize};
-use std::fs;
 
 use crate::{
     components::*,

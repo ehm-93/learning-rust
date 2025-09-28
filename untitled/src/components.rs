@@ -188,4 +188,22 @@ pub struct ExplosionEffect {
 #[derive(Component)]
 pub struct DungeonWall;
 
+/// Line of sight component for tracking visibility to targets
+#[derive(Component)]
+pub struct LineOfSight {
+    pub has_los_to_player: bool,
+    pub last_known_player_position: Option<Vec2>,
+    pub los_check_timer: Timer,
+}
+
+impl LineOfSight {
+    pub fn new() -> Self {
+        Self {
+            has_los_to_player: false,
+            last_known_player_position: None,
+            los_check_timer: Timer::from_seconds(0.1, TimerMode::Repeating), // Check LOS 10 times per second
+        }
+    }
+}
+
 

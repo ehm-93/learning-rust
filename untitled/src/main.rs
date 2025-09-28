@@ -12,6 +12,7 @@ mod player;
 mod world;
 mod ui;
 mod sounds;
+mod line_of_sight;
 
 // Import everything we need
 use constants::*;

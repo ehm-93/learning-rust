@@ -37,6 +37,7 @@ fn main() {
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()
+        .add_event::<HitFlashEvent>()
         .insert_resource(FireTimer {
             timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
         })
@@ -69,6 +70,8 @@ fn main() {
             handle_projectile_impacts.run_if(resource_equals(GameState::Playing)),
             detect_enemy_player_collisions.run_if(resource_equals(GameState::Playing)),
             process_damage.run_if(resource_equals(GameState::Playing)),
+            handle_hit_flash.run_if(resource_equals(GameState::Playing)),
+            update_hit_flash,
             cleanup_dead_entities,
             cleanup_projectiles.run_if(resource_equals(GameState::Playing)),
         ))

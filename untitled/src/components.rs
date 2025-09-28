@@ -149,3 +149,10 @@ pub struct GameOverOverlay;
 /// Restart button UI component
 #[derive(Component)]
 pub struct RestartButton;
+
+/// Hit flash component for visual damage feedback
+#[derive(Component)]
+pub struct HitFlash {
+    pub timer: Timer,
+    pub original_color: Color,
+}

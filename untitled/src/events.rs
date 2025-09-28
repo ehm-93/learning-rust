@@ -13,3 +13,9 @@ pub struct DamageEvent {
     pub target: Entity,
     pub damage: f32,
 }
+
+/// Event fired when an enemy should flash on hit
+#[derive(Event)]
+pub struct HitFlashEvent {
+    pub target: Entity,
+}

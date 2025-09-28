@@ -141,11 +141,20 @@ pub fn detect_enemy_player_collisions(
 /// Processes damage events by applying damage to entities
 pub fn process_damage(
     mut damage_events: EventReader<DamageEvent>,
+    mut hit_flash_events: EventWriter<HitFlashEvent>,
     mut health_query: Query<&mut Health>,
+    enemy_query: Query<&Enemy>,
 ) {
     for damage_event in damage_events.read() {
         if let Ok(mut health) = health_query.get_mut(damage_event.target) {
             health.take_damage(damage_event.damage);
+            
+            // Trigger hit flash for enemies
+            if enemy_query.contains(damage_event.target) {
+                hit_flash_events.write(HitFlashEvent {
+                    target: damage_event.target,
+                });
+            }
         }
     }
 }
@@ -195,6 +204,60 @@ pub fn cleanup_projectiles(
 
         if projectile.lifetime.finished() {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Handles hit flash events by adding flash component to enemies
+pub fn handle_hit_flash(
+    mut hit_flash_events: EventReader<HitFlashEvent>,
+    mut commands: Commands,
+    enemy_query: Query<&MeshMaterial2d<ColorMaterial>, With<Enemy>>,
+    materials: Res<Assets<ColorMaterial>>,
+) {
+    for flash_event in hit_flash_events.read() {
+        if let Ok(material_handle) = enemy_query.get(flash_event.target) {
+            // Get the original color from the material
+            if let Some(material) = materials.get(&material_handle.0) {
+                let original_color = material.color;
+                
+                // Add hit flash component
+                commands.entity(flash_event.target).insert(HitFlash {
+                    timer: Timer::from_seconds(HIT_FLASH_DURATION, TimerMode::Once),
+                    original_color,
+                });
+            }
+        }
+    }
+}
+
+/// Updates hit flash effects over time
+pub fn update_hit_flash(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut flash_query: Query<(Entity, &mut HitFlash, &MeshMaterial2d<ColorMaterial>)>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for (entity, mut hit_flash, material_handle) in flash_query.iter_mut() {
+        hit_flash.timer.tick(time.delta());
+        
+        if let Some(material) = materials.get_mut(&material_handle.0) {
+            if hit_flash.timer.finished() {
+                // Flash finished, restore original color and remove component
+                material.color = hit_flash.original_color;
+                commands.entity(entity).remove::<HitFlash>();
+            } else {
+                // Flash in progress, interpolate between flash color and original
+                let progress = hit_flash.timer.elapsed_secs() / hit_flash.timer.duration().as_secs_f32();
+                let flash_color = Color::srgb(1.0, 0.3, 0.3); // Bright red flash
+                
+                // Interpolate from flash color back to original
+                material.color = Color::srgb(
+                    flash_color.to_srgba().red * (1.0 - progress) + hit_flash.original_color.to_srgba().red * progress,
+                    flash_color.to_srgba().green * (1.0 - progress) + hit_flash.original_color.to_srgba().green * progress,
+                    flash_color.to_srgba().blue * (1.0 - progress) + hit_flash.original_color.to_srgba().blue * progress,
+                );
+            }
         }
     }
 }

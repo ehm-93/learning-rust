@@ -71,3 +71,6 @@ pub const ENEMY_BULLET_DAMAGE: f32 = 15.0;
 pub const ENEMY_BULLET_LIFETIME: f32 = 2.0;
 pub const SNIPER_BULLET_SPEED: f32 = 1200.0;
 pub const SHOTGUN_BULLET_SPEED: f32 = 400.0;
+
+// Hit flash constants
+pub const HIT_FLASH_DURATION: f32 = 0.15; // Duration of hit flash in seconds

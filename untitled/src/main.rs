@@ -36,6 +36,36 @@ struct MainCamera;
 #[derive(Component)]
 struct Boundary;
 
+#[derive(Component)]
+struct Health {
+    current: f32,
+    max: f32,
+}
+
+impl Health {
+    fn new(max_health: f32) -> Self {
+        Self {
+            current: max_health,
+            max: max_health,
+        }
+    }
+    
+    fn take_damage(&mut self, damage: f32) {
+        self.current = (self.current - damage).max(0.0);
+    }
+    
+    fn is_dead(&self) -> bool {
+        self.current <= 0.0
+    }
+}
+
+// Custom event for damage dealing
+#[derive(Event)]
+struct DamageEvent {
+    target: Entity,
+    damage: f32,
+}
+
 // Detect projectile collisions and emit custom events
 fn detect_projectile_collisions(
     mut collision_events: EventReader<CollisionEvent>,
@@ -78,6 +108,7 @@ fn detect_projectile_collisions(
 // Handle projectile impact events
 fn handle_projectile_impacts(
     mut impact_events: EventReader<ProjectileImpactEvent>,
+    mut damage_events: EventWriter<DamageEvent>,
     mut commands: Commands,
     projectile_query: Query<&Transform, With<Projectile>>,
     enemy_query: Query<&Transform, (With<Enemy>, Without<Projectile>)>,
@@ -85,10 +116,10 @@ fn handle_projectile_impacts(
 ) {
     for impact in impact_events.read() {
         // Get projectile and target positions for knockback calculation
-        let knockback_direction = if let (Ok(projectile_transform), Ok(target_transform)) =
+        let knockback_direction = if let (Ok(projectile_transform), Ok(target_transform)) = 
             (projectile_query.get(impact.projectile), enemy_query.get(impact.target)) {
             // Calculate knockback direction from projectile to target
-            let direction = (target_transform.translation.truncate() -
+            let direction = (target_transform.translation.truncate() - 
                            projectile_transform.translation.truncate()).normalize_or_zero();
             Some(direction)
         } else {
@@ -101,23 +132,20 @@ fn handle_projectile_impacts(
                 // Apply knockback impulse
                 enemy_velocity.linvel += direction * KNOCKBACK_FORCE;
             }
+            
+            // Deal damage to enemy
+            damage_events.write(DamageEvent {
+                target: impact.target,
+                damage: PROJECTILE_DAMAGE,
+            });
         }
 
         // Clean up the projectile
         if let Ok(mut entity) = commands.get_entity(impact.projectile) {
             entity.despawn();
         }
-
-        // Here you could add impact effects, damage, etc.
-        // For example:
-        // - Spawn particle effects at impact location
-        // - Play impact sounds
-        // - Deal damage to destructible targets
-        // - Create explosion effects
     }
-}
-
-#[derive(Resource)]
+}#[derive(Resource)]
 struct FireTimer {
     timer: Timer,
 }
@@ -146,6 +174,10 @@ const ENEMY_SPEED: f32 = 120.0; // Enemy movement speed
 const ENEMY_SPAWN_RATE: f32 = 2.0; // Seconds between enemy spawns
 const MAX_ENEMIES: usize = 8; // Maximum enemies on screen
 const KNOCKBACK_FORCE: f32 = 200.0; // Knockback impulse strength
+const PLAYER_MAX_HEALTH: f32 = 100.0; // Player health
+const ENEMY_MAX_HEALTH: f32 = 20.0; // Enemy health
+const PROJECTILE_DAMAGE: f32 = 10.0; // Damage per projectile hit
+const ENEMY_CONTACT_DAMAGE: f32 = 25.0; // Damage when enemy touches player
 
 // Team relationship system
 fn can_teams_damage(attacker: Team, target: Team) -> bool {
@@ -172,6 +204,7 @@ fn main() {
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugins(RapierDebugRenderPlugin::default())
         .add_event::<ProjectileImpactEvent>()
+        .add_event::<DamageEvent>()
         .insert_resource(FireTimer {
             timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
         })
@@ -188,6 +221,9 @@ fn main() {
             camera_follow,
             detect_projectile_collisions,
             handle_projectile_impacts,
+            process_damage,
+            cleanup_dead_entities,
+            detect_enemy_player_collisions,
         ))
         .run();
 }
@@ -216,12 +252,15 @@ fn setup(
         Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
         Player,
         Team::Player,
+        Health::new(PLAYER_MAX_HEALTH),
         RigidBody::Dynamic,
         Collider::ball(PLAYER_RADIUS),
         // Lock rotation so the player doesn't spin
         LockedAxes::ROTATION_LOCKED,
         // Add Velocity component for movement
         Velocity::zero(),
+        // Enable collision events for damage detection
+        ActiveEvents::COLLISION_EVENTS,
     ));
 
     // Spawn obstacles as gray rectangles with varied rotations
@@ -467,10 +506,13 @@ fn spawn_enemies(
                 Transform::from_translation(spawn_pos.extend(0.0)),
                 Enemy,
                 Team::Enemy,
+                Health::new(ENEMY_MAX_HEALTH),
                 RigidBody::Dynamic,
                 Collider::ball(ENEMY_RADIUS),
                 LockedAxes::ROTATION_LOCKED,
                 Velocity::zero(),
+                // Enable collision events for damage detection
+                ActiveEvents::COLLISION_EVENTS,
             ));
 
             // Reset the spawn timer
@@ -534,6 +576,56 @@ fn enemy_ai(
             // Apply some smoothing to the velocity change for better movement feel
             let velocity_change = (desired_velocity - enemy_velocity.linvel) * 5.0 * time.delta().as_secs_f32();
             enemy_velocity.linvel += velocity_change;
+        }
+    }
+}
+
+fn detect_enemy_player_collisions(
+    mut collision_events: EventReader<CollisionEvent>,
+    mut damage_events: EventWriter<DamageEvent>,
+    players: Query<Entity, With<Player>>,
+    enemies: Query<Entity, With<Enemy>>,
+) {
+    for collision_event in collision_events.read() {
+        if let CollisionEvent::Started(entity1, entity2, _) = collision_event {
+            // Check if collision is between enemy and player
+            let collision_pair = if enemies.contains(*entity1) && players.contains(*entity2) {
+                Some((*entity1, *entity2))
+            } else if enemies.contains(*entity2) && players.contains(*entity1) {
+                Some((*entity2, *entity1))
+            } else {
+                None
+            };
+
+            if let Some((_enemy, player)) = collision_pair {
+                // Deal damage to player
+                damage_events.write(DamageEvent {
+                    target: player,
+                    damage: ENEMY_CONTACT_DAMAGE,
+                });
+            }
+        }
+    }
+}
+
+fn process_damage(
+    mut damage_events: EventReader<DamageEvent>,
+    mut health_query: Query<&mut Health>,
+) {
+    for damage_event in damage_events.read() {
+        if let Ok(mut health) = health_query.get_mut(damage_event.target) {
+            health.take_damage(damage_event.damage);
+        }
+    }
+}
+
+fn cleanup_dead_entities(
+    mut commands: Commands,
+    health_query: Query<(Entity, &Health)>,
+) {
+    for (entity, health) in health_query.iter() {
+        if health.is_dead() {
+            commands.entity(entity).despawn();
         }
     }
 }

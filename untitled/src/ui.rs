@@ -236,14 +236,14 @@ pub fn handle_restart_button(
             if let Ok((mut health, mut transform, mut velocity, mut dash)) = player_query.single_mut() {
                 // Reset health
                 health.current = health.max;
-                
+
                 // Reset position to center
                 transform.translation = Vec3::new(0.0, 0.0, 0.0);
-                
+
                 // Reset velocity
                 velocity.linvel = Vec2::ZERO;
                 velocity.angvel = 0.0;
-                
+
                 // Reset dash state
                 *dash = Dash::new();
             } else {
@@ -263,7 +263,7 @@ pub fn handle_restart_button(
                     ActiveEvents::COLLISION_EVENTS,
                 ));
             }
-            
+
             // Reset timers
             fire_timer.timer.reset();
             enemy_spawn_timer.timer.reset();

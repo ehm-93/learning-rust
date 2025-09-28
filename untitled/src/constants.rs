@@ -3,6 +3,13 @@ pub const PLAYER_SPEED: f32 = 200.0;
 pub const PLAYER_RADIUS: f32 = 10.0;
 pub const PLAYER_MAX_HEALTH: f32 = 100.0;
 
+// Dash constants
+pub const DASH_SPEED: f32 = 800.0;
+pub const DASH_DISTANCE: f32 = 120.0;
+pub const DASH_DURATION: f32 = 0.2; // 0.2 seconds
+pub const DASH_COOLDOWN: f32 = 1.5; // 1.5 seconds cooldown
+pub const DASH_IFRAME_DURATION: f32 = 0.15; // Invincibility for most of dash
+
 // Projectile constants
 pub const PROJECTILE_SPEED: f32 = 800.0;
 pub const PROJECTILE_SIZE: f32 = 3.0;

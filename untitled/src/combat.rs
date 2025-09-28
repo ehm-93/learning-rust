@@ -108,26 +108,30 @@ pub fn handle_projectile_impacts(
 pub fn detect_enemy_player_collisions(
     mut collision_events: EventReader<CollisionEvent>,
     mut damage_events: EventWriter<DamageEvent>,
-    players: Query<Entity, With<Player>>,
+    players: Query<(Entity, &Dash), With<Player>>,
     enemies: Query<Entity, With<Enemy>>,
 ) {
     for collision_event in collision_events.read() {
         if let CollisionEvent::Started(entity1, entity2, _) = collision_event {
             // Check if collision is between enemy and player
-            let collision_pair = if enemies.contains(*entity1) && players.contains(*entity2) {
-                Some((*entity1, *entity2))
-            } else if enemies.contains(*entity2) && players.contains(*entity1) {
-                Some((*entity2, *entity1))
+            let collision_pair = if enemies.contains(*entity1) {
+                // Find player by entity
+                players.iter().find(|(entity, _)| entity == entity2).map(|(player_entity, dash)| (*entity1, player_entity, dash))
+            } else if enemies.contains(*entity2) {
+                // Find player by entity
+                players.iter().find(|(entity, _)| entity == entity1).map(|(player_entity, dash)| (*entity2, player_entity, dash))
             } else {
                 None
             };
 
-            if let Some((_enemy, player)) = collision_pair {
-                // Deal damage to player
-                damage_events.write(DamageEvent {
-                    target: player,
-                    damage: ENEMY_CONTACT_DAMAGE,
-                });
+            if let Some((_enemy, player, dash)) = collision_pair {
+                // Only deal damage if player is not invincible (not dashing with iframes)
+                if !dash.is_invincible {
+                    damage_events.write(DamageEvent {
+                        target: player,
+                        damage: ENEMY_CONTACT_DAMAGE,
+                    });
+                }
             }
         }
     }

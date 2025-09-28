@@ -10,32 +10,81 @@ use crate::{
 /// Handles player movement based on WASD input
 pub fn player_movement(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Velocity, With<Player>>,
+    mut query: Query<(&mut Velocity, &mut Dash), With<Player>>,
+    time: Res<Time>,
 ) {
-    for mut velocity in query.iter_mut() {
-        let mut direction = Vec2::ZERO;
+    for (mut velocity, mut dash) in query.iter_mut() {
+        // Update dash timers
+        dash.cooldown_timer.tick(time.delta());
+        dash.dash_timer.tick(time.delta());
+        dash.iframe_timer.tick(time.delta());
 
-        // Check WASD input
-        if keyboard_input.pressed(KeyCode::KeyW) {
-            direction.y += 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::KeyS) {
-            direction.y -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::KeyA) {
-            direction.x -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::KeyD) {
-            direction.x += 1.0;
+        // Check if dash just finished
+        if dash.is_dashing && dash.dash_timer.just_finished() {
+            dash.is_dashing = false;
         }
 
-        // Normalize diagonal movement
-        if direction != Vec2::ZERO {
-            direction = direction.normalize();
+        // Check if iframe just finished
+        if dash.is_invincible && dash.iframe_timer.just_finished() {
+            dash.is_invincible = false;
         }
 
-        // Apply velocity
-        velocity.linvel = direction * PLAYER_SPEED;
+        // Handle dash input (Shift key)
+        if keyboard_input.just_pressed(KeyCode::ShiftLeft) {
+            let mut dash_direction = Vec2::ZERO;
+
+            // Get dash direction from WASD input
+            if keyboard_input.pressed(KeyCode::KeyW) {
+                dash_direction.y += 1.0;
+            }
+            if keyboard_input.pressed(KeyCode::KeyS) {
+                dash_direction.y -= 1.0;
+            }
+            if keyboard_input.pressed(KeyCode::KeyA) {
+                dash_direction.x -= 1.0;
+            }
+            if keyboard_input.pressed(KeyCode::KeyD) {
+                dash_direction.x += 1.0;
+            }
+
+            // If no movement keys pressed, dash forward (up)
+            if dash_direction == Vec2::ZERO {
+                dash_direction = Vec2::Y;
+            }
+
+            dash.start_dash(dash_direction);
+        }
+
+        // Apply movement based on dash state
+        if dash.is_dashing {
+            // During dash, use dash speed and direction
+            velocity.linvel = dash.dash_direction * DASH_SPEED;
+        } else {
+            // Normal movement
+            let mut direction = Vec2::ZERO;
+
+            // Check WASD input
+            if keyboard_input.pressed(KeyCode::KeyW) {
+                direction.y += 1.0;
+            }
+            if keyboard_input.pressed(KeyCode::KeyS) {
+                direction.y -= 1.0;
+            }
+            if keyboard_input.pressed(KeyCode::KeyA) {
+                direction.x -= 1.0;
+            }
+            if keyboard_input.pressed(KeyCode::KeyD) {
+                direction.x += 1.0;
+            }
+
+            // Normalize diagonal movement
+            if direction != Vec2::ZERO {
+                direction = direction.normalize();
+            }
+
+            // Apply velocity
+            velocity.linvel = direction * PLAYER_SPEED;
+        }
     }
 }
 

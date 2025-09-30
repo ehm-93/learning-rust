@@ -1,11 +1,18 @@
 use bevy::prelude::*;
 use crate::inventory::{
-    Inventory, InstanceId, GridPosition,
+    Inventory, InstanceId, GridPosition, ItemRotation,
 };
+use super::DragState;
 
 /// Component to mark the main inventory panel container
 #[derive(Component)]
 pub struct InventoryPanel;
+
+/// Component to mark a container inventory panel
+#[derive(Component)]
+pub struct ContainerPanel {
+    pub container_entity: Entity,
+}
 
 /// Component to mark individual inventory grid cells
 #[derive(Component)]
@@ -25,6 +32,7 @@ pub struct InventoryItemIcon {
 pub struct InventoryUiState {
     pub is_open: bool,
     pub selected_item: Option<InstanceId>,
+    pub open_container: Option<Entity>, // Currently open container
 }
 
 // Placeholder color constants for different cell states
@@ -217,15 +225,248 @@ pub fn handle_cell_clicks(
                     // Select/deselect item
                     if ui_state.selected_item == Some(item.id) {
                         ui_state.selected_item = None;
-                        info!("Deselected item: {:?}", item.id);
+
                     } else {
                         ui_state.selected_item = Some(item.id);
-                        info!("Selected item: {:?}", item.id);
+
                     }
                 } else {
                     // Clicked empty cell, deselect any selected item
                     ui_state.selected_item = None;
                 }
+            }
+        }
+    }
+}
+
+/// System to handle drag and drop interactions
+pub fn handle_drag_and_drop(
+    mut drag_state: ResMut<DragState>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    windows: Query<&Window>,
+    interaction_query: Query<(&Interaction, &InventoryCell), Changed<Interaction>>,
+    mut player_query: Query<&mut Inventory, With<crate::components::Player>>,
+    item_registry: Res<crate::inventory::ItemRegistry>,
+    ui_state: Res<InventoryUiState>,
+) {
+    let Ok(window) = windows.single() else { return; };
+    let Some(cursor_pos) = window.cursor_position() else { return; };
+
+    // Update current mouse position
+    drag_state.current_mouse_position = cursor_pos;
+
+    // Start drag on mouse down
+    if mouse_input.just_pressed(MouseButton::Left) && !drag_state.is_dragging {
+        for (interaction, cell) in interaction_query.iter() {
+            if *interaction == Interaction::Pressed {
+                if let Ok(inventory) = player_query.single_mut() {
+                    let pos = GridPosition::new(cell.grid_x, cell.grid_y);
+
+                    if let Some(item) = inventory.get_item_at(pos) {
+                        // Start dragging
+                        drag_state.is_dragging = false; // Will become true after threshold
+                        drag_state.dragged_item = Some(item.id);
+                        drag_state.drag_start_position = cursor_pos;
+                        drag_state.original_grid_position = Some(pos);
+                        drag_state.current_rotation = item.rotation;
+                        drag_state.drag_offset = Vec2::ZERO;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Check if we should start actual dragging (past threshold)
+    if drag_state.dragged_item.is_some() && !drag_state.is_dragging {
+        let drag_distance = (cursor_pos - drag_state.drag_start_position).length();
+        if drag_distance > drag_state.drag_threshold {
+            drag_state.is_dragging = true;
+        }
+    }
+
+    // Handle rotation during drag
+    if drag_state.is_dragging {
+        let should_rotate = mouse_input.just_pressed(MouseButton::Right) ||
+                           keyboard_input.just_pressed(KeyCode::KeyR);
+
+        if should_rotate {
+            if let Some(item_id) = drag_state.dragged_item {
+                if let Ok(inventory) = player_query.single() {
+                    if let Some(item) = inventory.grid.items.get(&item_id) {
+                        // Check if item can be rotated
+                        if let Some(definition) = item_registry.get(item.item_id) {
+                            if definition.can_rotate {
+                                // Only rotate the drag state rotation, not the actual inventory item
+                                drag_state.current_rotation = drag_state.current_rotation.rotate_clockwise();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Handle rotation for selected items when not dragging
+    if !drag_state.is_dragging {
+        let should_rotate = mouse_input.just_pressed(MouseButton::Right) ||
+                           keyboard_input.just_pressed(KeyCode::KeyR);
+
+        if should_rotate {
+            if let Some(selected_id) = ui_state.selected_item {
+                if let Ok(mut inventory) = player_query.single_mut() {
+                    if inventory.grid.items.contains_key(&selected_id) {
+                        match inventory.rotate_item(selected_id, &item_registry) {
+                            Ok(()) => {
+                                // Successfully rotated
+                            }
+                            Err(_) => {
+                                // Rotation failed (item can't be rotated or not enough space)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Stop drag on mouse release
+    if mouse_input.just_released(MouseButton::Left) && drag_state.dragged_item.is_some() {
+        if drag_state.is_dragging {
+
+
+            // Handle drop logic
+            handle_item_drop(&drag_state, &interaction_query, &mut player_query, &item_registry);
+        }
+
+        // Reset drag state
+        *drag_state = DragState::default();
+    }
+}
+
+/// Handle dropping an item at the current mouse position
+fn handle_item_drop(
+    drag_state: &DragState,
+    _interaction_query: &Query<(&Interaction, &InventoryCell), Changed<Interaction>>,
+    player_query: &mut Query<&mut Inventory, With<crate::components::Player>>,
+    item_registry: &Res<crate::inventory::ItemRegistry>,
+) {
+    let Some(item_id) = drag_state.dragged_item else { return; };
+    let Ok(mut inventory) = player_query.single_mut() else { return; };
+
+    // Convert mouse position to grid coordinates (same logic as validation)
+    let inventory_start_x = 130.0;
+    let inventory_start_y = 130.0;
+    let cell_size = 40.0;
+
+    let relative_x = drag_state.current_mouse_position.x - inventory_start_x;
+    let relative_y = drag_state.current_mouse_position.y - inventory_start_y;
+
+    let mut target_pos = None;
+
+    // Check if mouse is within inventory bounds
+    if relative_x >= 0.0 && relative_y >= 0.0 {
+        let grid_x = (relative_x / cell_size) as u32;
+        let grid_y = (relative_y / cell_size) as u32;
+
+        // Check if grid position is within inventory bounds (10x10 grid)
+        if grid_x < 10 && grid_y < 10 {
+            target_pos = Some(GridPosition::new(grid_x, grid_y));
+        }
+    }
+
+    // If mouse is outside inventory, fall back to original position
+    if target_pos.is_none() {
+        target_pos = drag_state.original_grid_position;
+    }
+
+    // If rotation changed, original position might not work anymore
+    if let Some(original_item) = inventory.grid.items.get(&item_id) {
+        if original_item.rotation != drag_state.current_rotation {
+            // Need to check if item still fits at original position with new rotation
+            if let Some(definition) = item_registry.get(original_item.item_id) {
+                let rotated_size = drag_state.current_rotation.apply_to_size(definition.size);
+                if let Some(original_pos) = drag_state.original_grid_position {
+                    // Temporarily remove item to check if it fits
+                    let temp_item = inventory.remove_item(item_id);
+                    let fits = inventory.grid.is_area_free(original_pos, rotated_size);
+
+                    // Put item back temporarily
+                    if let Some(item) = temp_item {
+                        inventory.grid.items.insert(item_id, item);
+                    }
+
+                    if !fits {
+                        target_pos = None; // Force auto-placement
+                    }
+                }
+            }
+        }
+    }
+
+    // Attempt to move the item to the new position
+    // First, remove the item from its current position
+    if let Some(mut item) = inventory.remove_item(item_id) {
+        // Update the rotation
+        item.rotation = drag_state.current_rotation;
+
+        let mut placement_succeeded = false;
+
+        // First, try stacking with existing items
+        match inventory.try_stack_item(item.clone(), item_registry) {
+            Ok(()) => {
+
+                placement_succeeded = true;
+            }
+            Err((remaining_item, _)) => {
+
+                // Update item with any remaining quantity
+                item = remaining_item;
+                // Continue to placement logic if there's still item left
+            }
+        }
+
+        // If stacking didn't fully consume the item, try placement at target position
+        if !placement_succeeded && target_pos.is_some() {
+            if let Some(target_position) = target_pos {
+                match inventory.try_place_item(item.clone(), target_position, item_registry) {
+                    Ok(()) => {
+
+                        placement_succeeded = true;
+                    }
+                    Err(_) => {
+
+                    }
+                }
+            }
+        }
+
+        // If placement at target failed, try auto-placement
+        if !placement_succeeded {
+            match inventory.auto_place_item(item.clone(), item_registry) {
+                Ok(()) => {
+
+                    placement_succeeded = true;
+                }
+                Err(_) => {
+
+                }
+            }
+        }
+
+        // If both failed, try to put it back in original position without rotation
+        if !placement_succeeded {
+            let mut fallback_item = item;
+            fallback_item.rotation = ItemRotation::None; // Reset rotation
+            if let Some(original_pos) = drag_state.original_grid_position {
+                if let Err(_) = inventory.try_place_item(fallback_item.clone(), original_pos, item_registry) {
+                    // Last resort: force auto-placement without rotation
+                    let _ = inventory.auto_place_item(fallback_item, item_registry);
+                }
+            } else {
+                // No original position, force auto-placement
+                let _ = inventory.auto_place_item(fallback_item, item_registry);
             }
         }
     }

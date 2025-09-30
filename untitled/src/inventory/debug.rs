@@ -8,6 +8,7 @@ pub fn inventory_debug_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut item_factory: ResMut<ItemFactory>,
     item_registry: Res<ItemRegistry>,
+    drag_state: Res<crate::inventory::ui::DragState>,
     mut player_query: Query<(Entity, Option<&mut Inventory>), With<Player>>,
 ) {
     if let Ok((player_entity, inventory_opt)) = player_query.single_mut() {
@@ -93,8 +94,10 @@ pub fn inventory_debug_system(
                 info!("========================");
             }
 
-            // R key: Try to rotate first item
-            if keyboard.just_pressed(KeyCode::KeyR) {
+            // R key: Try to rotate first item (only when not dragging)
+            if keyboard.just_pressed(KeyCode::KeyR) && !drag_state.is_dragging {
+                // Only rotate here for debug purposes when not dragging
+                // Dragging rotation is handled in inventory_panel.rs
                 let first_item_id = inventory.get_all_items().first().map(|item| item.id);
                 if let Some(item_id) = first_item_id {
                     match inventory.rotate_item(item_id, &item_registry) {
@@ -146,7 +149,11 @@ pub fn inventory_debug_help_system(
         info!("");
         info!("=== INVENTORY UI CONTROLS ===");
         info!("Tab - Open/Close inventory panel");
-        info!("Click - Select/deselect items in inventory");
+        info!("Left Click & Drag - Move items in inventory");
+        info!("Right Click or R - Rotate items while dragging");
+        info!("Green preview - Valid drop location");
+        info!("Red preview - Invalid drop location");
+        info!("Auto-stacking - Compatible items stack automatically");
         info!("Hover - View item tooltips");
         info!("");
         info!("F1 - Show this help");

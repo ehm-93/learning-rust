@@ -21,8 +21,8 @@ pub const WALL_THICKNESS: f32 = 20.0;
 
 // Camera constants
 pub const CAMERA_FOLLOW_SPEED: f32 = 5.0;
-pub const CURSOR_BIAS_STRENGTH: f32 = 1.0;
-pub const CURSOR_BIAS_DISTANCE: f32 = 150.0;
+pub const CURSOR_BIAS_STRENGTH: f32 = 1.5;
+pub const CURSOR_BIAS_DISTANCE: f32 = 200.0;
 
 // Combat constants
 pub const KNOCKBACK_FORCE: f32 = 200.0;

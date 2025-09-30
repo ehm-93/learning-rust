@@ -13,6 +13,7 @@ mod world;
 mod ui;
 mod sounds;
 mod line_of_sight;
+mod inventory;
 
 // Import everything we need
 use constants::*;
@@ -24,6 +25,7 @@ use player::*;
 use world::*;
 use ui::*;
 use sounds::*;
+use inventory::InventoryPlugin;
 
 fn main() {
     App::new()
@@ -37,6 +39,7 @@ fn main() {
         }))
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         // .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(InventoryPlugin)
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()
         .add_event::<HitFlashEvent>()

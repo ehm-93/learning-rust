@@ -17,8 +17,6 @@ pub const PROJECTILE_DAMAGE: f32 = 10.0;
 pub const FIRE_RATE: f32 = 0.1; // 10 shots per second
 
 // World constants
-pub const MAP_WIDTH: f32 = 1200.0;
-pub const MAP_HEIGHT: f32 = 900.0;
 pub const WALL_THICKNESS: f32 = 20.0;
 
 // Camera constants
@@ -58,9 +56,7 @@ pub const MACHINE_GUNNER_RADIUS: f32 = 9.0;
 pub const MACHINE_GUNNER_RANGE: f32 = 150.0;
 pub const MACHINE_GUNNER_FIRE_RATE: f32 = 0.15;
 
-// Enemy spawn constants
-pub const ENEMY_SPAWN_RATE: f32 = 2.0;
-pub const MAX_ENEMIES: usize = 8;
+// Enemy spawn constants (removed ENEMY_SPAWN_RATE and MAX_ENEMIES for fixed spawning)
 
 // Enemy projectile constants
 pub const ENEMY_BULLET_SPEED: f32 = 600.0;

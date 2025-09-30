@@ -3,7 +3,7 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     components::*,
     resources::*,
-    constants::*,
+    world::{initialize_game_state, cleanup_game_entities, cleanup_dungeon_entities},
 };
 
 /// Sets up the health bar UI elements
@@ -206,72 +206,51 @@ pub fn setup_game_over_overlay(
 pub fn handle_restart_button(
     mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut score: ResMut<Score>,
-    mut game_state: ResMut<GameState>,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
+    score: ResMut<Score>,
+    game_state: ResMut<GameState>,
     overlay_query: Query<Entity, With<GameOverOverlay>>,
     entities_query: Query<Entity, (Or<(With<Enemy>, With<Projectile>)>, Without<Player>, Without<MainCamera>)>,
-    mut player_query: Query<(&mut Health, &mut Transform, &mut Velocity, &mut Dash, &mut GrenadeThrower), With<Player>>,
-    mut fire_timer: ResMut<FireTimer>,
-    mut enemy_spawn_timer: ResMut<EnemySpawnTimer>,
+    dungeon_query: Query<Entity, With<DungeonWall>>,
+    floor_query: Query<Entity, (With<Mesh2d>, Without<Player>, Without<MainCamera>, Without<DungeonWall>, Without<Enemy>)>,
+    player_query: Query<(&mut Health, &mut Transform, &mut Velocity, &mut Dash, &mut GrenadeThrower), With<Player>>,
+    fire_timer: ResMut<FireTimer>,
 ) {
+    let mut should_restart = false;
+
+    // Check if any restart button was pressed
     for interaction in &mut interaction_query {
         if *interaction == Interaction::Pressed {
-            // Reset game state
-            *game_state = GameState::Playing;
-            score.current = 0;
-
-            // Remove game over overlay
-            for entity in overlay_query.iter() {
-                commands.entity(entity).despawn();
-            }
-
-            // Clean up all enemies and projectiles
-            for entity in entities_query.iter() {
-                commands.entity(entity).despawn();
-            }
-
-            // Reset player state completely
-            if let Ok((mut health, mut transform, mut velocity, mut dash, mut grenade_thrower)) = player_query.single_mut() {
-                // Reset health
-                health.current = health.max;
-
-                // Reset position to center
-                transform.translation = Vec3::new(0.0, 0.0, 0.0);
-
-                // Reset velocity
-                velocity.linvel = Vec2::ZERO;
-                velocity.angvel = 0.0;
-
-                // Reset dash state
-                *dash = Dash::new();
-
-                // Reset grenade thrower state
-                *grenade_thrower = GrenadeThrower::new();
-            } else {
-                // Player doesn't exist, spawn a new one
-                commands.spawn((
-                    Mesh2d(meshes.add(Circle::new(PLAYER_RADIUS))),
-                    MeshMaterial2d(materials.add(Color::WHITE)),
-                    Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-                    Player,
-                    Team::Player,
-                    Health::new(PLAYER_MAX_HEALTH),
-                    Dash::new(),
-                    GrenadeThrower::new(),
-                    RigidBody::Dynamic,
-                    Collider::ball(PLAYER_RADIUS),
-                    LockedAxes::ROTATION_LOCKED,
-                    Velocity::zero(),
-                    ActiveEvents::COLLISION_EVENTS,
-                ));
-            }
-
-            // Reset timers
-            fire_timer.timer.reset();
-            enemy_spawn_timer.timer.reset();
+            should_restart = true;
+            break;
         }
+    }
+
+    if should_restart {
+        println!("Restarting game - generating new dungeon!");
+
+        // Remove game over overlay
+        for entity in overlay_query.iter() {
+            commands.entity(entity).despawn();
+        }
+
+        // Clean up all game entities (enemies, projectiles)
+        cleanup_game_entities(&mut commands, &entities_query);
+
+        // Clean up the entire dungeon (walls, floors) for complete regeneration
+        cleanup_dungeon_entities(&mut commands, &dungeon_query, &floor_query);
+
+        // Initialize/reset game state using centralized function
+        initialize_game_state(
+            commands,
+            meshes,
+            materials,
+            score,
+            game_state,
+            fire_timer,
+            player_query,
+        );
     }
 }
 

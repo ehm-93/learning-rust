@@ -3,7 +3,6 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     components::*,
     constants::*,
-    resources::*,
     sounds::*,
     line_of_sight::*,
 };
@@ -311,66 +310,8 @@ impl EnemyArchetype {
     }
 }
 
-/// Spawns enemies periodically around the map edges
-pub fn spawn_enemies(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut spawn_timer: ResMut<EnemySpawnTimer>,
-    time: Res<Time>,
-    enemies: Query<&Enemy>,
-    player_query: Query<&Transform, With<Player>>,
-) {
-    // Update the spawn timer
-    spawn_timer.timer.tick(time.delta());
-
-    // Only spawn if timer is ready and we haven't hit the enemy limit
-    if spawn_timer.timer.finished() && enemies.iter().count() < MAX_ENEMIES {
-        if let Ok(player_transform) = player_query.single() {
-            let player_pos = player_transform.translation.truncate();
-
-            // Choose a random spawn position around the map edges, away from player
-            let spawn_pos = get_enemy_spawn_position(player_pos);
-
-            // Choose random archetype and get its configuration
-            let archetype = match fastrand::usize(0..5) {
-                0 => EnemyArchetype::SmallMelee,
-                1 => EnemyArchetype::BigMelee,
-                2 => EnemyArchetype::Shotgunner,
-                3 => EnemyArchetype::Sniper,
-                _ => EnemyArchetype::MachineGunner,
-            };
-
-            // Handle group spawning for small melee enemies
-            if matches!(archetype, EnemyArchetype::SmallMelee) {
-                let group_size = fastrand::usize(3..=5); // 3-5 enemies per group
-                spawn_enemy_group(
-                    &mut commands,
-                    &mut meshes,
-                    &mut materials,
-                    archetype,
-                    spawn_pos,
-                    group_size,
-                );
-            } else {
-                // Spawn single enemy for other archetypes
-                spawn_single_enemy(
-                    &mut commands,
-                    &mut meshes,
-                    &mut materials,
-                    archetype,
-                    spawn_pos,
-                );
-            }
-
-            // Reset the spawn timer
-            spawn_timer.timer.reset();
-        }
-    }
-}
-
 /// Spawns a single enemy at the specified position
-fn spawn_single_enemy(
+pub fn spawn_single_enemy(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
@@ -406,7 +347,7 @@ fn spawn_single_enemy(
 }
 
 /// Spawns a group of enemies around the base position
-fn spawn_enemy_group(
+pub fn spawn_enemy_group(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
@@ -427,41 +368,7 @@ fn spawn_enemy_group(
     }
 }
 
-/// Gets a random spawn position for enemies around the map edges, away from the player
-fn get_enemy_spawn_position(player_pos: Vec2) -> Vec2 {
-    use std::f32::consts::PI;
 
-    // Spawn enemies around the map edges, at least 200 units away from player
-    let min_distance = 200.0;
-    let max_attempts = 10;
-
-    for _ in 0..max_attempts {
-        // Generate random angle
-        let angle = fastrand::f32() * 2.0 * PI;
-
-        // Choose distance from map center (spawn near edges)
-        let spawn_distance = 300.0 + fastrand::f32() * 200.0; // Between 300-500 units from center
-
-        let spawn_pos = Vec2::new(
-            angle.cos() * spawn_distance,
-            angle.sin() * spawn_distance,
-        );
-
-        // Check if spawn position is far enough from player
-        if spawn_pos.distance(player_pos) >= min_distance {
-            // Make sure it's within map bounds (with some margin)
-            let half_width = MAP_WIDTH / 2.0 - 50.0;
-            let half_height = MAP_HEIGHT / 2.0 - 50.0;
-
-            if spawn_pos.x.abs() <= half_width && spawn_pos.y.abs() <= half_height {
-                return spawn_pos;
-            }
-        }
-    }
-
-    // Fallback: spawn at a fixed position if random attempts fail
-    Vec2::new(400.0, 300.0)
-}
 
 /// AI system that controls enemy behavior based on their archetype
 pub fn enemy_ai(
@@ -549,14 +456,25 @@ fn spawn_shotgun_spread(
     spawn_pos: Vec2,
     base_direction: Vec2,
 ) {
-    for i in 0..SHOTGUNNER_PELLETS {
-        let spread_angle = (i as f32 - (SHOTGUNNER_PELLETS as f32 - 1.0) / 2.0) * 0.15; // 0.15 radians spread
-        let direction = Vec2::new(
-            base_direction.x * spread_angle.cos() - base_direction.y * spread_angle.sin(),
-            base_direction.x * spread_angle.sin() + base_direction.y * spread_angle.cos(),
-        );
+    println!("Spawning shotgun spread with {} pellets", SHOTGUNNER_PELLETS);
 
+    for i in 0..SHOTGUNNER_PELLETS {
+        // Calculate spread angle: center pellet at 0, others spread evenly
+        let spread_angle = if SHOTGUNNER_PELLETS == 1 {
+            0.0
+        } else {
+            (i as f32 - (SHOTGUNNER_PELLETS as f32 - 1.0) / 2.0) * 0.2 // Increased spread to 0.2 radians for better visibility
+        };
+
+        // Get base angle of the direction vector
+        let base_angle = base_direction.y.atan2(base_direction.x);
+        let final_angle = base_angle + spread_angle;
+
+        // Calculate final direction with proper rotation
+        let direction = Vec2::new(final_angle.cos(), final_angle.sin());
         let bullet_velocity = direction * SHOTGUN_BULLET_SPEED;
+
+        println!("Pellet {}: angle={:.2}, direction={:?}", i, spread_angle, direction);
         spawn_enemy_bullet(commands, meshes, materials, spawn_pos, bullet_velocity, Color::srgb(1.0, 0.7, 0.0));
     }
 }

@@ -44,9 +44,7 @@ fn main() {
         .insert_resource(FireTimer {
             timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
         })
-        .insert_resource(EnemySpawnTimer {
-            timer: Timer::from_seconds(ENEMY_SPAWN_RATE, TimerMode::Repeating),
-        })
+
         .insert_resource(Score::default())
         .insert_resource(GameState::default())
         .insert_resource(DungeonParams::default())
@@ -59,7 +57,6 @@ fn main() {
             camera_follow,
 
             // Enemy systems
-            spawn_enemies.run_if(resource_equals(GameState::Playing)),
             enemy_ai.run_if(resource_equals(GameState::Playing)),
             laser_sight_system.run_if(resource_equals(GameState::Playing)),
 

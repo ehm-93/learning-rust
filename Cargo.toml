@@ -1,0 +1,11 @@
+[workspace]
+members = [
+  "sanity",
+  "shadowcast",
+  "untitled",
+]
+default-members = ["untitled"]
+
+# Enable max optimizations for dependencies, but not for our code:
+[profile.dev.package."*"]
+opt-level = 3

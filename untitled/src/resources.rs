@@ -6,12 +6,6 @@ pub struct FireTimer {
     pub timer: Timer,
 }
 
-/// Timer resource for controlling enemy spawning
-#[derive(Resource)]
-pub struct EnemySpawnTimer {
-    pub timer: Timer,
-}
-
 /// Score tracking resource
 #[derive(Resource, Default)]
 pub struct Score {

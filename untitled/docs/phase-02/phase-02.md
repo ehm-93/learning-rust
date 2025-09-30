@@ -48,6 +48,8 @@ At each floor, player chooses: *Extract safely with current loot* or *Risk every
 **Inventory Constraint:**
 - **Limited slots**: Can only carry 3-5 items at once, must choose what to keep
 - **Drop/pickup**: Can abandon items for better finds, creating meaningful decisions
+- **Diablo-style grid system**: Items occupy variable grid spaces (1x1, 2x1, etc.)
+- **Detailed specification**: See [inventory-specification.md](./inventory-specification.md) for complete technical design
 
 ## Technical Implementation Strategy
 

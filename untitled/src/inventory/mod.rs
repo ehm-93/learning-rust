@@ -3,12 +3,15 @@ pub mod factory;
 pub mod operations;
 pub mod registry;
 pub mod debug;
+pub mod events;
+pub mod ui;
 
 // Re-export commonly used types
 pub use components::{Inventory, ItemInstance, InstanceId, GridPosition, ItemRotation, InventorySize};
 pub use factory::{ItemFactory, ItemCreationError};
 pub use operations::{InventoryError};
 pub use registry::{ItemRegistry, ItemDefinition, ItemId, PropertyRange, GridSize};
+pub use events::*;
 
 use bevy::prelude::*;
 
@@ -18,6 +21,13 @@ pub struct InventoryPlugin;
 impl Plugin for InventoryPlugin {
     fn build(&self, app: &mut App) {
         app
+            // Add events
+            .add_event::<InventoryEvent>()
+            .add_event::<events::TooltipEvent>()
+            // Add resources
+            .init_resource::<ui::InventoryUiState>()
+            .init_resource::<ui::TooltipState>()
+            .init_resource::<ui::DragState>()
             // Add startup systems
             .add_systems(Startup, (
                 registry::setup_item_registry,
@@ -25,9 +35,21 @@ impl Plugin for InventoryPlugin {
             ))
             // Add update systems
             .add_systems(Update, (
+                // Core inventory systems
                 operations::inventory_operations_system,
                 debug::inventory_debug_system,
                 debug::inventory_debug_help_system,
+                // UI systems
+                ui::toggle_inventory_panel,
+                ui::spawn_inventory_panel,
+                ui::update_inventory_display,
+                ui::handle_cell_clicks,
+                ui::update_tooltip_state,
+                ui::spawn_tooltips,
+                // Drag and drop (placeholder systems for Phase 2.3)
+                ui::update_drag_preview,
+                ui::spawn_drag_preview,
+                ui::cleanup_drag_preview,
             ));
     }
 }

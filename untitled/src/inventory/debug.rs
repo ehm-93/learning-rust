@@ -127,22 +127,29 @@ pub fn inventory_debug_system(
     }
 }
 
-/// System to display debug help
+/// Help system that shows debug commands
 pub fn inventory_debug_help_system(
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     if keyboard.just_pressed(KeyCode::F1) {
-        info!("=== INVENTORY DEBUG COMMANDS ===");
-        info!("I - Add inventory to player");
-        info!("1 - Add health potion");
-        info!("2 - Add rifle");
-        info!("3 - Add armor");
-        info!("C - Clear inventory");
+        info!("=== INVENTORY DEBUG HELP ===");
+        info!("I - Give player an inventory (if they don't have one)");
+        info!("1 - Add a health potion");
+        info!("2 - Add a rifle");
+        info!("3 - Add body armor");
+        info!("4 - Add ammo (stackable)");
+        info!("C - Clear inventory (remove all items)");
         info!("L - List inventory contents");
-        info!("R - Rotate first item");
-        info!("+ - Expand inventory width");
-        info!("- - Shrink inventory width");
+        info!("R - Rotate first item in inventory");
+        info!("+ (Equal) - Expand inventory width");
+        info!("- (Minus) - Shrink inventory width");
+        info!("");
+        info!("=== INVENTORY UI CONTROLS ===");
+        info!("Tab - Open/Close inventory panel");
+        info!("Click - Select/deselect items in inventory");
+        info!("Hover - View item tooltips");
+        info!("");
         info!("F1 - Show this help");
-        info!("===============================");
+        info!("=============================");
     }
 }

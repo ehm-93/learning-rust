@@ -151,7 +151,7 @@ A flexible grid-based inventory system that supports the game's extraction mecha
 
 ## Implementation Strategy
 
-### Sub-Phase 2.1: Foundation
+### ✅ Sub-Phase 2.1: Foundation
 **Goal**: Basic inventory functionality without UI
 1. **Item Registry System**: Define item templates with property ranges
 2. **Core Components**: Inventory component with dynamic grid sizing
@@ -161,7 +161,7 @@ A flexible grid-based inventory system that supports the game's extraction mecha
 
 **Deliverable**: Working inventory system accessible via debug commands
 
-### Sub-Phase 2.2: Basic UI
+### ✅ Sub-Phase 2.2: Basic UI
 **Goal**: Minimal functional inventory interface
 1. **Grid Visualization**: Render inventory slots and occupied spaces
 2. **Item Display**: Show item icons and basic information
@@ -171,7 +171,7 @@ A flexible grid-based inventory system that supports the game's extraction mecha
 
 **Deliverable**: Playable inventory management interface
 
-### Sub-Phase 2.3: Core Features
+### ✅ Sub-Phase 2.3: Core Features
 **Goal**: Complete inventory interaction system
 1. **Drag & Drop**: Full drag and drop between slots and inventories
 2. **Item Rotation**: Right-click or hotkey to rotate items for better fit

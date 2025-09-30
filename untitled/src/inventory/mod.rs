@@ -2,7 +2,6 @@ pub mod components;
 pub mod factory;
 pub mod operations;
 pub mod registry;
-pub mod debug;
 pub mod events;
 pub mod ui;
 
@@ -37,8 +36,6 @@ impl Plugin for InventoryPlugin {
             .add_systems(Update, (
                 // Core inventory systems
                 operations::inventory_operations_system,
-                debug::inventory_debug_system,
-                debug::inventory_debug_help_system,
                 // UI systems
                 ui::toggle_inventory_panel,
                 ui::spawn_inventory_panel,

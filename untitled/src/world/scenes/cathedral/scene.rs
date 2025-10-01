@@ -4,6 +4,7 @@ use rand::rng;
 use crate::{
     world::{Interactable, InteractableHighlight, InteractionCallback},
     player::PlayerSpawner,
+    ui::tooltip::Tooltip,
 };
 use super::{
     components::*,
@@ -93,7 +94,19 @@ impl CathedralScene {
             // Get modifiers for this portal
             let portal_modifiers = modifier_system.get_portal_modifiers(current_depth, portal_id);
 
-            // Create portal entity with scene tracking
+            // Create tooltip content
+            let mut tooltip_content = format!("{:?} Portal\nDepth {}\n\n", portal_id, current_depth);
+
+            if portal_modifiers.is_empty() {
+                tooltip_content.push_str("No Modifiers");
+            } else {
+                tooltip_content.push_str("Modifiers:\n");
+                for modifier in &portal_modifiers {
+                    tooltip_content.push_str(&format!("• {}\n", modifier.display_name()));
+                }
+            }
+
+            // Create portal entity with scene tracking and tooltip
             world.spawn((
                 Mesh2d(portal_mesh.clone()),
                 MeshMaterial2d(portal_materials[i].clone()),
@@ -109,32 +122,13 @@ impl CathedralScene {
                     portal_callback
                 ),
                 InteractableHighlight::with_radius(1.4), // Use default colors with custom radius
-                SceneEntity {
-                    scene_id: SceneId::of::<CathedralScene>(),
-                },
-            ));
-
-            // Create portal display text with proper information
-            let text_position = position + Vec3::new(0.0, -120.0, 1.0);
-            let mut display_text = format!("Depth {}\n", current_depth);
-
-            if portal_modifiers.is_empty() {
-                display_text.push_str("No Modifiers");
-            } else {
-                for modifier in &portal_modifiers {
-                    display_text.push_str(&format!("• {}\n", modifier.display_name()));
-                }
-            }
-
-            world.spawn((
-                Text2d::new(display_text),
-                TextFont {
-                    font_size: 16.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-                Transform::from_translation(text_position),
-                PortalDisplay { portal_id },
+                Tooltip::new(tooltip_content)
+                    .with_offset(Vec3::new(0.0, 80.0, 10.0)) // Show above the portal
+                    .with_font_size(16.0)
+                    .with_background_color(Color::srgba(0.1, 0.0, 0.2, 0.9)) // Dark purple background
+                    .with_text_color(Color::WHITE)
+                    .with_max_width(250.0)
+                    .with_padding(12.0),
                 SceneEntity {
                     scene_id: SceneId::of::<CathedralScene>(),
                 },

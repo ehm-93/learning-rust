@@ -51,6 +51,7 @@ fn main() {
         .insert_resource(GameState::default())
         .insert_resource(GameMode::default())
         .insert_resource(DungeonParams::default())
+        .insert_resource(ui::tooltip::TooltipState::default())
         .add_systems(Startup, (disable_gravity, setup_health_bar, setup_score_display, load_sounds))
         .add_systems(Update, (
             // Enemy systems
@@ -63,6 +64,10 @@ fn main() {
             update_score_display,
             show_game_over_overlay,
             handle_restart_button,
+
+            // Tooltip systems
+            ui::tooltip::handle_tooltip_hover.run_if(resource_equals(GameState::Playing)),
+            ui::tooltip::cleanup_orphaned_tooltips,
         ))
         .add_systems(Update, (
             // Combat systems

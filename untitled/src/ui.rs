@@ -7,6 +7,9 @@ use crate::{
     player::{Player, FireTimer},
 };
 
+// Tooltip system module
+pub mod tooltip;
+
 /// Sets up the health bar UI elements
 pub fn setup_health_bar(
     mut commands: Commands,

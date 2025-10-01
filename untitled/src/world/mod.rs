@@ -69,7 +69,11 @@ impl Plugin for WorldPlugin {
             .add_event::<InteractionEvent>()
 
             // Add scene plugins (each handles their own OnEnter/OnExit transitions)
-            .add_plugins(scenes::cathedral::CathedralPlugin)
+            .add_plugins((
+                scenes::cathedral::CathedralPlugin,
+                scenes::sanctuary::SanctuaryPlugin,
+                scenes::dungeon::DungeonPlugin,
+            ))
 
             // Global interaction systems (run regardless of scene)
             .add_systems(Update, (
@@ -78,6 +82,7 @@ impl Plugin for WorldPlugin {
                 interaction::handle_basic_interactions.run_if(resource_equals(GameState::Playing)),
                 interaction::update_interactable_highlights,
                 interaction::manage_halo_effects,
+                interaction::cleanup_orphaned_halos,
             ));
     }
 }

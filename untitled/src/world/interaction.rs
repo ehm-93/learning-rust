@@ -409,3 +409,18 @@ pub fn manage_halo_effects(
         }
     }
 }
+
+/// System to clean up orphaned halo effects when their parent interactables are despawned
+pub fn cleanup_orphaned_halos(
+    mut commands: Commands,
+    halos: Query<(Entity, &HaloEffect)>,
+    interactables: Query<Entity, With<Interactable>>,
+) {
+    for (halo_entity, halo_effect) in halos.iter() {
+        // Check if the parent entity still exists and has an Interactable component
+        if !interactables.contains(halo_effect.parent_entity) {
+            // Parent interactable no longer exists, despawn the halo
+            commands.entity(halo_entity).despawn();
+        }
+    }
+}

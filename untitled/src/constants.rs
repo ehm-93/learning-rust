@@ -99,3 +99,11 @@ pub const EXPLOSION_END_SIZE: f32 = 120.0; // Final explosion radius
 
 // Line of sight constants
 pub const LOS_MAX_RANGE: f32 = 800.0; // Maximum line of sight range
+
+// Sanctuary constants
+pub const SANCTUARY_HEALING_RATE: f32 = 20.0; // HP per second
+pub const SANCTUARY_HEALING_RANGE: f32 = 100.0; // Healing station range
+
+// Basic dungeon constants
+pub const DUNGEON_ROOM_SIZE: f32 = 200.0; // Size of dungeon rooms
+pub const DUNGEON_WALL_THICKNESS: f32 = 10.0; // Thickness of dungeon walls

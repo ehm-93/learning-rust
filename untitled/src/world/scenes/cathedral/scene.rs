@@ -53,7 +53,7 @@ impl CathedralScene {
             Color::srgb(0.4, 0.2, 0.6), // Deep purple
         ];
 
-        let portal_ids = [PortalId::Left, PortalId::Center, PortalId::Right];
+        let portal_ids = [PortalId::DungeonLeft, PortalId::DungeonCenter, PortalId::DungeonRight];
 
         // Pre-create all assets to avoid borrow checker issues
         let portal_mesh = {
@@ -112,6 +112,7 @@ impl CathedralScene {
                 Transform::from_translation(position),
                 Portal {
                     id: portal_id,
+                    portal_type: PortalType::Dungeon,
                     depth: current_depth,
                     modifiers: portal_modifiers.clone(),
                 },

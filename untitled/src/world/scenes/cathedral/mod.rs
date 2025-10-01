@@ -24,6 +24,7 @@ impl Plugin for CathedralPlugin {
             .add_systems(
                 Update,
                 (
+                    systems::handle_portal_interaction_events.run_if(in_state(WorldState::Cathedral)),
                     systems::handle_portal_activation.run_if(in_state(WorldState::Cathedral)),
                     systems::update_portal_displays.run_if(in_state(WorldState::Cathedral)),
                 )
@@ -113,30 +114,54 @@ fn setup_cathedral_entities(
         Visibility::Visible,
     ));
 
-    // Create three portal archways
+    // Create three dungeon portals
     let portal_positions = [
-        Vec3::new(-300.0, 100.0, 0.0), // Left portal
-        Vec3::new(0.0, 100.0, 0.0),    // Center portal
-        Vec3::new(300.0, 100.0, 0.0),  // Right portal
+        Vec3::new(-300.0, 100.0, 0.0), // Left dungeon portal
+        Vec3::new(0.0, 100.0, 0.0),    // Center dungeon portal
+        Vec3::new(300.0, 100.0, 0.0),  // Right dungeon portal
     ];
 
-    let portal_ids = [components::PortalId::Left, components::PortalId::Center, components::PortalId::Right];
-    let portal_colors = [Color::srgb(0.6, 0.3, 0.8), Color::srgb(0.8, 0.4, 1.0), Color::srgb(0.4, 0.2, 0.6)];
+    let portal_ids = [
+        components::PortalId::DungeonLeft,
+        components::PortalId::DungeonCenter,
+        components::PortalId::DungeonRight,
+    ];
 
-    for (i, (&position, &portal_id)) in portal_positions.iter().zip(portal_ids.iter()).enumerate() {
+    let portal_types = [
+        components::PortalType::Dungeon,
+        components::PortalType::Dungeon,
+        components::PortalType::Dungeon,
+    ];
+
+    let portal_colors = [
+        Color::srgb(0.6, 0.3, 0.8), // Purple dungeon portals
+        Color::srgb(0.8, 0.4, 1.0),
+        Color::srgb(0.4, 0.2, 0.6),
+    ];
+
+    for (i, ((&position, &portal_id), &portal_type)) in portal_positions.iter()
+        .zip(portal_ids.iter())
+        .zip(portal_types.iter())
+        .enumerate() {
+
         // Create portal callback (currently just logs)
         let portal_callback: InteractionCallback = Arc::new(move |_context| {
-            info!("Portal {:?} activated", portal_id);
+            info!("Portal {:?} ({:?}) activated", portal_id, portal_type);
         });
 
-        // Create portal entity
+        // Create portal entity with different sizes for different types
+        let (width, height) = match portal_type {
+            components::PortalType::Dungeon => (80.0, 120.0),
+        };
+
         commands.spawn((
-            Mesh2d(meshes.add(Rectangle::new(80.0, 120.0))),
+            Mesh2d(meshes.add(Rectangle::new(width, height))),
             MeshMaterial2d(materials.add(portal_colors[i])),
             Transform::from_translation(position),
             components::Cathedral,
             components::Portal {
                 id: portal_id,
+                portal_type,
                 depth: 1,
                 modifiers: Vec::new(),
             },

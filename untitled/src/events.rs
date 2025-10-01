@@ -29,7 +29,7 @@ pub struct GrenadeExplosionEvent {
     pub team: crate::components::Team,
 }
 
-/// Event fired when a portal is activated to transition to a dungeon
+/// Event fired when a portal is activated to transition to a scene
 #[derive(Event)]
 pub struct PortalActivationEvent {
     pub portal_id: crate::world::scenes::cathedral::PortalId,

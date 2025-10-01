@@ -43,7 +43,7 @@ impl ModifierSystem {
 
     /// Generate stable modifier combinations for a specific depth level
     pub fn generate_portal_modifiers(&mut self, depth: u32, rng: &mut impl Rng) {
-        for portal_id in [PortalId::Left, PortalId::Center, PortalId::Right] {
+        for portal_id in [PortalId::DungeonLeft, PortalId::DungeonCenter, PortalId::DungeonRight] {
             // Only generate if we don't already have modifiers for this portal/depth combo
             if !self.portal_configurations.contains_key(&(depth, portal_id)) {
                 let mut modifiers = Vec::new();

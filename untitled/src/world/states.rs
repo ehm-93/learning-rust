@@ -8,6 +8,7 @@ pub enum WorldState {
 
     // Game world states
     Cathedral,
+    Sanctuary,
     Dungeon,
 }
 

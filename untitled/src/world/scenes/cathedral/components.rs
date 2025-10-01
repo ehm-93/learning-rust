@@ -4,10 +4,11 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct Cathedral;
 
-/// Portal component representing one of the three dungeon entry points
+/// Portal component representing different scene entry points
 #[derive(Component)]
 pub struct Portal {
     pub id: PortalId,
+    pub portal_type: PortalType,
     pub depth: u32,
     pub modifiers: Vec<ModifierId>,
 }
@@ -15,9 +16,15 @@ pub struct Portal {
 /// Portal identifier
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum PortalId {
-    Left,
-    Center,
-    Right,
+    DungeonLeft,
+    DungeonCenter,
+    DungeonRight,
+}
+
+/// Portal destination type
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub enum PortalType {
+    Dungeon,
 }
 
 /// Modifier identifier for dungeon modifications

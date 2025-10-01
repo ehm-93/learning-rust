@@ -10,7 +10,7 @@ use crate::{
 // Add missing constant that was used in player shooting
 const PROJECTILE_MOMENTUM_TRANSFER: f32 = 0.5;
 use super::{Player, Dash, GrenadeThrower, FireTimer, PlayerConfig};
-use super::actions::{PlayerActionEvent, PlayerAction, ActionState};
+use super::actions::{PlayerActionEvent, PlayerAction};
 
 /// Handles player movement based on player action events
 pub fn player_movement(

@@ -16,7 +16,6 @@ mod line_of_sight;
 mod inventory;
 
 // Import everything we need
-use constants::*;
 use events::*;
 use resources::*;
 use combat::*;

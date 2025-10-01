@@ -2,7 +2,6 @@
 //!
 //! This module is responsible for world initialization and state-based scene management.
 
-pub mod dungeon;
 pub mod scenes;
 pub mod interaction;
 pub mod states;
@@ -11,7 +10,7 @@ pub mod states;
 pub use interaction::{
     Interactable, InteractionEvent, InteractableHighlight, InteractionCallback,
 };
-pub use states::{WorldState, PortalId, ExitReason, PlayerProgress, DungeonConfig, CathedralConfig};
+pub use states::WorldState;
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
@@ -70,10 +69,7 @@ impl Plugin for WorldPlugin {
             .add_event::<InteractionEvent>()
 
             // Add scene plugins (each handles their own OnEnter/OnExit transitions)
-            .add_plugins((
-                scenes::cathedral::CathedralPlugin,
-                scenes::dungeon::DungeonPlugin,
-            ))
+            .add_plugins(scenes::cathedral::CathedralPlugin)
 
             // Global interaction systems (run regardless of scene)
             .add_systems(Update, (

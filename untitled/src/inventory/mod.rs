@@ -6,10 +6,8 @@ pub mod events;
 pub mod ui;
 
 // Re-export commonly used types
-pub use components::{Inventory, ItemInstance, InstanceId, GridPosition, ItemRotation, InventorySize};
-pub use factory::{ItemFactory, ItemCreationError};
-pub use operations::{InventoryError};
-pub use registry::{ItemRegistry, ItemDefinition, ItemId, PropertyRange, GridSize};
+pub use components::{Inventory, ItemInstance, InstanceId, GridPosition, ItemRotation};
+pub use registry::{ItemRegistry, ItemDefinition};
 pub use events::*;
 
 use bevy::prelude::*;

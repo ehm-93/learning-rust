@@ -311,63 +311,6 @@ impl EnemyArchetype {
     }
 }
 
-/// Spawns a single enemy at the specified position
-pub fn spawn_single_enemy(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-    archetype: EnemyArchetype,
-    spawn_pos: Vec2,
-) {
-    let config = ArchetypeConfig::for_archetype(archetype);
-
-    let mut entity_commands = commands.spawn((
-        Mesh2d(meshes.add(Circle::new(config.radius))),
-        MeshMaterial2d(materials.add(config.color)),
-        Transform::from_translation(spawn_pos.extend(0.0)),
-        Enemy { archetype },
-        Team::Enemy,
-        Health::new(config.health),
-        AIBehavior::new(config.fire_rate),
-        LineOfSight::new(),
-        RigidBody::Dynamic,
-        Collider::ball(config.radius),
-        LockedAxes::ROTATION_LOCKED,
-        Velocity::zero(),
-        // Enable collision events for damage detection
-        ActiveEvents::COLLISION_EVENTS,
-    ));
-
-    // Add laser sight component for snipers
-    if matches!(archetype, EnemyArchetype::Sniper) {
-        entity_commands.insert(LaserSight {
-            is_active: false,
-            target_pos: Vec2::ZERO,
-        });
-    }
-}
-
-/// Spawns a group of enemies around the base position
-pub fn spawn_enemy_group(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-    archetype: EnemyArchetype,
-    base_pos: Vec2,
-    group_size: usize,
-) {
-    let config = ArchetypeConfig::for_archetype(archetype);
-    let spacing = config.radius * 3.0; // Space enemies apart to avoid overlap
-
-    for i in 0..group_size {
-        // Create circular formation around base position
-        let angle = (i as f32 / group_size as f32) * std::f32::consts::TAU;
-        let offset = Vec2::new(angle.cos(), angle.sin()) * spacing;
-        let enemy_pos = base_pos + offset;
-
-        spawn_single_enemy(commands, meshes, materials, archetype, enemy_pos);
-    }
-}
 
 
 

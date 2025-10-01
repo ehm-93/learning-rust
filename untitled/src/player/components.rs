@@ -78,6 +78,7 @@ pub struct PlayerBundle {
     pub health: crate::components::Health,
     pub dash: Dash,
     pub grenade_thrower: GrenadeThrower,
+    pub inventory: crate::inventory::Inventory,
 }
 
 impl Default for PlayerBundle {
@@ -89,6 +90,7 @@ impl Default for PlayerBundle {
             health: crate::components::Health::new(PLAYER_MAX_HEALTH),
             dash: Dash::new(),
             grenade_thrower: GrenadeThrower::new(),
+            inventory: crate::inventory::Inventory::player_inventory(),
         }
     }
 }

@@ -93,33 +93,18 @@ pub fn handle_portal_interaction_events(
     }
 }
 
-/// Direct portal activation handler that transitions straight to Dungeon state
+/// Direct portal activation handler - currently disabled since dungeons are not implemented
 pub fn handle_portal_activation(
     mut events: EventReader<crate::events::PortalActivationEvent>,
     current_state: Res<State<crate::world::states::WorldState>>,
-    mut next_state: ResMut<NextState<crate::world::states::WorldState>>,
-    mut dungeon_config: ResMut<crate::world::states::DungeonConfig>,
+    mut _next_state: ResMut<NextState<crate::world::states::WorldState>>,
 ) {
-    use crate::world::states::{WorldState, PortalId as StatePortalId};
+    use crate::world::states::WorldState;
 
     for event in events.read() {
         if matches!(current_state.get(), WorldState::Cathedral) {
-            info!("Cathedral: Portal activated -> transitioning directly to dungeon depth {}", event.depth);
-
-            // Convert cathedral PortalId to state PortalId
-            let state_portal_id = match event.portal_id {
-                super::components::PortalId::Left => StatePortalId::Left,
-                super::components::PortalId::Center => StatePortalId::Center,
-                super::components::PortalId::Right => StatePortalId::Right,
-            };
-
-            // Update dungeon configuration
-            dungeon_config.depth = event.depth;
-            dungeon_config.modifiers = event.modifiers.clone();
-            dungeon_config.portal_id = state_portal_id;
-
-            // Transition directly to dungeon state
-            next_state.set(WorldState::Dungeon);
+            info!("Cathedral: Portal activated (depth {}) - dungeons not yet implemented", event.depth);
+            // TODO: Implement dungeon transitions when dungeon system is ready
         }
     }
 }

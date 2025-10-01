@@ -33,7 +33,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Combat Sandbox - Enemy Archetypes".to_string(),
-                resolution: (800.0, 600.0).into(),
+                resolution: (1280.0, 720.0).into(),
                 ..default()
             }),
             ..default()
@@ -47,6 +47,7 @@ fn main() {
         .add_event::<DamageEvent>()
         .add_event::<HitFlashEvent>()
         .add_event::<GrenadeExplosionEvent>()
+        .add_event::<PortalActivationEvent>()
         .insert_resource(Score::default())
         .insert_resource(GameState::default())
         .insert_resource(GameMode::default())

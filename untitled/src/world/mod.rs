@@ -1,28 +1,25 @@
 //! World setup and management
 //!
-//! This module is responsible for world initialization and configuration.
+//! This module is responsible for world initialization and state-based scene management.
 
 pub mod dungeon;
 pub mod scenes;
 pub mod interaction;
+pub mod states;
 
-// Re-export interaction components for easy access
+// Re-export key types for easy access
 pub use interaction::{
     Interactable, InteractionEvent, InteractableHighlight, InteractionCallback,
 };
-
-// WorldPlugin is defined below and automatically exported as pub
+pub use states::{WorldState, PortalId, ExitReason, PlayerProgress, DungeonConfig, CathedralConfig};
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
     components::*,
-    constants::*,
     resources::*,
-    world::scenes::manager::{SceneManager, SceneId},
-    world::scenes::cathedral::CathedralScene,
-    player::{Player, FireTimer},
+    player::Player,
 };
 
 /// Disables gravity for the 2D physics world
@@ -31,29 +28,6 @@ pub fn disable_gravity(mut query: Query<&mut RapierConfiguration>) {
         config.gravity = Vec2::ZERO;
     }
 }
-
-
-
-/// Reset game to Cathedral scene - used for restart functionality
-pub fn reset_to_cathedral(
-    mut scene_manager: ResMut<scenes::SceneManager>,
-    mut score: ResMut<Score>,
-    mut game_state: ResMut<GameState>,
-    mut fire_timer: ResMut<FireTimer>,
-) {
-    // Reset game state
-    *game_state = GameState::Playing;
-    score.current = 0;
-
-    // Reset timers
-    fire_timer.timer.reset();
-
-    // Clear all scenes and return to Cathedral
-    scene_manager.clear_scenes();
-    scene_manager.push_scene(scenes::CathedralScene::new());
-}
-
-
 
 /// Cleans up game entities (enemies, projectiles) for restart
 pub fn cleanup_game_entities(
@@ -83,39 +57,33 @@ pub fn cleanup_dungeon_entities(
     }
 }
 
-/// Plugin that organizes all world-related systems, events, and resources
+/// Plugin that organizes all world-related systems using state-based scene management
 pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app
+            // Initialize world state
+            .init_state::<WorldState>()
+
             // Events
             .add_event::<InteractionEvent>()
 
-            // Resources
-            .insert_resource(scenes::SceneManager::new())
-
-            // Systems
-            .add_systems(Update, (
-                // Scene management
-                scenes::manager::update_scenes,
-
-                // Consolidated interaction systems
-                interaction::update_interactable_cooldowns,
-                interaction::update_hovered_interactable, // Manages HoveredInteractable marker component
-                interaction::handle_basic_interactions.run_if(resource_equals(GameState::Playing)),
-                interaction::update_interactable_highlights,
-                interaction::manage_halo_effects, // Now handles all halo management
+            // Add scene plugins (each handles their own OnEnter/OnExit transitions)
+            .add_plugins((
+                scenes::cathedral::CathedralPlugin,
+                scenes::dungeon::DungeonPlugin,
             ))
 
-            // Setup initial scene
-            .add_systems(Startup, setup_initial_scene);
+            // Global interaction systems (run regardless of scene)
+            .add_systems(Update, (
+                interaction::update_interactable_cooldowns,
+                interaction::update_hovered_interactable,
+                interaction::handle_basic_interactions.run_if(resource_equals(GameState::Playing)),
+                interaction::update_interactable_highlights,
+                interaction::manage_halo_effects,
+            ));
     }
-}
-
-/// Setup initial scene (Cathedral)
-fn setup_initial_scene(mut scene_manager: ResMut<scenes::SceneManager>) {
-    scene_manager.push_scene(scenes::CathedralScene::new());
 }
 
 

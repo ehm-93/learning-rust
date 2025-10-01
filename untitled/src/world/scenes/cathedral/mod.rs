@@ -4,6 +4,7 @@ pub mod systems;
 pub mod scene;
 
 use bevy::prelude::*;
+use crate::world::states::WorldState;
 
 /// Cathedral plugin that manages the central hub and dungeon descent system
 pub struct CathedralPlugin;
@@ -12,25 +13,162 @@ impl Plugin for CathedralPlugin {
     fn build(&self, app: &mut App) {
         app
             // Add resources
-            .init_resource::<resources::CathedralState>()
             .init_resource::<resources::ModifierSystem>()
             .init_resource::<resources::ProgressionState>()
-            // Add startup systems
-            .add_systems(Startup, (
-                systems::setup_cathedral_scene,
-                systems::initialize_portals,
-            ))
-            // Add update systems (only run in Cathedral mode)
-            .add_systems(Update, (
-                systems::handle_portal_interaction.run_if(resource_equals(crate::resources::GameMode::Cathedral)),
-                systems::handle_portal_interaction_events.run_if(resource_equals(crate::resources::GameMode::Cathedral)),
-                systems::update_portal_displays.run_if(resource_equals(crate::resources::GameMode::Cathedral)),
-            ));
+            .init_resource::<resources::CathedralState>()
+            .init_resource::<crate::world::states::CathedralConfig>()
+
+            // Scene lifecycle systems
+            .add_systems(OnEnter(WorldState::Cathedral), setup_cathedral_scene)
+            .add_systems(OnExit(WorldState::Cathedral), teardown_cathedral_scene)
+            .add_systems(
+                Update,
+                (
+                    systems::handle_portal_activation.run_if(in_state(WorldState::Cathedral)),
+                    systems::update_portal_displays.run_if(in_state(WorldState::Cathedral)),
+                )
+            );
     }
+}
+
+
+
+
+
+/// System to setup the cathedral scene when entering WorldState::Cathedral
+fn setup_cathedral_scene(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut modifier_system: ResMut<resources::ModifierSystem>,
+    mut cathedral_state: ResMut<resources::CathedralState>,
+    progression_state: Res<resources::ProgressionState>,
+) {
+    info!("Entering Cathedral state - setting up scene");
+
+    // Mark Cathedral as active
+    cathedral_state.is_active = true;
+    cathedral_state.current_depth = 1; // Default starting depth
+
+    // Spawn camera
+    commands.spawn((
+        Camera2d,
+        crate::components::MainCamera,
+        components::Cathedral, // Tag for cleanup
+    ));
+
+    // Spawn player at cathedral center using PlayerSpawner
+    commands.queue(|world: &mut World| {
+        use crate::player::PlayerSpawner;
+        let player_entity = PlayerSpawner::spawn_standalone(world, Vec3::new(0.0, -100.0, 0.0));
+
+        // Add cathedral tag for cleanup
+        world.entity_mut(player_entity).insert(components::Cathedral);
+    });
+
+    setup_cathedral_entities(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut modifier_system,
+        &progression_state,
+    );
+}
+
+/// System to cleanup the cathedral scene when exiting WorldState::Cathedral
+fn teardown_cathedral_scene(
+    mut commands: Commands,
+    mut cathedral_state: ResMut<resources::CathedralState>,
+    cathedral_entities: Query<Entity, With<components::Cathedral>>,
+) {
+    info!("Leaving Cathedral state - cleaning up scene");
+
+    // Mark Cathedral as inactive
+    cathedral_state.is_active = false;
+
+    for entity in cathedral_entities.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+
+
+// Helper function to set up cathedral entities
+fn setup_cathedral_entities(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    _modifier_system: &mut ResMut<resources::ModifierSystem>,
+    _progression_state: &Res<resources::ProgressionState>,
+) {
+    use std::sync::Arc;
+    use crate::world::{Interactable, InteractableHighlight, InteractionCallback};
+
+    // Spawn Cathedral marker entity
+    commands.spawn((
+        components::Cathedral,
+        Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
+        Visibility::Visible,
+    ));
+
+    // Create three portal archways
+    let portal_positions = [
+        Vec3::new(-300.0, 100.0, 0.0), // Left portal
+        Vec3::new(0.0, 100.0, 0.0),    // Center portal
+        Vec3::new(300.0, 100.0, 0.0),  // Right portal
+    ];
+
+    let portal_ids = [components::PortalId::Left, components::PortalId::Center, components::PortalId::Right];
+    let portal_colors = [Color::srgb(0.6, 0.3, 0.8), Color::srgb(0.8, 0.4, 1.0), Color::srgb(0.4, 0.2, 0.6)];
+
+    for (i, (&position, &portal_id)) in portal_positions.iter().zip(portal_ids.iter()).enumerate() {
+        // Create portal callback (currently just logs)
+        let portal_callback: InteractionCallback = Arc::new(move |_context| {
+            info!("Portal {:?} activated", portal_id);
+        });
+
+        // Create portal entity
+        commands.spawn((
+            Mesh2d(meshes.add(Rectangle::new(80.0, 120.0))),
+            MeshMaterial2d(materials.add(portal_colors[i])),
+            Transform::from_translation(position),
+            components::Cathedral,
+            components::Portal {
+                id: portal_id,
+                depth: 1,
+                modifiers: Vec::new(),
+            },
+            Interactable::new(
+                format!("portal_{:?}", portal_id),
+                format!("{:?} Portal", portal_id),
+                portal_callback
+            ),
+            InteractableHighlight::with_radius(1.4),
+        ));
+    }
+
+    // Add basic Cathedral decoration (simple floor)
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(800.0, 100.0))),
+        MeshMaterial2d(materials.add(Color::srgb(0.2, 0.2, 0.2))),
+        Transform::from_translation(Vec3::new(0.0, -200.0, -1.0)),
+        components::Cathedral,
+    ));
+
+    // Add Cathedral title text
+    commands.spawn((
+        Text2d::new("The Cathedral"),
+        TextFont {
+            font_size: 32.0,
+            ..default()
+        },
+        TextColor(Color::WHITE),
+        Transform::from_translation(Vec3::new(0.0, 250.0, 1.0)),
+        components::Cathedral,
+    ));
+
+    info!("Cathedral scene set up with three portals");
 }
 
 // Re-export commonly used types
 pub use components::*;
-pub use resources::*;
-pub use systems::*;
-pub use scene::*;

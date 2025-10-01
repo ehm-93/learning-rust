@@ -12,13 +12,7 @@ pub struct InteractionContext {
     pub target_entity: Entity,
     /// Entity that initiated the interaction (usually player)
     pub source_entity: Entity,
-    /// Current world (for accessing other systems/resources)
-    pub world: *mut World,
 }
-
-// Safety: We control the lifetime and usage of the World pointer
-unsafe impl Send for InteractionContext {}
-unsafe impl Sync for InteractionContext {}
 
 /// Callback function type for interactions
 pub type InteractionCallback = Arc<dyn Fn(&InteractionContext) + Send + Sync>;
@@ -41,14 +35,10 @@ pub struct Interactable {
     pub interaction_type: InteractionType,
     /// Display name shown to the player
     pub display_name: String,
-    /// Description or hint about the interaction
-    pub description: Option<String>,
     /// Whether this interactable is currently available
     pub is_enabled: bool,
     /// Distance at which interaction becomes available
     pub interaction_range: f32,
-    /// Whether to show interaction prompt when in range
-    pub show_prompt: bool,
     /// Cooldown timer for repeated interactions
     pub cooldown: Option<Timer>,
 }
@@ -64,18 +54,10 @@ impl Interactable {
                 on_interact: callback,
             },
             display_name: display_string,
-            description: None,
             is_enabled: true,
             interaction_range: 100.0,
-            show_prompt: true,
             cooldown: None,
         }
-    }
-
-    /// Builder method to set description
-    pub fn with_description(mut self, description: &str) -> Self {
-        self.description = Some(description.to_string());
-        self
     }
 
     /// Builder method to set interaction range
@@ -107,15 +89,6 @@ impl Interactable {
         }
 
         true
-    }
-
-    /// Get the appropriate interaction prompt text
-    pub fn get_prompt_text(&self) -> String {
-        if let Some(description) = &self.description {
-            format!("[E] {} - {}", self.display_name, description)
-        } else {
-            format!("[E] {}", self.display_name)
-        }
     }
 
     /// Reset cooldown timer if it exists
@@ -259,7 +232,6 @@ pub fn handle_basic_interactions(
             let context = InteractionContext {
                 target_entity,
                 source_entity: player_entity,
-                world: std::ptr::null_mut(), // TODO: Pass world safely
             };
             (interactable.interaction_type.on_interact)(&context);
 

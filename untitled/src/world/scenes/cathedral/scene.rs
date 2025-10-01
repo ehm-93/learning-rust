@@ -85,10 +85,9 @@ impl CathedralScene {
 
         for (i, (&position, &portal_id)) in portal_positions.iter().zip(portal_ids.iter()).enumerate() {
             // Create portal callback for transitions
+            // The callback is required but the actual transition logic is handled by the portal_interaction_events system
             let portal_callback: InteractionCallback = Arc::new(move |_context| {
-                info!("Portal {:?} activated - transitioning to dungeon depth 1", portal_id);
-                info!("For now, portals just log this message. Actual dungeon generation will be implemented soon!");
-                // The actual transition logic will be handled by the portal_interaction_events system
+                // No-op - the event system handles portal transitions
             });
 
             // Get modifiers for this portal

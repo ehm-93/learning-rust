@@ -1,9 +1,7 @@
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
 use crate::{
     components::*,
     resources::*,
-    world::{reset_to_cathedral, cleanup_game_entities, cleanup_dungeon_entities},
     player::{Player, FireTimer},
 };
 
@@ -210,14 +208,14 @@ pub fn setup_game_over_overlay(
 pub fn handle_restart_button(
     mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut commands: Commands,
-    score: ResMut<Score>,
-    game_state: ResMut<GameState>,
+    mut score: ResMut<Score>,
+    mut game_state: ResMut<GameState>,
     overlay_query: Query<Entity, With<GameOverOverlay>>,
     entities_query: Query<Entity, (Or<(With<Enemy>, With<Projectile>)>, Without<Player>, Without<MainCamera>)>,
     dungeon_query: Query<Entity, With<DungeonWall>>,
     floor_query: Query<Entity, (With<Mesh2d>, Without<Player>, Without<MainCamera>, Without<DungeonWall>, Without<Enemy>)>,
-    fire_timer: ResMut<FireTimer>,
-    scene_manager: ResMut<crate::world::scenes::SceneManager>,
+    mut fire_timer: ResMut<FireTimer>,
+    mut next_state: ResMut<NextState<crate::world::states::WorldState>>,
 ) {
     let mut should_restart = false;
 
@@ -230,7 +228,7 @@ pub fn handle_restart_button(
     }
 
     if should_restart {
-        println!("Restarting game - generating new dungeon!");
+        println!("Restarting game - returning to Cathedral!");
 
         // Remove game over overlay
         for entity in overlay_query.iter() {
@@ -238,18 +236,18 @@ pub fn handle_restart_button(
         }
 
         // Clean up all game entities (enemies, projectiles)
-        cleanup_game_entities(&mut commands, &entities_query);
+        crate::world::cleanup_game_entities(&mut commands, &entities_query);
 
         // Clean up the entire dungeon (walls, floors) for complete regeneration
-        cleanup_dungeon_entities(&mut commands, &dungeon_query, &floor_query);
+        crate::world::cleanup_dungeon_entities(&mut commands, &dungeon_query, &floor_query);
 
-        // Reset to Cathedral scene using scene system
-        reset_to_cathedral(
-            scene_manager,
-            score,
-            game_state,
-            fire_timer,
-        );
+        // Reset game state
+        *game_state = GameState::Playing;
+        score.current = 0;
+        fire_timer.timer.reset();
+
+        // Return to Cathedral with fresh progress
+        next_state.set(crate::world::states::WorldState::Cathedral);
     }
 }
 

@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use crate::inventory::{InstanceId, GridPosition, ItemRotation};
+use crate::{
+    inventory::{InstanceId, GridPosition, ItemRotation},
+    player::Player,
+};
 
 /// Component for drag preview visual elements
 #[derive(Component)]
@@ -40,7 +43,7 @@ pub fn update_drag_preview(
     drag_state: Res<DragState>,
     mut preview_query: Query<(&mut Node, &mut BackgroundColor), With<DragPreview>>,
     cell_query: Query<(&crate::inventory::ui::InventoryCell, &GlobalTransform)>,
-    player_query: Query<&crate::inventory::Inventory, With<crate::components::Player>>,
+    player_query: Query<&crate::inventory::Inventory, With<Player>>,
     item_registry: Res<crate::inventory::ItemRegistry>,
 ) {
     if !drag_state.is_dragging {
@@ -93,7 +96,7 @@ pub fn update_drag_preview(
 fn check_drop_validity(
     drag_state: &DragState,
     _cell_query: &Query<(&crate::inventory::ui::InventoryCell, &GlobalTransform)>,
-    player_query: &Query<&crate::inventory::Inventory, With<crate::components::Player>>,
+    player_query: &Query<&crate::inventory::Inventory, With<Player>>,
     item_registry: &Res<crate::inventory::ItemRegistry>,
 ) -> bool {
     let Some(item_id) = drag_state.dragged_item else { return false; };
@@ -141,7 +144,7 @@ pub fn spawn_drag_preview(
     mut commands: Commands,
     drag_state: Res<DragState>,
     existing_preview: Query<Entity, With<DragPreview>>,
-    player_query: Query<&crate::inventory::Inventory, With<crate::components::Player>>,
+    player_query: Query<&crate::inventory::Inventory, With<Player>>,
     item_registry: Res<crate::inventory::ItemRegistry>,
 ) {
     if drag_state.is_dragging && drag_state.dragged_item.is_some() && existing_preview.is_empty() {

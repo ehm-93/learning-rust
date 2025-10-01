@@ -3,7 +3,8 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     components::*,
     resources::*,
-    world::{initialize_game_state, cleanup_game_entities, cleanup_dungeon_entities},
+    world::{reset_to_cathedral, cleanup_game_entities, cleanup_dungeon_entities},
+    player::{Player, FireTimer},
 };
 
 /// Sets up the health bar UI elements
@@ -206,16 +207,14 @@ pub fn setup_game_over_overlay(
 pub fn handle_restart_button(
     mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<ColorMaterial>>,
     score: ResMut<Score>,
     game_state: ResMut<GameState>,
     overlay_query: Query<Entity, With<GameOverOverlay>>,
     entities_query: Query<Entity, (Or<(With<Enemy>, With<Projectile>)>, Without<Player>, Without<MainCamera>)>,
     dungeon_query: Query<Entity, With<DungeonWall>>,
     floor_query: Query<Entity, (With<Mesh2d>, Without<Player>, Without<MainCamera>, Without<DungeonWall>, Without<Enemy>)>,
-    player_query: Query<(&mut Health, &mut Transform, &mut Velocity, &mut Dash, &mut GrenadeThrower), With<Player>>,
     fire_timer: ResMut<FireTimer>,
+    scene_manager: ResMut<crate::world::scenes::SceneManager>,
 ) {
     let mut should_restart = false;
 
@@ -241,15 +240,12 @@ pub fn handle_restart_button(
         // Clean up the entire dungeon (walls, floors) for complete regeneration
         cleanup_dungeon_entities(&mut commands, &dungeon_query, &floor_query);
 
-        // Initialize/reset game state using centralized function
-        initialize_game_state(
-            commands,
-            meshes,
-            materials,
+        // Reset to Cathedral scene using scene system
+        reset_to_cathedral(
+            scene_manager,
             score,
             game_state,
             fire_timer,
-            player_query,
         );
     }
 }

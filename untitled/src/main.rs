@@ -21,11 +21,12 @@ use events::*;
 use resources::*;
 use combat::*;
 use enemy::*;
-use player::*;
 use world::*;
 use ui::*;
 use sounds::*;
 use inventory::InventoryPlugin;
+use world::WorldPlugin;
+use player::PlayerPlugin;
 
 fn main() {
     App::new()
@@ -39,26 +40,19 @@ fn main() {
         }))
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         // .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(PlayerPlugin)
         .add_plugins(InventoryPlugin)
+        .add_plugins(WorldPlugin)
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()
         .add_event::<HitFlashEvent>()
         .add_event::<GrenadeExplosionEvent>()
-        .insert_resource(FireTimer {
-            timer: Timer::from_seconds(FIRE_RATE, TimerMode::Repeating),
-        })
-
         .insert_resource(Score::default())
         .insert_resource(GameState::default())
+        .insert_resource(GameMode::default())
         .insert_resource(DungeonParams::default())
-        .add_systems(Startup, (disable_gravity, setup, setup_health_bar, setup_score_display, load_sounds))
+        .add_systems(Startup, (disable_gravity, setup_health_bar, setup_score_display, load_sounds))
         .add_systems(Update, (
-            // Player systems
-            player_movement.run_if(resource_equals(GameState::Playing)),
-            shoot_projectiles.run_if(resource_equals(GameState::Playing)),
-            throw_grenades.run_if(resource_equals(GameState::Playing)),
-            camera_follow,
-
             // Enemy systems
             enemy_ai.run_if(resource_equals(GameState::Playing)),
             laser_sight_system.run_if(resource_equals(GameState::Playing)),
@@ -87,3 +81,5 @@ fn main() {
         ))
         .run();
 }
+
+

@@ -7,6 +7,7 @@ use crate::{
     constants::*,
     resources::*,
     sounds::*,
+    player::{Player, Dash},
 };
 
 /// Detects collisions between projectiles and other entities, emitting impact events

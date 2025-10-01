@@ -1,6 +1,9 @@
 use bevy::prelude::*;
-use crate::inventory::{
-    Inventory, InstanceId, GridPosition, ItemRotation,
+use crate::{
+    inventory::{
+        Inventory, InstanceId, GridPosition, ItemRotation,
+    },
+    player::Player,
 };
 use super::DragState;
 
@@ -129,7 +132,7 @@ pub fn update_inventory_display(
     mut commands: Commands,
     mut cell_query: Query<(Entity, &mut BackgroundColor, &InventoryCell), With<InventoryCell>>,
     item_icon_query: Query<Entity, With<InventoryItemIcon>>,
-    player_query: Query<&Inventory, With<crate::components::Player>>,
+    player_query: Query<&Inventory, With<Player>>,
     item_registry: Res<crate::inventory::ItemRegistry>,
     ui_state: Res<InventoryUiState>,
 ) {
@@ -213,7 +216,7 @@ fn get_item_icon_color(item_name: &str) -> Color {
 /// System to handle mouse clicks on inventory cells
 pub fn handle_cell_clicks(
     interaction_query: Query<(&Interaction, &InventoryCell), Changed<Interaction>>,
-    player_query: Query<&Inventory, With<crate::components::Player>>,
+    player_query: Query<&Inventory, With<Player>>,
     mut ui_state: ResMut<InventoryUiState>,
 ) {
     for (interaction, cell) in interaction_query.iter() {
@@ -246,7 +249,7 @@ pub fn handle_drag_and_drop(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     windows: Query<&Window>,
     interaction_query: Query<(&Interaction, &InventoryCell), Changed<Interaction>>,
-    mut player_query: Query<&mut Inventory, With<crate::components::Player>>,
+    mut player_query: Query<&mut Inventory, With<Player>>,
     item_registry: Res<crate::inventory::ItemRegistry>,
     ui_state: Res<InventoryUiState>,
 ) {
@@ -349,7 +352,7 @@ pub fn handle_drag_and_drop(
 fn handle_item_drop(
     drag_state: &DragState,
     _interaction_query: &Query<(&Interaction, &InventoryCell), Changed<Interaction>>,
-    player_query: &mut Query<&mut Inventory, With<crate::components::Player>>,
+    player_query: &mut Query<&mut Inventory, With<Player>>,
     item_registry: &Res<crate::inventory::ItemRegistry>,
 ) {
     let Some(item_id) = drag_state.dragged_item else { return; };

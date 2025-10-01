@@ -1,10 +1,6 @@
 use bevy::prelude::*;
 
-/// Timer resource for controlling player fire rate
-#[derive(Resource)]
-pub struct FireTimer {
-    pub timer: Timer,
-}
+
 
 /// Score tracking resource
 #[derive(Resource, Default)]
@@ -18,6 +14,14 @@ pub enum GameState {
     #[default]
     Playing,
     GameOver,
+}
+
+/// Game mode resource to track if we're in Cathedral or Dungeon
+#[derive(Resource, Default, PartialEq, Eq)]
+pub enum GameMode {
+    #[default]
+    Cathedral,
+    Dungeon,
 }
 
 /// Dungeon generation parameters

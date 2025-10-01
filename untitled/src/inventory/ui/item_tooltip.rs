@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use crate::inventory::{ItemRegistry, InstanceId, ItemInstance, ItemDefinition};
+use crate::{
+    inventory::{ItemRegistry, InstanceId, ItemInstance, ItemDefinition},
+    player::Player,
+};
 
 /// Component to mark tooltip UI elements
 #[derive(Component)]
@@ -19,7 +22,7 @@ pub fn update_tooltip_state(
     mut tooltip_state: ResMut<TooltipState>,
     windows: Query<&Window>,
     interaction_query: Query<(&Interaction, &crate::inventory::ui::InventoryCell)>,
-    player_query: Query<&crate::inventory::Inventory, With<crate::components::Player>>,
+    player_query: Query<&crate::inventory::Inventory, With<Player>>,
 ) {
     if let Ok(window) = windows.single() {
         if let Some(cursor_position) = window.cursor_position() {
@@ -49,7 +52,7 @@ pub fn spawn_tooltips(
     mut commands: Commands,
     tooltip_state: Res<TooltipState>,
     existing_tooltips: Query<(Entity, &ItemTooltip)>,
-    player_query: Query<&crate::inventory::Inventory, With<crate::components::Player>>,
+    player_query: Query<&crate::inventory::Inventory, With<Player>>,
     item_registry: Res<ItemRegistry>,
 ) {
     match tooltip_state.current_item {

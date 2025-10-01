@@ -5,6 +5,7 @@ use crate::{
     constants::*,
     sounds::*,
     line_of_sight::*,
+    player::Player,
 };
 
 /// Configuration for enemy archetype properties

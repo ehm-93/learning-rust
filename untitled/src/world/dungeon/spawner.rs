@@ -6,6 +6,7 @@ use crate::{
     components::*,
     constants::*,
     enemy::{spawn_single_enemy, spawn_enemy_group},
+    world::scenes::manager::Scene,
 };
 use super::grid::DungeonGrid;
 
@@ -370,4 +371,18 @@ fn spawn_wall(
         RigidBody::Fixed,
         Collider::cuboid(width / 2.0, height / 2.0),
     ));
+}
+
+/// Scene-aware version of spawn_grid_as_entities
+/// For now, this is a simplified version that just wraps the original function
+/// TODO: Make the original spawn_grid_as_entities scene-aware and use that
+pub fn spawn_grid_as_entities_in_scene<T: Scene>(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    grid: &DungeonGrid,
+) {
+    // For now, just call the original function
+    // TODO: Refactor the original function to be scene-aware
+    spawn_grid_as_entities(commands, meshes, materials, grid);
 }

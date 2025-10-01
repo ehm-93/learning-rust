@@ -1,11 +1,10 @@
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
 
 use crate::{
     constants::*,
     world::scenes::manager::{Scene, SceneEntity, SceneId},
 };
-use super::{PlayerBundle, Player};
+use super::Player;
 
 /// Service for spawning player entities with proper scene tracking
 pub struct PlayerSpawner;
@@ -13,6 +12,8 @@ pub struct PlayerSpawner;
 impl PlayerSpawner {
     /// Spawn a player entity in a specific scene at the given position
     pub fn spawn_in_scene<T: Scene>(world: &mut World, position: Vec3) -> Entity {
+        use super::components::FullPlayerBundle;
+
         // Get mesh and material resources
         let mesh_handle = {
             let mut meshes = world.resource_mut::<Assets<Mesh>>();
@@ -24,23 +25,9 @@ impl PlayerSpawner {
             materials.add(Color::WHITE)
         };
 
-        // Spawn player with all necessary components
+        // Spawn player with complete bundle + scene tracking
         world.spawn((
-            // Visual components
-            Mesh2d(mesh_handle),
-            MeshMaterial2d(material_handle),
-            Transform::from_translation(position),
-
-            // Player bundle (core player components)
-            PlayerBundle::default(),
-
-            // Physics components
-            RigidBody::Dynamic,
-            Collider::ball(PLAYER_RADIUS),
-            LockedAxes::ROTATION_LOCKED,
-            Velocity::zero(),
-            ActiveEvents::COLLISION_EVENTS,
-
+            FullPlayerBundle::new(mesh_handle, material_handle, position),
             // Scene tracking
             SceneEntity {
                 scene_id: SceneId::of::<T>(),
@@ -50,6 +37,8 @@ impl PlayerSpawner {
 
     /// Spawn a player entity without scene tracking (for testing or standalone use)
     pub fn spawn_standalone(world: &mut World, position: Vec3) -> Entity {
+        use super::components::FullPlayerBundle;
+
         // Get mesh and material resources
         let mesh_handle = {
             let mut meshes = world.resource_mut::<Assets<Mesh>>();
@@ -61,22 +50,32 @@ impl PlayerSpawner {
             materials.add(Color::WHITE)
         };
 
-        // Spawn player with all necessary components (no scene tracking)
-        world.spawn((
-            // Visual components
-            Mesh2d(mesh_handle),
-            MeshMaterial2d(material_handle),
-            Transform::from_translation(position),
+        // Spawn player with complete bundle - much simpler!
+        world.spawn(FullPlayerBundle::new(
+            mesh_handle,
+            material_handle,
+            position,
+        )).id()
+    }
 
-            // Player bundle (core player components)
-            PlayerBundle::default(),
+    /// Spawn a player entity using Commands (more idiomatic for systems)
+    pub fn spawn_with_commands(
+        commands: &mut Commands,
+        meshes: &mut ResMut<Assets<Mesh>>,
+        materials: &mut ResMut<Assets<ColorMaterial>>,
+        position: Vec3,
+    ) -> Entity {
+        use super::components::FullPlayerBundle;
 
-            // Physics components
-            RigidBody::Dynamic,
-            Collider::ball(PLAYER_RADIUS),
-            LockedAxes::ROTATION_LOCKED,
-            Velocity::zero(),
-            ActiveEvents::COLLISION_EVENTS,
+        // Create mesh and material handles
+        let mesh_handle = meshes.add(Circle::new(PLAYER_RADIUS));
+        let material_handle = materials.add(Color::WHITE);
+
+        // Spawn player with complete bundle - much simpler!
+        commands.spawn(FullPlayerBundle::new(
+            mesh_handle,
+            material_handle,
+            position,
         )).id()
     }
 

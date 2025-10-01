@@ -58,13 +58,15 @@ fn setup_cathedral_scene(
     ));
 
     // Spawn player at cathedral center using PlayerSpawner
-    commands.queue(|world: &mut World| {
-        use crate::player::PlayerSpawner;
-        let player_entity = PlayerSpawner::spawn_standalone(world, Vec3::new(0.0, -100.0, 0.0));
+    let player_entity = crate::player::PlayerSpawner::spawn_with_commands(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        Vec3::new(0.0, -100.0, 0.0)
+    );
 
-        // Add cathedral tag for cleanup
-        world.entity_mut(player_entity).insert(components::Cathedral);
-    });
+    // Add cathedral tag for cleanup
+    commands.entity(player_entity).insert(components::Cathedral);
 
     setup_cathedral_entities(
         &mut commands,

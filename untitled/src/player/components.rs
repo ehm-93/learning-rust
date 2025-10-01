@@ -70,7 +70,7 @@ impl GrenadeThrower {
     }
 }
 
-/// Bundle of all core player components for easy spawning
+/// Bundle of all core player components for easy spawning (gameplay only)
 #[derive(Bundle)]
 pub struct PlayerBundle {
     pub player: Player,
@@ -89,6 +89,53 @@ impl Default for PlayerBundle {
             health: crate::components::Health::new(PLAYER_MAX_HEALTH),
             dash: Dash::new(),
             grenade_thrower: GrenadeThrower::new(),
+        }
+    }
+}
+
+/// Complete player bundle with all necessary components for spawning
+#[derive(Bundle)]
+pub struct FullPlayerBundle {
+    // Core player components
+    pub player_bundle: PlayerBundle,
+
+    // Visual components
+    pub mesh: Mesh2d,
+    pub material: MeshMaterial2d<ColorMaterial>,
+    pub transform: Transform,
+    pub visibility: Visibility,
+
+    // Physics components
+    pub rigid_body: bevy_rapier2d::prelude::RigidBody,
+    pub collider: bevy_rapier2d::prelude::Collider,
+    pub velocity: bevy_rapier2d::prelude::Velocity,
+    pub locked_axes: bevy_rapier2d::prelude::LockedAxes,
+    pub active_events: bevy_rapier2d::prelude::ActiveEvents,
+}
+
+impl FullPlayerBundle {
+    pub fn new(
+        mesh_handle: Handle<Mesh>,
+        material_handle: Handle<ColorMaterial>,
+        position: Vec3,
+    ) -> Self {
+        use crate::constants::*;
+
+        Self {
+            player_bundle: PlayerBundle::default(),
+
+            // Visual components
+            mesh: Mesh2d(mesh_handle),
+            material: MeshMaterial2d(material_handle),
+            transform: Transform::from_translation(position),
+            visibility: Visibility::Visible,
+
+            // Physics components
+            rigid_body: bevy_rapier2d::prelude::RigidBody::Dynamic,
+            collider: bevy_rapier2d::prelude::Collider::ball(PLAYER_RADIUS),
+            velocity: bevy_rapier2d::prelude::Velocity::zero(),
+            locked_axes: bevy_rapier2d::prelude::LockedAxes::ROTATION_LOCKED,
+            active_events: bevy_rapier2d::prelude::ActiveEvents::COLLISION_EVENTS,
         }
     }
 }

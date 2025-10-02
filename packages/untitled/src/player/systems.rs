@@ -5,6 +5,7 @@ use crate::{
     components::*,
     constants::*,
     sounds::*,
+    player::resources::*,
 };
 
 // Add missing constant that was used in player shooting
@@ -247,5 +248,36 @@ pub fn camera_follow(
         let current_pos = camera_transform.translation.truncate();
         let new_pos = current_pos.lerp(target_pos, config.camera_smoothing);
         camera_transform.translation = new_pos.extend(camera_transform.translation.z);
+    }
+}
+
+/// System to handle camera zoom events and apply zoom to all cameras
+pub fn handle_camera_zoom(
+    mut action_events: EventReader<PlayerActionEvent>,
+    mut camera_zoom: ResMut<CameraZoom>,
+    mut camera_query: Query<&mut Transform, With<crate::components::MainCamera>>,
+) {
+    let mut zoom_changed = false;
+
+    // Handle zoom input events
+    for event in action_events.read() {
+        match event.action {
+            PlayerAction::ZoomIn => {
+                camera_zoom.level = (camera_zoom.level - camera_zoom.sensitivity).max(camera_zoom.min_zoom);
+                zoom_changed = true;
+            }
+            PlayerAction::ZoomOut => {
+                camera_zoom.level = (camera_zoom.level + camera_zoom.sensitivity).min(camera_zoom.max_zoom);
+                zoom_changed = true;
+            }
+            _ => {}
+        }
+    }
+
+    // Apply zoom level to all main cameras if zoom changed
+    if zoom_changed {
+        for mut camera_transform in camera_query.iter_mut() {
+            camera_transform.scale = Vec3::splat(camera_zoom.level);
+        }
     }
 }

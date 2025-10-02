@@ -1,6 +1,8 @@
 // Player constants
+// Player is about 1m diameter (0.5m radius) in world units
+// Since 16 units = 0.5m, then 32 units = 1m diameter (16 unit radius)
 pub const PLAYER_SPEED: f32 = 200.0;
-pub const PLAYER_RADIUS: f32 = 10.0;
+pub const PLAYER_RADIUS: f32 = 16.0; // 16 units = 0.5m radius = 1m diameter
 pub const PLAYER_MAX_HEALTH: f32 = 100.0;
 
 // Dash constants
@@ -15,14 +17,6 @@ pub const PROJECTILE_SIZE: f32 = 3.0;
 pub const PROJECTILE_LIFETIME: f32 = 3.0;
 pub const PROJECTILE_DAMAGE: f32 = 10.0;
 pub const FIRE_RATE: f32 = 0.1; // 10 shots per second
-
-// World constants (unused)
-// pub const WALL_THICKNESS: f32 = 20.0;
-
-// Camera constants (unused - planned for future camera system)
-// pub const CAMERA_FOLLOW_SPEED: f32 = 5.0;
-// pub const CURSOR_BIAS_STRENGTH: f32 = 0.75;
-// pub const CURSOR_BIAS_DISTANCE: f32 = 200.0;
 
 // Combat constants
 pub const KNOCKBACK_FORCE: f32 = 200.0;
@@ -84,26 +78,5 @@ pub const EXPLOSION_DURATION: f32 = 0.3; // How long explosion animation lasts
 pub const EXPLOSION_START_SIZE: f32 = 5.0; // Initial explosion radius
 pub const EXPLOSION_END_SIZE: f32 = 120.0; // Final explosion radius
 
-// Grid-based dungeon generation constants (unused - dungeon system removed)
-// pub const GRID_WIDTH: usize = 64; // M: Grid width in cells
-// pub const GRID_HEIGHT: usize = 64; // N: Grid height in cells
-// pub const CELL_SIZE: f32 = 120.0; // Physical size of each grid cell
-// pub const ROOM_COUNT: usize = 8; // Number of rooms to generate
-// pub const ROOM_SIZE_X: usize = 6; // I: Room width in grid cells
-// pub const ROOM_SIZE_Y: usize = 6; // J: Room height in grid cells
-
-// Dungeon visual constants (unused - dungeon system removed)
-// pub const ROOM_FLOOR_COLOR: [f32; 3] = [0.4, 0.3, 0.25]; // Darker, warmer brown for rooms
-// pub const CORRIDOR_FLOOR_COLOR: [f32; 3] = [0.3, 0.35, 0.4]; // Cooler bluish-gray for corridors
-// pub const WALL_COLOR: [f32; 3] = [0.6, 0.6, 0.7]; // Existing wall color
-
 // Line of sight constants
 pub const LOS_MAX_RANGE: f32 = 800.0; // Maximum line of sight range
-
-// Sanctuary constants
-pub const SANCTUARY_HEALING_RATE: f32 = 20.0; // HP per second
-pub const SANCTUARY_HEALING_RANGE: f32 = 100.0; // Healing station range
-
-// Basic dungeon constants
-pub const DUNGEON_ROOM_SIZE: f32 = 200.0; // Size of dungeon rooms
-pub const DUNGEON_WALL_THICKNESS: f32 = 10.0; // Thickness of dungeon walls

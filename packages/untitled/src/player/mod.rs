@@ -27,6 +27,7 @@ impl Plugin for PlayerPlugin {
             .insert_resource(FireTimer::default())
             .insert_resource(PlayerConfig::default())
             .insert_resource(PlayerInputBindings::default())
+            .insert_resource(CameraZoom::default())
 
             // Add player action events
             .add_event::<PlayerActionEvent>()
@@ -40,6 +41,7 @@ impl Plugin for PlayerPlugin {
                 shoot_projectiles,
                 throw_grenades,
                 camera_follow,
+                handle_camera_zoom,
             ));
     }
 }

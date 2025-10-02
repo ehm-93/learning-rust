@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, input::mouse::MouseWheel};
 use crate::player::actions::{PlayerAction, PlayerActionEvent, ActionState, PlayerInputBindings};
 
 /// System that converts raw input into player action events
@@ -6,6 +6,7 @@ pub fn player_input_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut mouse_motion: EventReader<CursorMoved>,
+    mut scroll_events: EventReader<MouseWheel>,
     bindings: Res<PlayerInputBindings>,
     mut action_events: EventWriter<PlayerActionEvent>,
     windows: Query<&Window>,
@@ -19,6 +20,9 @@ pub fn player_input_system(
 
     // Handle camera/look input
     handle_camera_input(&mut mouse_motion, &mut action_events);
+
+    // Handle scroll wheel zoom
+    handle_scroll_input(&mut scroll_events, &mut action_events);
 }
 
 fn handle_movement_input(
@@ -108,6 +112,30 @@ fn handle_camera_input(
                     delta.length(),
                 ));
             }
+        }
+    }
+}
+
+/// Handle scroll wheel input for camera zoom
+fn handle_scroll_input(
+    scroll_events: &mut EventReader<MouseWheel>,
+    action_events: &mut EventWriter<PlayerActionEvent>,
+) {
+    for scroll in scroll_events.read() {
+        if scroll.y > 0.0 {
+            // Scroll up = zoom in
+            action_events.write(PlayerActionEvent::new(
+                PlayerAction::ZoomIn,
+                ActionState::Started,
+                scroll.y,
+            ));
+        } else if scroll.y < 0.0 {
+            // Scroll down = zoom out
+            action_events.write(PlayerActionEvent::new(
+                PlayerAction::ZoomOut,
+                ActionState::Started,
+                -scroll.y,
+            ));
         }
     }
 }

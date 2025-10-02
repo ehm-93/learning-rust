@@ -32,9 +32,33 @@ impl Default for PlayerConfig {
     fn default() -> Self {
         Self {
             movement_speed_multiplier: 1.0,
-            camera_smoothing: 0.1,
-            cursor_bias_strength: 0.3,
-            cursor_bias_max_distance: 200.0,
+            camera_smoothing: 0.05,
+            cursor_bias_strength: 0.5,
+            cursor_bias_max_distance: 300.0,
+        }
+    }
+}
+
+/// Resource for managing camera zoom level across scenes
+#[derive(Resource)]
+pub struct CameraZoom {
+    /// Current zoom level (higher values = more zoomed out)
+    pub level: f32,
+    /// Minimum zoom level (closest zoom)
+    pub min_zoom: f32,
+    /// Maximum zoom level (furthest zoom)
+    pub max_zoom: f32,
+    /// Zoom sensitivity (how much each scroll step changes zoom)
+    pub sensitivity: f32,
+}
+
+impl Default for CameraZoom {
+    fn default() -> Self {
+        Self {
+            level: 1.5,      // Start at 1.5x zoom out
+            min_zoom: 0.5,   // Can zoom in to 0.5x (closer)
+            max_zoom: 3.0,   // Can zoom out to 3.0x (further)
+            sensitivity: 0.1, // Each scroll step changes zoom by 0.1
         }
     }
 }

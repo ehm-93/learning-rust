@@ -29,6 +29,8 @@ pub enum PlayerAction {
 
     // Camera
     Look(Vec2), // Mouse delta for camera control
+    ZoomIn,     // Scroll wheel zoom in
+    ZoomOut,    // Scroll wheel zoom out
 }
 
 /// State of a player action

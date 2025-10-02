@@ -122,12 +122,13 @@ pub fn setup_sanctuary_scene(
     ));
 
     // Spawn player at sanctuary entrance
-    let player_entity = crate::player::PlayerSpawner::spawn_with_commands(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        Vec3::new(0.0, 100.0, 0.0), // Position player above center
-    );
+    let player_entity = commands.spawn(
+        crate::player::components::PlayerBundle::new(
+            &mut meshes,
+            &mut materials,
+            Vec3::new(0.0, 100.0, 0.0), // Position player above center
+        ),
+    ).id();
 
     // Mark player as a sanctuary entity for cleanup
     commands.entity(player_entity).insert(SanctuaryEntity);

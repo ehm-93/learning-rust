@@ -1,7 +1,6 @@
 pub mod components;
 pub mod resources;
 pub mod systems;
-pub mod scene;
 
 use bevy::prelude::*;
 use crate::world::states::WorldState;
@@ -60,12 +59,13 @@ fn setup_cathedral_scene(
     ));
 
     // Spawn player at cathedral center using PlayerSpawner (with higher Z to render above tilemap)
-    let player_entity = crate::player::PlayerSpawner::spawn_with_commands(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        Vec3::new(0.0, 0.0, 1.0) // Centered in tilemap area, Z=1 to render above tilemap at Z=-1
-    );
+    let player_entity = commands.spawn(
+        crate::player::components::PlayerBundle::new(
+            &mut meshes,
+            &mut materials,
+            Vec3::new(0.0, 0.0, 1.0) // Centered in tilemap area, Z=1 to render above tilemap at Z=-1
+        ),
+    ).id();
 
     // Add cathedral tag for cleanup
     commands.entity(player_entity).insert(components::Cathedral);

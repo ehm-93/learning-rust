@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use crate::constants::*;
 
 /// Player marker component
 #[derive(Component, Reflect)]
@@ -70,7 +71,7 @@ impl GrenadeThrower {
     }
 }
 
-/// Bundle of all core player components for easy spawning (gameplay only)
+/// Complete player bundle with all necessary components for spawning
 #[derive(Bundle)]
 pub struct PlayerBundle {
     pub player: Player,
@@ -79,27 +80,6 @@ pub struct PlayerBundle {
     pub dash: Dash,
     pub grenade_thrower: GrenadeThrower,
     pub inventory: crate::inventory::Inventory,
-}
-
-impl Default for PlayerBundle {
-    fn default() -> Self {
-        use crate::constants::*;
-        Self {
-            player: Player,
-            team: crate::components::Team::Player,
-            health: crate::components::Health::new(PLAYER_MAX_HEALTH),
-            dash: Dash::new(),
-            grenade_thrower: GrenadeThrower::new(),
-            inventory: crate::inventory::Inventory::player_inventory(),
-        }
-    }
-}
-
-/// Complete player bundle with all necessary components for spawning
-#[derive(Bundle)]
-pub struct FullPlayerBundle {
-    // Core player components
-    pub player_bundle: PlayerBundle,
 
     // Visual components
     pub mesh: Mesh2d,
@@ -115,16 +95,23 @@ pub struct FullPlayerBundle {
     pub active_events: bevy_rapier2d::prelude::ActiveEvents,
 }
 
-impl FullPlayerBundle {
+impl PlayerBundle {
     pub fn new(
-        mesh_handle: Handle<Mesh>,
-        material_handle: Handle<ColorMaterial>,
+        meshes: &mut ResMut<Assets<Mesh>>,
+        materials: &mut ResMut<Assets<ColorMaterial>>,
         position: Vec3,
     ) -> Self {
-        use crate::constants::*;
+        // Create mesh and material handles
+        let mesh_handle = meshes.add(Circle::new(PLAYER_RADIUS));
+        let material_handle = materials.add(Color::WHITE);
 
         Self {
-            player_bundle: PlayerBundle::default(),
+            player: Player,
+            team: crate::components::Team::Player,
+            health: crate::components::Health::new(PLAYER_MAX_HEALTH),
+            dash: Dash::new(),
+            grenade_thrower: GrenadeThrower::new(),
+            inventory: crate::inventory::Inventory::player_inventory(),
 
             // Visual components
             mesh: Mesh2d(mesh_handle),

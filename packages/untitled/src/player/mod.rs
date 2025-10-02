@@ -2,14 +2,12 @@ use bevy::prelude::*;
 
 pub mod components;
 pub mod systems;
-pub mod spawning;
 pub mod resources;
 pub mod actions;
 pub mod input;
 
 pub use components::*;
 pub use systems::*;
-pub use spawning::*;
 pub use resources::*;
 pub use actions::*;
 pub use input::*;

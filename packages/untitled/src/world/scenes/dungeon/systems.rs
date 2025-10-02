@@ -73,12 +73,13 @@ pub fn setup_dungeon_scene(
     ));
 
     // Spawn player at dungeon entrance
-    let player_entity = crate::player::PlayerSpawner::spawn_with_commands(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        Vec3::new(0.0, 100.0, 0.0), // Position player above center
-    );
+    let player_entity = commands.spawn((
+        crate::player::components::PlayerBundle::new(
+            &mut meshes,
+            &mut materials,
+            Vec3::new(0.0, 100.0, 0.0),
+        ),
+    )).id();
 
     // Mark player as a dungeon entity for cleanup
     commands.entity(player_entity).insert(DungeonEntity);

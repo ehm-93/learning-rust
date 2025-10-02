@@ -12,11 +12,12 @@ pub fn freeform(outfile: &str, floodfile: &str) {
     let height = width;
     let mut map = vec![vec![false; width]; height];
 
+    // Spawn room
     square_fill_seeds(&mut map, 8);
 
     let mut rng = rand::rng();
 
-    // cardinal edges
+     // Initial walkable path
     let (cx, cy) = center(&map);
     let cardinal_points = [
         (cx, 0),
@@ -30,98 +31,41 @@ pub fn freeform(outfile: &str, floodfile: &str) {
             &(cx, cy),
             &t,
             0.08,
-            width,
+            width / 4,
             2,
             1.0,
         );
     }
 
-    let seed_points= random(&map, 16);
-    dla::dla_generation(
-        &mut map,
-        5000,
-        10_000,
-        &seed_points,
-        &vec![(cx, cy)],
-        0.02,
-        |current, _, map| {
-            if current % 500 == 0 {
-                save_png(outfile, &map).unwrap();
-            }
-         }
-    );
-
-    let cardinal_halfway = [
-        (cx, height / 4),
-        (3 * width / 4, cy),
-        (cx, 3 * height / 4),
-        (width / 4, cy),
-    ];
-    for i in 0..cardinal_halfway.len() {
+    // Add some random paths
+    let path_count = 8;
+    let path_points = ring(&map, path_count * 2, width.min(height) / 2);
+    for i in 0..path_count {
+        // take two points to walk between
+        let a = path_points[2 * i];
+        let b = path_points[(2 * i + 1 + path_count) % path_points.len()];
         random_walk_fill(
             &mut map,
-            &cardinal_halfway[i],
-            &cardinal_halfway[(i + 1) % cardinal_halfway.len()],
-            0.08,
-            width,
+            &a,
+            &b,
+            0.05,
+            (((a.0 as isize - b.0 as isize).abs() + (a.1 as isize - b.1 as isize).abs()) as f64 * 1.5) as usize,
             2,
-            1.0,
+            0.5,
         );
     }
 
-    dla::dla_generation(
-        &mut map,
-        5000,
-        10_000,
-        &seed_points,
-        &vec![(cx, cy)],
-        0.02,
-        |current, _, map| {
-            if current % 500 == 0 {
-                save_png(outfile, &map).unwrap();
-            }
-         }
-    );
-
-    ca::cellular_automata(&mut map, 2, |_, _| { });
-
-    let external_centers = [
-        (width / 8, height / 8),
-        (7 * width / 8, height / 8),
-        (7 * width / 8, 7 * height / 8),
-        (width / 8, 7 * height / 8),
-    ];
-    for &center in &external_centers {
-        let n_w = width / 8;
-        let n_h = height / 8;
-        let n_area = n_w * n_h;
-        map[center.1][center.0] = true;
-
-        let radius = width / 8;
-        let circle = diamond(&map, 2, radius, center);
-        dla::dla_generation(
-            &mut map,
-            n_area / 4,
-            n_area,
-            &circle,
-            &vec![center],
-            0.02,
-            |current, _, map| {
-                if current % 500 == 0 {
-                    save_png(outfile, &map).unwrap();
-                }
-             }
-        );
-    }
-
+    // scale out to guarantee solid boarder
     resize(&mut map, 1024, 1024);
     let (cx, cy) = center(&map);
 
-    simplex::generate_simplex_noise(&mut map, &mut rng, 0.05, 0.9);
-    simplex::generate_simplex_noise(&mut map, &mut rng, 0.1, 0.9);
-    simplex::generate_simplex_noise(&mut map, &mut rng, 0.25, 0.9);
+    // Add some noise to make it less uniform
+    simplex::generate_simplex_noise(&mut map, &mut rng, 0.025, 0.85);
+    simplex::generate_simplex_noise(&mut map, &mut rng, 0.05, 0.85);
+    simplex::generate_simplex_noise(&mut map, &mut rng, 0.1, 0.85);
 
-    ca::cellular_automata(&mut map, 3, |_, _| { });
+    // Smoothing
+    ca::cellular_automata(&mut map, 5, |_, _| { });
 
     save_png(outfile, &map).unwrap();
 

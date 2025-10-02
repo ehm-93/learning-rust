@@ -20,6 +20,12 @@ pub fn flood_fill(map: &Vec<Vec<bool>>, start: (usize, usize)) -> Vec<Vec<usize>
     distances
 }
 
+pub fn threshold(map: &Vec<Vec<usize>>, threshold: usize) -> Vec<Vec<bool>> {
+    map.iter()
+        .map(|row| row.iter().map(|&v| v < threshold).collect())
+        .collect()
+}
+
 fn neighbors((x, y): (usize, usize), width: usize, height: usize) -> Vec<(usize, usize)> {
     let mut result = Vec::new();
     if x > 0 { result.push((x - 1, y)); }

@@ -7,70 +7,63 @@ use super::post;
 
 use rand::Rng;
 
-pub fn freeform(outfile: &str, floodfile: &str) {
-    let width = 768;
+pub fn freeform(size: usize, outfile: &str, floodfile: &str) {
+    let mut rng = rand::rng();
+    let width = 3 * size / 4;
     let height = width;
     let mut map = vec![vec![false; width]; height];
+    let (cx, cy) = center(&map);
 
     // Spawn room
-    square_fill_seeds(&mut map, 8);
+    square_fill_seeds(&mut map, 4);
 
-    let mut rng = rand::rng();
-
-     // Initial walkable path
-    let (cx, cy) = center(&map);
-    let cardinal_points = [
-        (cx, 0),
-        (cx, height - 1),
-        (0, cy),
-        (width - 1, cy),
-    ];
-    for &t in &cardinal_points {
+    // Add some random paths
+    let mut path_count = (size as i32) / 256;
+    path_count = rng.random_range((path_count - 2)..(path_count + 2)).max(4).min(32);
+    let path_points = circle(&map, 1, width / 2, (cx, cy));
+    let mut a = path_points[rng.random_range(0..path_points.len())];
+    for _ in 0..path_count {
+        let last_a = a;
+        // make sure the new point is at least tau / path_count radians from the previous
+        // prevents paths from overlapping too much
+        loop {
+            a = path_points[rng.random_range(0..path_points.len())];
+            let angle_a = ((a.1 as isize - cy as isize) as f64).atan2((a.0 as isize - cx as isize) as f64) + std::f64::consts::TAU;
+            let angle_a = angle_a % std::f64::consts::TAU;
+            let angle_last_a = ((last_a.1 as isize - cy as isize) as f64).atan2((last_a.0 as isize - cx as isize) as f64) + std::f64::consts::TAU;
+            let angle_last_a = angle_last_a % std::f64::consts::TAU;
+            let angle_diff = (angle_a - angle_last_a).abs();
+            if angle_diff >= (std::f64::consts::TAU / path_count as f64) {
+                break;
+            }
+        }
         random_walk_fill(
             &mut map,
             &(cx, cy),
-            &t,
-            0.08,
-            width / 4,
-            2,
-            1.0,
-        );
-    }
-
-    // Add some random paths
-    let path_count = 8;
-    let path_points = ring(&map, path_count * 2, width.min(height) / 2);
-    for i in 0..path_count {
-        // take two points to walk between
-        let a = path_points[2 * i];
-        let b = path_points[(2 * i + 1 + path_count) % path_points.len()];
-        random_walk_fill(
-            &mut map,
             &a,
-            &b,
-            0.05,
-            (((a.0 as isize - b.0 as isize).abs() + (a.1 as isize - b.1 as isize).abs()) as f64 * 1.5) as usize,
+            0.02,
+            (((a.0 as isize - cx as isize).abs() + (a.1 as isize - cy as isize).abs()) as f64 * 1.5) as usize,
             2,
-            0.5,
+            0.3,
         );
     }
 
     // scale out to guarantee solid boarder
-    resize(&mut map, 1024, 1024);
+    resize(&mut map, size, size);
     let (cx, cy) = center(&map);
 
     // Add some noise to make it less uniform
-    simplex::generate_simplex_noise(&mut map, &mut rng, 0.025, 0.85);
-    simplex::generate_simplex_noise(&mut map, &mut rng, 0.05, 0.85);
-    simplex::generate_simplex_noise(&mut map, &mut rng, 0.1, 0.85);
+    simplex::generate_simplex_noise(&mut map, &mut rng, 0.045, 0.8);
+    simplex::generate_simplex_noise(&mut map, &mut rng, 0.1, 0.7);
 
     // Smoothing
     ca::cellular_automata(&mut map, 5, |_, _| { });
 
     save_png(outfile, &map).unwrap();
 
-    let flooded = post::flood::flood_fill(&mut map, (cx, cy));
-    post::flood::write_choropleth(&flooded, floodfile).unwrap();
+    let distances = post::flood::flood_fill(&mut map, (cx, cy));
+    let flooded = post::flood::threshold(&distances, usize::MAX);
+    save_png(floodfile, &flooded).unwrap();
 }
 
 fn save_png(path: &str, map: &Vec<Vec<bool>>) -> Result<(), std::io::Error> {

@@ -26,13 +26,26 @@ Success isn't reaching the end - it's getting back out with something valuable. 
 
 ## World Structure
 
-### Three-Tier Hierarchy
-- **World** - The infinite progression of difficulty
-- **Levels** - Self-contained challenge areas with themes and bosses  
-- **Dungeons** - Individual exploration zones within each level
+### Three Primary Scenes
+- **The Cathedral** - The starting sanctuary and hub of preparation
+- **The Dungeon (Hell)** - The infinite descent of increasingly dangerous levels
+- **Sanctuaries** - Safe havens between dungeon levels with extraction opportunities
 
-### Safe Zones as Crossroads
-Each level contains a sanctuary - a place of preparation and decision. Once abandoned, these havens become as dangerous as everywhere else. This creates natural **points of no return** where comfort becomes commitment.
+### Sanctuary Hierarchy
+**Greater Sanctuaries** (every 10th level):
+- Full inventory extraction capability
+- Three additional loot chests for enhanced rewards
+- Major preparation and planning opportunities
+- Strategic waypoints for deep expeditions
+
+**Lesser Sanctuaries** (all other levels):
+- Partial extraction - equipped items plus limited inventory
+- Single loot chest for modest rewards
+- Brief respite and basic preparation
+- Critical decision points for continued descent
+
+### The Extraction Tension
+Sanctuaries create natural **risk evaluation moments** where players must choose: cash out with current gains, or push deeper for greater rewards. The 10-level rhythm builds anticipation and creates strategic planning opportunities.
 
 ### Level Modification System  
 Players can alter upcoming challenges using rare modifier artifacts. This transforms passive difficulty scaling into **active risk negotiation** - you choose how much danger to face.
@@ -42,7 +55,7 @@ Players can alter upcoming challenges using rare modifier artifacts. This transf
 ## Progression Philosophy
 
 ### The Deception of Victory
-The game presents an achievable goal (extract from Level 15) that satisfies most players. Only the curious discover this was merely the **introduction** to the true experience waiting below.
+The game presents an achievable goal (extract from the first Greater Sanctuary at Level 10) that satisfies most players. Only after this "victory" do players discover the true depth - Level 10 was merely the **introduction** to the infinite descent waiting below. Each subsequent Greater Sanctuary (20, 30, 40...) reveals new layers of complexity and challenge.
 
 ### Discovery-Driven Narrative
 NPCs aren't found in safe taverns - they're **rescued from the depths**. Every quest comes from your own exploration, making story feel earned rather than assigned.
@@ -57,9 +70,13 @@ NPCs aren't found in safe taverns - they're **rescued from the depths**. Every q
 ## Risk & Reward Architecture
 
 ### Extraction Economics
-- **Full extraction** - Return safely, keep everything
+- **Greater Sanctuary extraction** - Full inventory retained, bonus loot from 3 chests
+- **Lesser Sanctuary extraction** - Equipped gear + limited inventory, 1 bonus chest
 - **Emergency extraction** - Escape immediate danger, abandon most loot  
 - **No extraction** - Lose everything, but knowledge remains
+
+### The Sanctuary Gamble
+Each sanctuary presents a calculated risk: extract now with guaranteed gains, or push toward the next sanctuary (potentially greater) for exponentially better rewards. The 10-level greater sanctuary rhythm creates **psychological waypoints** that structure the infinite descent into manageable risk chunks.
 
 ### The Inventory Dilemma
 Limited carrying capacity forces constant evaluation: *"Is this new item worth dropping something I already have?"* Combined with extraction limits, every piece of loot becomes a **commitment**.
@@ -141,9 +158,11 @@ All mechanics support the extraction tension:
 ## Success Metrics
 
 ### Surface Engagement
-- Players reaching first extraction (Level 15)
+- Players reaching first Greater Sanctuary extraction (Level 10)
+- Ratio of Greater vs Lesser Sanctuary extractions
 - Average extraction depth over time
 - Repeat play after initial "completion"
+- Sanctuary progression patterns and player behavior
 
 ### Deep Engagement  
 - Community discovery rate of hidden mechanics

@@ -199,7 +199,8 @@ pub fn handle_basic_interactions(
     mut action_events: EventReader<crate::player::actions::PlayerActionEvent>,
     player_query: Query<Entity, With<Player>>,
     mut interactables: Query<&mut Interactable>,
-    hovered_query: Query<Entity, (With<HoveredInteractable>, With<InteractableHighlight>)>,
+    hovered_query: Query<Entity, With<HoveredInteractable>>,
+    highlights_query: Query<&InteractableHighlight>,
     mut interaction_events: EventWriter<InteractionEvent>,
 ) {
     // Check for interact action events
@@ -212,19 +213,34 @@ pub fn handle_basic_interactions(
     }
 
     let Ok(player_entity) = player_query.single() else {
+        warn!("Interact pressed but no player entity found");
         return;
     };
 
     // Find the interactable that has the HoveredInteractable marker component
     if let Ok(target_entity) = hovered_query.single() {
-        // Get the interactable component to check if we can interact
-        if let Ok(interactable) = interactables.get(target_entity) {
-            if !interactable.can_interact() {
+        // Check if the hovered entity is in range for interaction
+        if let Ok(highlight) = highlights_query.get(target_entity) {
+            if !highlight.in_range {
+                debug!("Interact pressed but target {} is out of range", target_entity.index());
                 return;
             }
         } else {
+            debug!("Interact pressed but target {} missing highlight component", target_entity.index());
             return;
         }
+
+        // Get the interactable component to check if we can interact
+        if let Ok(interactable) = interactables.get(target_entity) {
+            if !interactable.can_interact() {
+                debug!("Interact pressed but target {} has cooldown", target_entity.index());
+                return;
+            }
+        } else {
+            warn!("Hovered entity {} missing Interactable component", target_entity.index());
+            return;
+        }
+
         if let Ok(mut interactable) = interactables.get_mut(target_entity) {
             interactable.trigger_cooldown();
 
@@ -244,6 +260,8 @@ pub fn handle_basic_interactions(
 
             info!("Interaction: {}", interactable.display_name);
         }
+    } else {
+        debug!("Interact pressed but no hovered interactable found");
     }
 }
 
@@ -252,7 +270,7 @@ pub fn update_hovered_interactable(
     mut commands: Commands,
     cameras: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
-    interactables: Query<(Entity, &Interactable, &Transform, &InteractableHighlight), Without<HoveredInteractable>>,
+    interactables: Query<(Entity, &Interactable, &Transform), Without<HoveredInteractable>>,
     current_hovered: Query<Entity, With<HoveredInteractable>>,
 ) {
     // Get the primary window and main camera
@@ -269,13 +287,17 @@ pub fn update_hovered_interactable(
     let mut closest_hovered: Option<(Entity, f32)> = None;
 
     if let Some(cursor_world) = world_cursor {
-        for (entity, interactable, transform, highlight) in interactables.iter() {
-            if !interactable.is_enabled || !highlight.in_range {
+        for (entity, interactable, transform) in interactables.iter() {
+            if !interactable.is_enabled {
                 continue;
             }
 
+            // Hover is purely cursor-based - independent of player range
             let hover_distance = cursor_world.distance(transform.translation.truncate());
-            if hover_distance <= HOVER_RADIUS {
+            let is_cursor_close = hover_distance <= HOVER_RADIUS;
+
+            if is_cursor_close {
+                // Find the closest interactable under cursor
                 if let Some((_, closest_distance)) = closest_hovered {
                     if hover_distance < closest_distance {
                         closest_hovered = Some((entity, hover_distance));

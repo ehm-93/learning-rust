@@ -77,13 +77,17 @@ impl Plugin for WorldPlugin {
 
             // Global interaction systems (run regardless of scene)
             .add_systems(Update, (
+                // First update cooldowns and highlights (based on player/cursor position)
                 interaction::update_interactable_cooldowns,
-                interaction::update_hovered_interactable,
-                interaction::handle_basic_interactions.run_if(resource_equals(GameState::Playing)),
                 interaction::update_interactable_highlights,
+                // Then update which interactable is hovered (depends on highlights)
+                interaction::update_hovered_interactable,
+                // Then handle interactions (depends on hovered state)
+                interaction::handle_basic_interactions.run_if(resource_equals(GameState::Playing)),
+                // Finally manage visual effects
                 interaction::manage_halo_effects,
                 interaction::cleanup_orphaned_halos,
-            ));
+            ).chain());
     }
 }
 

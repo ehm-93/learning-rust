@@ -1,0 +1,11 @@
+[package]
+name = "generation"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+itertools = "0.14"
+rand = "0.9"
+noise = "0.9"
+image = "0.25"
+rayon = "1.10"

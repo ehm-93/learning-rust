@@ -1,11 +1,7 @@
 [workspace]
 resolver = "3"
-members = [
-  "sanity",
-  "shadowcast",
-  "untitled",
-]
-default-members = ["untitled"]
+members = ['packages/*']
+default-members = ["packages/untitled"]
 
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]

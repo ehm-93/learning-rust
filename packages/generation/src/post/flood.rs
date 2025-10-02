@@ -17,7 +17,6 @@ pub fn flood_fill(map: &Vec<Vec<bool>>, start: (usize, usize)) -> Vec<Vec<usize>
             }
         }
     }
-
     distances
 }
 
@@ -33,7 +32,7 @@ fn neighbors((x, y): (usize, usize), width: usize, height: usize) -> Vec<(usize,
 pub fn write_choropleth(values: &Vec<Vec<usize>>, filename: &str) -> std::io::Result<()> {
     let height = values.len() as u32;
     let width = values[0].len() as u32;
-    let max_value = values.iter().flatten().max().unwrap_or(&1);
+    let max_value = values.iter().flatten().filter(|&&d| d != usize::MAX).max().unwrap_or(&1);
 
     let mut img = ImageBuffer::new(width, height);
 

@@ -21,5 +21,6 @@ target/
 Thumbs.db
 
 # Game specific
+out/
 assets/temp/
 *.log

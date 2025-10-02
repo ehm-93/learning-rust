@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 bevy = { version = "0.16", features = ["vorbis", "wav"] }
+bevy_ecs_tilemap = "0.16"
 bevy_rapier2d = "0.31"
 fastrand = "2.3.0"
 rand = "0.9"

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
+use bevy_ecs_tilemap::prelude::*;
 
 // Module declarations
 mod components;
@@ -39,6 +40,7 @@ fn main() {
         }))
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         // .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(TilemapPlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(InventoryPlugin)
         .add_plugins(WorldPlugin)

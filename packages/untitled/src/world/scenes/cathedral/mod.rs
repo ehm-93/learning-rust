@@ -44,6 +44,7 @@ fn setup_cathedral_scene(
     mut modifier_system: ResMut<resources::ModifierSystem>,
     mut cathedral_state: ResMut<resources::CathedralState>,
     progression_state: Res<resources::ProgressionState>,
+    asset_server: Res<AssetServer>,
 ) {
     info!("Entering Cathedral state - setting up scene");
 
@@ -58,16 +59,19 @@ fn setup_cathedral_scene(
         components::Cathedral, // Tag for cleanup
     ));
 
-    // Spawn player at cathedral center using PlayerSpawner
+    // Spawn player at cathedral center using PlayerSpawner (with higher Z to render above tilemap)
     let player_entity = crate::player::PlayerSpawner::spawn_with_commands(
         &mut commands,
         &mut meshes,
         &mut materials,
-        Vec3::new(0.0, -100.0, 0.0)
+        Vec3::new(0.0, 0.0, 1.0) // Centered in tilemap area, Z=1 to render above tilemap at Z=-1
     );
 
     // Add cathedral tag for cleanup
     commands.entity(player_entity).insert(components::Cathedral);
+
+    // Spawn the tilemap for the Cathedral scene
+    crate::world::mapgen::spawn_cathedral_tilemap(&mut commands, &asset_server);
 
     setup_cathedral_entities(
         &mut commands,
@@ -116,9 +120,9 @@ fn setup_cathedral_entities(
 
     // Create three dungeon portals
     let portal_positions = [
-        Vec3::new(-300.0, 100.0, 0.0), // Left dungeon portal
-        Vec3::new(0.0, 100.0, 0.0),    // Center dungeon portal
-        Vec3::new(300.0, 100.0, 0.0),  // Right dungeon portal
+        Vec3::new(-200.0, 200.0, 0.0), // Left dungeon portal - positioned above tilemap
+        Vec3::new(0.0, 200.0, 0.0),    // Center dungeon portal
+        Vec3::new(200.0, 200.0, 0.0),  // Right dungeon portal
     ];
 
     let portal_ids = [
@@ -174,15 +178,9 @@ fn setup_cathedral_entities(
         ));
     }
 
-    // Add basic Cathedral decoration (simple floor)
-    commands.spawn((
-        Mesh2d(meshes.add(Rectangle::new(800.0, 100.0))),
-        MeshMaterial2d(materials.add(Color::srgb(0.2, 0.2, 0.2))),
-        Transform::from_translation(Vec3::new(0.0, -200.0, -1.0)),
-        components::Cathedral,
-    ));
+    // Floor is now handled by the tilemap - no need for separate floor decoration
 
-    // Add Cathedral title text
+    // Add Cathedral title text - positioned above the tilemap area
     commands.spawn((
         Text2d::new("The Cathedral"),
         TextFont {
@@ -190,7 +188,7 @@ fn setup_cathedral_entities(
             ..default()
         },
         TextColor(Color::WHITE),
-        Transform::from_translation(Vec3::new(0.0, 250.0, 1.0)),
+        Transform::from_translation(Vec3::new(0.0, 300.0, 1.0)), // Higher up to be above portals
         components::Cathedral,
     ));
 

@@ -45,6 +45,7 @@ pub fn handle_projectile_impacts(
     projectile_query: Query<(&Transform, &Projectile)>,
     enemy_query: Query<&Transform, (With<Enemy>, Without<Projectile>)>,
     player_query: Query<&Transform, (With<Player>, Without<Projectile>)>,
+    wall_query: Query<(), With<crate::world::WallTile>>,
     mut enemy_velocities: Query<&mut Velocity, With<Enemy>>,
 ) {
     for impact in impact_events.read() {
@@ -78,6 +79,12 @@ pub fn handle_projectile_impacts(
                         damage: ENEMY_BULLET_DAMAGE,
                     });
                 }
+            }
+
+            // Handle projectile hitting a wall
+            if wall_query.get(impact.target).is_ok() {
+                // Projectiles are destroyed when hitting walls (handled below)
+                // Could add particle effects, sound, etc. here
             }
         }
 

@@ -1,4 +1,4 @@
-//! Map generation systems
+//! Tile systems
 //!
 //! This module contains the tilemap generation and management systems,
 //! starting with static tilemaps and building towards procedural generation.
@@ -13,10 +13,10 @@ pub use resources::*;
 
 use bevy::prelude::*;
 
-/// Plugin for map generation - Static tilemap with basic collision
-pub struct MapgenPlugin;
+/// Plugin for tile systems - Static tilemap with basic collision
+pub struct TilePlugin;
 
-impl Plugin for MapgenPlugin {
+impl Plugin for TilePlugin {
     fn build(&self, app: &mut App) {
         app
             // Add startup systems for loading assets

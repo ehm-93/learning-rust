@@ -219,11 +219,12 @@ impl ChunkManager {
     ) -> [[tiles::TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] {
         let mut tiles = [[tiles::TileType::Floor; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
 
-        // Check if out of bounds of macro map, default to walls if so
-        let max_macro_x = position.x * MACRO_PX_PER_CHUNK as i32 + (MACRO_PX_PER_CHUNK as i32 - 1);
-        let max_macro_y = position.y * MACRO_PX_PER_CHUNK as i32 + (MACRO_PX_PER_CHUNK as i32 - 1);
+        // Macro map is structured as [y][x] (row/column)
+        let macro_height = macro_map.len();
+        let macro_width = if macro_height > 0 { macro_map[0].len() } else { 0 };
 
-        if max_macro_x >= macro_map.len() as i32 || max_macro_y >= macro_map[0].len() as i32 {
+        // If macro map is empty, fill with walls
+        if macro_height == 0 || macro_width == 0 {
             for x in 0..CHUNK_SIZE {
                 for y in 0..CHUNK_SIZE {
                     tiles[y as usize][x as usize] = tiles::TileType::Wall;
@@ -232,28 +233,90 @@ impl ChunkManager {
             return tiles;
         }
 
-        // Generate tiles based on macro map
-        // Each macro cell maps to multiple tiles within the chunk
-        let tiles_per_macro_cell = CHUNK_SIZE / MACRO_PX_PER_CHUNK as u32;
-
+        // Generate tiles using global coordinate sampling for seamless chunk transitions
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
-                let macro_cell_x = x / tiles_per_macro_cell;
-                let macro_cell_y = y / tiles_per_macro_cell;
+                // Calculate global tile coordinates
+                let global_tile_x = position.x as f32 * CHUNK_SIZE as f32 + x as f32;
+                let global_tile_y = position.y as f32 * CHUNK_SIZE as f32 + y as f32;
 
-                let macro_x = position.x as usize * MACRO_PX_PER_CHUNK + macro_cell_x as usize;
-                let macro_y = position.y as usize * MACRO_PX_PER_CHUNK + macro_cell_y as usize;
+                // Convert to macro space coordinates (continuous)
+                let tiles_per_macro = CHUNK_SIZE as f32 / MACRO_PX_PER_CHUNK as f32;
+                let macro_x_f = global_tile_x / tiles_per_macro;
+                let macro_y_f = global_tile_y / tiles_per_macro;
 
-                let is_open = macro_map[macro_x][macro_y];
-                tiles[y as usize][x as usize] = if is_open {
-                    tiles::TileType::Floor
-                } else {
+                // Sample the macro map with smooth interpolation
+                let density = Self::sample_macro_density_smooth(
+                    macro_map,
+                    macro_x_f,
+                    macro_y_f,
+                    macro_width,
+                    macro_height
+                );
+
+                // Add very subtle noise for natural variation (reduced intensity)
+                let noise_value = Self::noise_2d(global_tile_x, global_tile_y, 0.05);
+                let final_density = (density + noise_value * 0.1).clamp(0.0, 1.0);
+
+                // Use a smoother threshold function instead of hard random cutoff
+                let smooth_threshold = 0.5 + Self::noise_2d(global_tile_x, global_tile_y, 0.02) * 0.1;
+
+                tiles[y as usize][x as usize] = if final_density > smooth_threshold {
                     tiles::TileType::Wall
+                } else {
+                    tiles::TileType::Floor
                 };
             }
         }
 
         tiles
+    }
+
+    /// Sample macro density with smooth interpolation across chunk boundaries
+    fn sample_macro_density_smooth(
+        macro_map: &Vec<Vec<bool>>,
+        macro_x: f32,
+        macro_y: f32,
+        macro_width: usize,
+        macro_height: usize,
+    ) -> f32 {
+        // Clamp coordinates to valid range
+        let mx = macro_x.max(0.0).min(macro_width as f32 - 0.001);
+        let my = macro_y.max(0.0).min(macro_height as f32 - 0.001);
+
+        // Get the four corner points for bilinear interpolation
+        let x0 = mx.floor() as usize;
+        let y0 = my.floor() as usize;
+        let x1 = (x0 + 1).min(macro_width - 1);
+        let y1 = (y0 + 1).min(macro_height - 1);
+
+        let fx = mx - x0 as f32;
+        let fy = my - y0 as f32;
+
+        // Sample the four corners (convert bool to density: true=open=0.0, false=wall=1.0)
+        let d00 = if macro_map[y0][x0] { 0.0 } else { 1.0 };
+        let d10 = if macro_map[y0][x1] { 0.0 } else { 1.0 };
+        let d01 = if macro_map[y1][x0] { 0.0 } else { 1.0 };
+        let d11 = if macro_map[y1][x1] { 0.0 } else { 1.0 };
+
+        // Bilinear interpolation
+        let d0 = d00 * (1.0 - fx) + d10 * fx;
+        let d1 = d01 * (1.0 - fx) + d11 * fx;
+
+        d0 * (1.0 - fy) + d1 * fy
+    }
+
+    /// Simple 2D noise function for micro-variation
+    fn noise_2d(x: f32, y: f32, frequency: f32) -> f32 {
+        let x = x * frequency;
+        let y = y * frequency;
+
+        // Simple hash-based noise
+        let hash = ((x as i32).wrapping_mul(73856093) ^ (y as i32).wrapping_mul(19349663)) as u32;
+        let normalized = (hash as f32) / (u32::MAX as f32);
+
+        // Convert to -1.0 to 1.0 range
+        normalized * 2.0 - 1.0
     }
 
     /// Calculate which chunks should be loaded around a world position

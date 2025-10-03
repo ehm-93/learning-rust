@@ -2,15 +2,17 @@
 //!
 //! This module handles the spatial partitioning of the world into 64x64 tile chunks,
 //! dynamic loading/unloading based on player position, and chunk-based tile generation.
+//! Supports async chunk loading to keep the render pipeline smooth.
 
 pub mod collision;
 pub mod systems;
 
 use bevy::prelude::*;
+use bevy::tasks::{AsyncComputeTaskPool, Task};
 use std::collections::HashMap;
 
-use crate::world::tiles;
 use crate::world::constants::MACRO_PX_PER_CHUNK;
+use crate::world::tiles;
 
 /// State to control whether chunking systems are active
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -47,6 +49,33 @@ pub fn chunk_coord_to_world_pos(chunk_coord: ChunkCoord) -> Vec2 {
     )
 }
 
+/// Task for loading a chunk asynchronously
+pub type ChunkLoadTask = Task<ChunkData>;
+
+/// Data generated for a chunk off the main thread
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChunkData {
+    /// Position of this chunk in chunk coordinates
+    pub position: ChunkCoord,
+    /// 64x64 tile data for this chunk
+    pub tiles: [[tiles::TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+    /// Pre-computed wall regions for efficient collision generation
+    pub wall_regions: Vec<collision::WallRegion>,
+}
+
+/// Loading state for chunk management
+#[derive(Debug, Clone, PartialEq)]
+pub enum ChunkLoadingState {
+    /// Chunk is not loaded and not being loaded
+    Unloaded,
+    /// Chunk is currently being loaded on a background thread
+    Loading,
+    /// Chunk data is loaded but not yet spawned
+    Loaded(ChunkData),
+    /// Chunk is fully spawned in the world
+    Spawned(Entity), // Parent entity
+}
+
 /// A single chunk containing a 64x64 grid of tiles
 #[derive(Debug, Clone)]
 pub struct Chunk {
@@ -60,20 +89,134 @@ pub struct Chunk {
     pub parent_entity: Option<Entity>,
 }
 
-impl Chunk {
-    /// Create a new chunk at the given position with macro map-driven generation
-    pub fn new(position: ChunkCoord, macro_map: &Vec<Vec<bool>>) -> Self {
+impl ChunkData {
+    /// Get the tile at the given local coordinates within this chunk
+    pub fn get_tile(&self, local_x: u32, local_y: u32) -> Option<tiles::TileType> {
+        if local_x < CHUNK_SIZE && local_y < CHUNK_SIZE {
+            Some(self.tiles[local_y as usize][local_x as usize])
+        } else {
+            None
+        }
+    }
+}
+
+/// Resource managing all loaded chunks with async loading support
+#[derive(Resource, Default)]
+pub struct ChunkManager {
+    /// All chunks and their current loading state
+    pub chunks: HashMap<ChunkCoord, ChunkLoadingState>,
+    /// Active loading tasks that we poll for completion
+    pub loading_tasks: HashMap<ChunkCoord, ChunkLoadTask>,
+    /// Texture handle for all tilemaps
+    pub texture_handle: Handle<Image>,
+}
+
+impl ChunkManager {
+    /// Create a new chunk manager with the given texture
+    pub fn new(texture_handle: Handle<Image>) -> Self {
         Self {
-            position,
-            tiles: Self::generate_from_macro_map(position, macro_map),
-            dirty: false,
-            parent_entity: None,
+            chunks: HashMap::new(),
+            loading_tasks: HashMap::new(),
+            texture_handle,
         }
     }
 
-    /// Generate tiles for this chunk based on the macro map
-    /// Uses the macro map to determine overall density, then fills with appropriate tile pattern
-    fn generate_from_macro_map(position: ChunkCoord, macro_map: &Vec<Vec<bool>>) -> [[tiles::TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] {
+    /// Start loading a chunk asynchronously if not already loaded/loading
+    pub fn request_chunk_load(&mut self, chunk_coord: ChunkCoord, macro_map: Vec<Vec<bool>>) {
+        if !matches!(self.chunks.get(&chunk_coord), Some(ChunkLoadingState::Unloaded) | None) {
+            return; // Already loading or loaded
+        }
+
+        info!("Starting async load for chunk {:?}", chunk_coord);
+
+        // Spawn async task to generate chunk data
+        let task_pool = AsyncComputeTaskPool::get();
+        let task = task_pool.spawn(async move {
+            // Generate tile data
+            let tiles = Self::generate_chunk_tiles(chunk_coord, &macro_map);
+
+            // Perform heavy collision computation off main thread
+            let wall_regions = collision::find_wall_regions(&tiles);
+
+            ChunkData {
+                position: chunk_coord,
+                tiles,
+                wall_regions,
+            }
+        });
+
+        self.chunks.insert(chunk_coord, ChunkLoadingState::Loading);
+        self.loading_tasks.insert(chunk_coord, task);
+    }
+
+    /// Check if a chunk is ready to be spawned (loaded but not yet spawned)
+    pub fn is_chunk_ready_to_spawn(&self, chunk_coord: ChunkCoord) -> bool {
+        matches!(self.chunks.get(&chunk_coord), Some(ChunkLoadingState::Loaded(_)))
+    }
+
+    /// Get chunk data for spawning (moves from Loaded to Spawned state)
+    pub fn take_loaded_chunk_data(&mut self, chunk_coord: ChunkCoord) -> Option<ChunkData> {
+        if let Some(ChunkLoadingState::Loaded(data)) = self.chunks.remove(&chunk_coord) {
+            self.chunks.insert(chunk_coord, ChunkLoadingState::Spawned(Entity::PLACEHOLDER)); // Will be updated with real entity
+            Some(data)
+        } else {
+            None
+        }
+    }
+
+    /// Mark a chunk as fully spawned with its parent entity
+    pub fn mark_chunk_spawned(&mut self, chunk_coord: ChunkCoord, parent_entity: Entity) {
+        self.chunks.insert(chunk_coord, ChunkLoadingState::Spawned(parent_entity));
+    }
+
+    /// Remove and despawn a chunk
+    pub fn unload_chunk(&mut self, chunk_coord: ChunkCoord, commands: &mut Commands) -> bool {
+        // Cancel loading task if it exists
+        self.loading_tasks.remove(&chunk_coord);
+
+        if let Some(state) = self.chunks.remove(&chunk_coord) {
+            match state {
+                ChunkLoadingState::Spawned(entity) => {
+                    commands.entity(entity).despawn();
+                    info!("Unloaded spawned chunk at {:?}", chunk_coord);
+                    true
+                }
+                _ => {
+                    info!("Cancelled loading chunk at {:?}", chunk_coord);
+                    true
+                }
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Get all loaded/spawned chunk coordinates
+    pub fn loaded_chunks(&self) -> impl Iterator<Item = ChunkCoord> + '_ {
+        self.chunks.iter()
+            .filter_map(|(coord, state)| {
+                match state {
+                    ChunkLoadingState::Loaded(_) | ChunkLoadingState::Spawned(_) => Some(*coord),
+                    _ => None,
+                }
+            })
+    }
+
+    /// Get the number of chunks in any state
+    pub fn chunk_count(&self) -> usize {
+        self.chunks.len()
+    }
+
+    /// Get the number of actively loading chunks
+    pub fn loading_count(&self) -> usize {
+        self.loading_tasks.len()
+    }
+
+    /// Generate chunk tiles (extracted for async use)
+    fn generate_chunk_tiles(
+        position: ChunkCoord,
+        macro_map: &Vec<Vec<bool>>
+    ) -> [[tiles::TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] {
         let mut tiles = [[tiles::TileType::Floor; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
 
         // Check if out of bounds of macro map, default to walls if so
@@ -90,16 +233,13 @@ impl Chunk {
         }
 
         // Generate tiles based on macro map
-        // Each macro cell influences a region of the chunk
         let tiles_per_macro_cell = CHUNK_SIZE / MACRO_PX_PER_CHUNK as u32;
 
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
-                // Determine which macro cell this tile corresponds to
                 let macro_cell_x = x / tiles_per_macro_cell;
                 let macro_cell_y = y / tiles_per_macro_cell;
 
-                // Get the macro map value for this region
                 let macro_x = position.x as usize * MACRO_PX_PER_CHUNK + macro_cell_x as usize;
                 let macro_y = position.y as usize * MACRO_PX_PER_CHUNK + macro_cell_y as usize;
 
@@ -113,91 +253,6 @@ impl Chunk {
         }
 
         tiles
-    }
-
-    /// Get the tile at the given local coordinates within this chunk
-    pub fn get_tile(&self, local_x: u32, local_y: u32) -> Option<tiles::TileType> {
-        if local_x < CHUNK_SIZE && local_y < CHUNK_SIZE {
-            Some(self.tiles[local_y as usize][local_x as usize])
-        } else {
-            None
-        }
-    }
-
-    /// Set the tile at the given local coordinates within this chunk
-    pub fn set_tile(&mut self, local_x: u32, local_y: u32, tile_type: tiles::TileType) -> bool {
-        if local_x < CHUNK_SIZE && local_y < CHUNK_SIZE {
-            self.tiles[local_y as usize][local_x as usize] = tile_type;
-            self.dirty = true;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Mark this chunk as clean (saved to persistence)
-    pub fn mark_clean(&mut self) {
-        self.dirty = false;
-    }
-}
-
-/// Resource managing all loaded chunks
-#[derive(Resource, Default)]
-pub struct ChunkManager {
-    /// All loaded chunks, keyed by their chunk coordinates
-    pub chunks: HashMap<ChunkCoord, Chunk>,
-    /// Texture handle for all tilemaps
-    pub texture_handle: Handle<Image>,
-}
-
-impl ChunkManager {
-    /// Create a new chunk manager with the given texture
-    pub fn new(texture_handle: Handle<Image>) -> Self {
-        Self {
-            chunks: HashMap::new(),
-            texture_handle,
-        }
-    }
-
-    /// Get a chunk at the given coordinates, loading it if necessary
-    pub fn get_or_create_chunk(&mut self, chunk_coord: ChunkCoord, macro_map: &Vec<Vec<bool>>) -> &mut Chunk {
-        self.chunks.entry(chunk_coord).or_insert_with(|| {
-            info!("Creating new chunk at {:?}", chunk_coord);
-            Chunk::new(chunk_coord, macro_map)
-        })
-    }
-
-    /// Get a reference to a chunk if it exists
-    pub fn get_chunk(&self, chunk_coord: ChunkCoord) -> Option<&Chunk> {
-        self.chunks.get(&chunk_coord)
-    }
-
-    /// Get a mutable reference to a chunk if it exists
-    pub fn get_chunk_mut(&mut self, chunk_coord: ChunkCoord) -> Option<&mut Chunk> {
-        self.chunks.get_mut(&chunk_coord)
-    }
-
-    /// Remove and despawn a chunk
-    pub fn unload_chunk(&mut self, chunk_coord: ChunkCoord, commands: &mut Commands) -> bool {
-        if let Some(chunk) = self.chunks.remove(&chunk_coord) {
-            if let Some(entity) = chunk.parent_entity {
-                commands.entity(entity).despawn();
-                info!("Unloaded chunk at {:?}", chunk_coord);
-            }
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Get all loaded chunk coordinates
-    pub fn loaded_chunks(&self) -> impl Iterator<Item = ChunkCoord> + '_ {
-        self.chunks.keys().copied()
-    }
-
-    /// Get the number of loaded chunks
-    pub fn chunk_count(&self) -> usize {
-        self.chunks.len()
     }
 
     /// Calculate which chunks should be loaded around a world position
@@ -232,6 +287,28 @@ impl ChunkManager {
 
         to_unload
     }
+
+    /// Poll all loading tasks and move completed ones to loaded state
+    pub fn poll_loading_tasks(&mut self) {
+        let mut completed_tasks = Vec::new();
+
+        // Check each loading task for completion
+        for (&chunk_coord, task) in self.loading_tasks.iter_mut() {
+            if task.is_finished() {
+                completed_tasks.push(chunk_coord);
+            }
+        }
+
+        // Move completed tasks to loaded state
+        for chunk_coord in completed_tasks {
+            if let Some(task) = self.loading_tasks.remove(&chunk_coord) {
+                // Use Bevy's block_on approach since task is already finished
+                let chunk_data = bevy::tasks::block_on(task);
+                info!("Chunk {:?} finished loading", chunk_coord);
+                self.chunks.insert(chunk_coord, ChunkLoadingState::Loaded(chunk_data));
+            }
+        }
+    }
 }
 
 /// Component to mark chunk tilemap entities
@@ -263,7 +340,9 @@ impl Plugin for ChunkPlugin {
             )
             // Add chunk management systems (only when chunking is enabled)
             .add_systems(Update, (
+                systems::poll_chunk_loading_tasks,
                 systems::manage_chunk_loading,
+                systems::spawn_loaded_chunks.after(systems::poll_chunk_loading_tasks),
                 systems::manage_chunk_unloading.after(systems::manage_chunk_loading),
             ).run_if(in_state(ChunkingState::Enabled)))
             // Add cleanup system when entering disabled state

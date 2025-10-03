@@ -1,7 +1,7 @@
 // Player constants
 // Player is about 1m diameter (0.5m radius) in world units
 // Since 16 units = 0.5m, then 32 units = 1m diameter (16 unit radius)
-pub const PLAYER_SPEED: f32 = 200.0;
+pub const PLAYER_SPEED: f32 = 250.0;
 pub const PLAYER_RADIUS: f32 = 16.0; // 16 units = 0.5m radius = 1m diameter
 pub const PLAYER_MAX_HEALTH: f32 = 100.0;
 

@@ -279,8 +279,12 @@ fn render_chunk_boundaries(
                     chunk_coord.y as f32 * chunk_size_world,
                 );
 
-                // Determine line color based on whether chunk is loaded
-                let is_loaded = chunk_manager.get_chunk(chunk_coord).is_some();
+                // Determine line color based on chunk loading state
+                let is_loaded = matches!(
+                    chunk_manager.chunks.get(&chunk_coord),
+                    Some(crate::world::chunks::ChunkLoadingState::Loaded(_)) |
+                    Some(crate::world::chunks::ChunkLoadingState::Spawned(_))
+                );
 
                 let line_color = if is_loaded {
                     Color::srgb(0.0, 1.0, 0.0) // Green for loaded chunks

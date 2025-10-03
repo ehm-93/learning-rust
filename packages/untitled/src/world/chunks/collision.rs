@@ -50,7 +50,7 @@ impl TilePoint {
 }
 
 /// A connected region of wall tiles
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct WallRegion {
     pub tiles: HashSet<TilePoint>,
     pub boundary_polylines: Vec<Vec<Vec2>>,

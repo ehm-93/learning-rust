@@ -21,6 +21,9 @@ pub struct DungeonState {
     /// Available loot tier for this depth
     pub loot_tier: u32,
 
+    /// Seed for deterministic generation based on depth
+    pub seed: u64,
+
     pub macro_map: Vec<Vec<bool>>,
 }
 
@@ -33,6 +36,7 @@ impl Default for DungeonState {
             is_completed: false,
             difficulty_multiplier: 1.0,
             loot_tier: 1,
+            seed: 42, // Default seed
             macro_map: vec![],
         }
     }
@@ -47,6 +51,7 @@ impl DungeonState {
             is_completed: false,
             difficulty_multiplier: 1.0 + (depth as f32 * 0.2), // 20% harder per depth
             loot_tier: 1 + (depth / 3), // Better loot every 3 depths
+            seed: 42 + depth as u64, // Deterministic seed based on depth
             macro_map: vec![],
         }
     }

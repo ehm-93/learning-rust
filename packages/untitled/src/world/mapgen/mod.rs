@@ -1,10 +1,11 @@
 pub mod ca;
 pub mod simplex;
 
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand::rngs::StdRng;
 
-pub fn freeform(size: usize) -> Vec<Vec<bool>> {
-    let mut rng = rand::rng();
+pub fn freeform(size: usize, seed: u64) -> Vec<Vec<bool>> {
+    let mut rng = StdRng::seed_from_u64(seed);
     let width = 3 * size / 4;
     let height = width;
     let mut map = vec![vec![false; width]; height];
@@ -35,6 +36,7 @@ pub fn freeform(size: usize) -> Vec<Vec<bool>> {
         }
         random_walk_fill(
             &mut map,
+            &mut rng,
             &(cx, cy),
             &a,
             0.02,
@@ -93,6 +95,7 @@ fn resize(map: &mut Vec<Vec<bool>>, new_width: usize, new_height: usize) {
 
 fn random_walk_fill(
     map: &mut Vec<Vec<bool>>,
+    rng: &mut impl Rng,
     spawn_point: &(usize, usize),
     bias_point: &(usize, usize),
     bias_chance: f64,
@@ -100,7 +103,7 @@ fn random_walk_fill(
     path_thickness: usize,
     steer_aggression: f64,
 ) {
-    let path = random_walk(map, spawn_point, bias_point, bias_chance, path_length, path_thickness, steer_aggression);
+    let path = random_walk(map, rng, spawn_point, bias_point, bias_chance, path_length, path_thickness, steer_aggression);
     for (x, y) in path {
         map[y][x] = true;
     }
@@ -108,6 +111,7 @@ fn random_walk_fill(
 
 fn random_walk(
     map: &Vec<Vec<bool>>,
+    rng: &mut impl Rng,
     spawn_point: &(usize, usize),
     bias_point: &(usize, usize),
     bias_chance: f64,
@@ -117,7 +121,6 @@ fn random_walk(
 ) -> Vec<(usize, usize)> {
     let width = map[0].len();
     let height = map.len();
-    let mut rng = rand::rng();
     let (mut x, mut y) = *spawn_point;
     let mut path = Vec::new();
 

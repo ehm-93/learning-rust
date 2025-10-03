@@ -115,8 +115,6 @@ impl Chunk {
         tiles
     }
 
-
-
     /// Get the tile at the given local coordinates within this chunk
     pub fn get_tile(&self, local_x: u32, local_y: u32) -> Option<tiles::TileType> {
         if local_x < CHUNK_SIZE && local_y < CHUNK_SIZE {

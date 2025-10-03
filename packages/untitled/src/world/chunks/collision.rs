@@ -140,29 +140,29 @@ fn trace_region_boundaries(region: &HashSet<TilePoint>) -> Vec<Vec<Vec2>> {
 /// Find holes (non-wall regions completely enclosed by walls) within a wall region
 fn find_holes_in_region(region: &HashSet<TilePoint>) -> Vec<HashSet<TilePoint>> {
     let mut holes = Vec::new();
-    
+
     if region.is_empty() {
         return holes;
     }
-    
+
     // Find the bounding box of the region
     let min_x = region.iter().map(|p| p.x).min().unwrap();
     let min_y = region.iter().map(|p| p.y).min().unwrap();
     let max_x = region.iter().map(|p| p.x).max().unwrap();
     let max_y = region.iter().map(|p| p.y).max().unwrap();
-    
+
     let mut visited_empty = HashSet::new();
-    
+
     // Look for empty spaces within the bounding box
     for y in min_y..=max_y {
         for x in min_x..=max_x {
             let point = TilePoint::new(x, y);
-            
+
             // If this point is empty (not a wall) and not visited
             if !region.contains(&point) && !visited_empty.contains(&point) {
                 // Flood fill to find this empty region
                 let empty_region = flood_fill_empty_region(&point, region, &mut visited_empty, min_x, min_y, max_x, max_y);
-                
+
                 // Check if this empty region is completely enclosed (a hole)
                 if is_enclosed_hole(&empty_region, region, min_x, min_y, max_x, max_y) {
                     holes.push(empty_region);
@@ -170,7 +170,7 @@ fn find_holes_in_region(region: &HashSet<TilePoint>) -> Vec<HashSet<TilePoint>> 
             }
         }
     }
-    
+
     holes
 }
 
@@ -183,11 +183,11 @@ fn flood_fill_empty_region(
 ) -> HashSet<TilePoint> {
     let mut region = HashSet::new();
     let mut queue = VecDeque::new();
-    
+
     queue.push_back(*start);
     visited.insert(*start);
     region.insert(*start);
-    
+
     while let Some(current) = queue.pop_front() {
         // Check 4-directional neighbors
         let neighbors = [
@@ -196,12 +196,12 @@ fn flood_fill_empty_region(
             (current.x, current.y.wrapping_sub(1)),
             (current.x, current.y + 1),
         ];
-        
+
         for (nx, ny) in neighbors {
             // Check bounds
             if nx >= min_x && nx <= max_x && ny >= min_y && ny <= max_y {
                 let neighbor = TilePoint::new(nx, ny);
-                
+
                 if !visited.contains(&neighbor) && !walls.contains(&neighbor) {
                     visited.insert(neighbor);
                     region.insert(neighbor);
@@ -210,7 +210,7 @@ fn flood_fill_empty_region(
             }
         }
     }
-    
+
     region
 }
 
@@ -237,53 +237,51 @@ fn trace_hole_boundary(hole: &HashSet<TilePoint>, walls: &HashSet<TilePoint>) ->
 
     // Find all boundary edges around the hole
     let mut boundary_edges = Vec::new();
-    
+
     for &empty_tile in hole {
         let x = empty_tile.x as f32;
         let y = empty_tile.y as f32;
-        
+
         // Check each edge of this empty tile to see if it borders a wall
-        // North edge (top of empty tile)
+        // For holes, we want counter-clockwise orientation (opposite of exterior)
+
+        // North edge (top of empty tile) - right to left for counter-clockwise
         let north_neighbor = TilePoint::new(empty_tile.x, empty_tile.y + 1);
         if walls.contains(&north_neighbor) {
             boundary_edges.push((
-                Vec2::new(x + 0.5, y + 0.5),      // Top-right corner (reversed for hole)
+                Vec2::new(x + 0.5, y + 0.5),      // Top-right corner
                 Vec2::new(x - 0.5, y + 0.5),      // Top-left corner
             ));
         }
-        
-        // East edge (right of empty tile)
+
+        // East edge (right of empty tile) - bottom to top for counter-clockwise
         let east_neighbor = TilePoint::new(empty_tile.x + 1, empty_tile.y);
         if walls.contains(&east_neighbor) {
             boundary_edges.push((
-                Vec2::new(x + 0.5, y - 0.5),      // Bottom-right corner (reversed for hole)
+                Vec2::new(x + 0.5, y - 0.5),      // Bottom-right corner
                 Vec2::new(x + 0.5, y + 0.5),      // Top-right corner
             ));
         }
-        
-        // South edge (bottom of empty tile)
-        if empty_tile.y > 0 {
-            let south_neighbor = TilePoint::new(empty_tile.x, empty_tile.y - 1);
-            if walls.contains(&south_neighbor) {
-                boundary_edges.push((
-                    Vec2::new(x - 0.5, y - 0.5),  // Bottom-left corner (reversed for hole)
-                    Vec2::new(x + 0.5, y - 0.5),  // Bottom-right corner
-                ));
-            }
+
+        // South edge (bottom of empty tile) - left to right for counter-clockwise
+        let south_neighbor = TilePoint::new(empty_tile.x, empty_tile.y.wrapping_sub(1));
+        if empty_tile.y > 0 && walls.contains(&south_neighbor) {
+            boundary_edges.push((
+                Vec2::new(x - 0.5, y - 0.5),  // Bottom-left corner
+                Vec2::new(x + 0.5, y - 0.5),  // Bottom-right corner
+            ));
         }
-        
-        // West edge (left of empty tile)
-        if empty_tile.x > 0 {
-            let west_neighbor = TilePoint::new(empty_tile.x - 1, empty_tile.y);
-            if walls.contains(&west_neighbor) {
-                boundary_edges.push((
-                    Vec2::new(x - 0.5, y + 0.5),  // Top-left corner (reversed for hole)
-                    Vec2::new(x - 0.5, y - 0.5),  // Bottom-left corner  
-                ));
-            }
+
+        // West edge (left of empty tile) - top to bottom for counter-clockwise
+        let west_neighbor = TilePoint::new(empty_tile.x.wrapping_sub(1), empty_tile.y);
+        if empty_tile.x > 0 && walls.contains(&west_neighbor) {
+            boundary_edges.push((
+                Vec2::new(x - 0.5, y + 0.5),  // Top-left corner
+                Vec2::new(x - 0.5, y - 0.5),  // Bottom-left corner
+            ));
         }
     }
-    
+
     // Connect these edges to form the hole boundary
     trace_perimeter_from_edges(boundary_edges)
 }
@@ -302,53 +300,37 @@ fn trace_contour_boundary(region: &HashSet<TilePoint>) -> Vec<Vec2> {
         let x = tile.x as f32;
         let y = tile.y as f32;
 
-        // Check each edge of this tile
-        // North edge (top of tile)
+        // Check each edge of this tile and ensure consistent clockwise orientation
+        // North edge (top of tile) - left to right for clockwise exterior
         let north_neighbor = TilePoint::new(tile.x, tile.y + 1);
-        if !region.contains(&north_neighbor) {
+        if tile.y >= CHUNK_SIZE - 1 || !region.contains(&north_neighbor) {
             boundary_edges.push((
                 Vec2::new(x - 0.5, y + 0.5),      // Top-left corner
                 Vec2::new(x + 0.5, y + 0.5),      // Top-right corner
             ));
         }
 
-        // East edge (right of tile)
+        // East edge (right of tile) - top to bottom for clockwise exterior
         let east_neighbor = TilePoint::new(tile.x + 1, tile.y);
-        if !region.contains(&east_neighbor) {
+        if tile.x >= CHUNK_SIZE - 1 || !region.contains(&east_neighbor) {
             boundary_edges.push((
                 Vec2::new(x + 0.5, y + 0.5),      // Top-right corner
                 Vec2::new(x + 0.5, y - 0.5),      // Bottom-right corner
             ));
         }
 
-        // South edge (bottom of tile)
-        if tile.y > 0 {
-            let south_neighbor = TilePoint::new(tile.x, tile.y - 1);
-            if !region.contains(&south_neighbor) {
-                boundary_edges.push((
-                    Vec2::new(x + 0.5, y - 0.5),  // Bottom-right corner
-                    Vec2::new(x - 0.5, y - 0.5),  // Bottom-left corner
-                ));
-            }
-        } else {
-            // At y=0, there's always a boundary to the south
+        // South edge (bottom of tile) - right to left for clockwise exterior
+        let south_neighbor = TilePoint::new(tile.x, tile.y.wrapping_sub(1));
+        if tile.y == 0 || !region.contains(&south_neighbor) {
             boundary_edges.push((
                 Vec2::new(x + 0.5, y - 0.5),  // Bottom-right corner
                 Vec2::new(x - 0.5, y - 0.5),  // Bottom-left corner
             ));
         }
 
-        // West edge (left of tile)
-        if tile.x > 0 {
-            let west_neighbor = TilePoint::new(tile.x - 1, tile.y);
-            if !region.contains(&west_neighbor) {
-                boundary_edges.push((
-                    Vec2::new(x - 0.5, y - 0.5),  // Bottom-left corner
-                    Vec2::new(x - 0.5, y + 0.5),  // Top-left corner
-                ));
-            }
-        } else {
-            // At x=0, there's always a boundary to the west
+        // West edge (left of tile) - bottom to top for clockwise exterior
+        let west_neighbor = TilePoint::new(tile.x.wrapping_sub(1), tile.y);
+        if tile.x == 0 || !region.contains(&west_neighbor) {
             boundary_edges.push((
                 Vec2::new(x - 0.5, y - 0.5),  // Bottom-left corner
                 Vec2::new(x - 0.5, y + 0.5),  // Top-left corner
@@ -360,57 +342,90 @@ fn trace_contour_boundary(region: &HashSet<TilePoint>) -> Vec<Vec2> {
     trace_perimeter_from_edges(boundary_edges)
 }
 
-/// Connect boundary edges to form a coherent perimeter
+/// Connect boundary edges to form coherent perimeters
+/// Returns multiple polylines if there are disconnected boundary regions
 fn trace_perimeter_from_edges(edges: Vec<(Vec2, Vec2)>) -> Vec<Vec2> {
     if edges.is_empty() {
         return Vec::new();
     }
 
-    let mut perimeter = Vec::new();
+    // Try to find all connected boundary loops
+    let all_loops = find_all_boundary_loops(edges);
+
+    // Return the largest loop (main boundary)
+    // In the future, we could handle multiple loops for complex shapes
+    all_loops.into_iter()
+        .max_by_key(|loop_points| loop_points.len())
+        .unwrap_or_default()
+}
+
+/// Find all connected boundary loops from a set of edges
+fn find_all_boundary_loops(edges: Vec<(Vec2, Vec2)>) -> Vec<Vec<Vec2>> {
     let mut remaining_edges = edges;
+    let mut loops = Vec::new();
+    let epsilon = 0.001; // Smaller epsilon for better precision
 
-    // Start with the first edge
-    let current_edge = remaining_edges.remove(0);
-    perimeter.push(current_edge.0);
-    perimeter.push(current_edge.1);
-
-    // Keep connecting edges until we can't find more connections
     while !remaining_edges.is_empty() {
-        let current_end = *perimeter.last().unwrap();
-        let mut found_connection = false;
+        // Start a new loop
+        let mut current_loop = Vec::new();
+        let start_edge = remaining_edges.remove(0);
 
-        // Look for an edge that starts where we ended
-        for (i, &(start, end)) in remaining_edges.iter().enumerate() {
-            if (current_end - start).length() < 0.01 {
-                perimeter.push(end);
-                remaining_edges.remove(i);
-                found_connection = true;
+        current_loop.push(start_edge.0);
+        current_loop.push(start_edge.1);
+
+        let loop_start = start_edge.0;
+        let mut current_end = start_edge.1;
+
+        // Try to complete this loop
+        let mut max_iterations = remaining_edges.len() + 1;
+        while max_iterations > 0 {
+            max_iterations -= 1;
+
+            // Check if we've closed the loop
+            if (current_end - loop_start).length() < epsilon {
+                // Loop is closed
                 break;
             }
-            // Also try reversed edge
-            else if (current_end - end).length() < 0.01 {
-                perimeter.push(start);
-                remaining_edges.remove(i);
-                found_connection = true;
+
+            let mut found_connection = false;
+
+            // Look for an edge that connects to our current end point
+            for (i, &(start, end)) in remaining_edges.iter().enumerate() {
+                if (current_end - start).length() < epsilon {
+                    // Found forward connection
+                    current_loop.push(end);
+                    current_end = end;
+                    remaining_edges.remove(i);
+                    found_connection = true;
+                    break;
+                } else if (current_end - end).length() < epsilon {
+                    // Found reverse connection
+                    current_loop.push(start);
+                    current_end = start;
+                    remaining_edges.remove(i);
+                    found_connection = true;
+                    break;
+                }
+            }
+
+            if !found_connection {
                 break;
             }
         }
 
-        if !found_connection {
-            break;
+        // Only add loops that have sufficient points and are reasonably closed
+        if current_loop.len() >= 3 {
+            // Ensure the loop is properly closed
+            if let (Some(&first), Some(&last)) = (current_loop.first(), current_loop.last()) {
+                if (first - last).length() > epsilon {
+                    current_loop.push(first);
+                }
+            }
+            loops.push(current_loop);
         }
     }
 
-    // Close the polygon if we have enough points
-    if perimeter.len() >= 3 {
-        if let (Some(first), Some(last)) = (perimeter.first(), perimeter.last()) {
-            if (first - last).length() > 0.01 {
-                perimeter.push(*first);
-            }
-        }
-    }
-
-    perimeter
+    loops
 }
 
 // Note: The detailed edge-based boundary tracing has been simplified

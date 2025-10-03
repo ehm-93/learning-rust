@@ -21,6 +21,6 @@ impl Plugin for TilePlugin {
         app
             // Add startup systems for loading assets
             .add_systems(Startup, systems::load_tilemap_texture);
-            // Note: tilemap spawning is now handled by individual scenes
+            // Note: chunk management is now handled by ChunkPlugin
     }
 }

@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    world::states::WorldState,
-};
+use crate::world::{states::WorldState, chunks::ChunkingState};
 
 use super::components::{SanctuaryEntity, SanctuaryExitPortal, SanctuaryDungeonPortal};
 
@@ -14,6 +12,9 @@ pub fn setup_sanctuary_scene(
     sanctuary_state: Res<super::resources::SanctuaryState>,
 ) {
     info!("Setting up Sanctuary scene (depth {})", sanctuary_state.current_depth);
+
+     // Disable chunking in sanctuary, fixed map
+    commands.set_state(ChunkingState::Disabled);
 
     // Spawn camera
     commands.spawn((

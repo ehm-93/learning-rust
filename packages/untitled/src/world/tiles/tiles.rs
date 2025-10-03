@@ -1,5 +1,4 @@
-use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
+// Tile definitions and generation functions
 
 /// Tile types for the tilemap
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

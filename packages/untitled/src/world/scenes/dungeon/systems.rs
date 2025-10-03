@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use crate::world::chunks::ChunkingState;
 use crate::{
     world::states::WorldState,
 };
@@ -16,30 +17,13 @@ pub fn setup_dungeon_scene(
 ) {
     info!("Setting up Dungeon scene (depth {})", dungeon_state.depth);
 
+    // Enable chunking in dungeon, procedural map
+    commands.set_state(ChunkingState::Enabled);
+
     // Spawn camera
     commands.spawn((
         Camera2d,
         crate::components::MainCamera,
-        DungeonEntity,
-    ));
-
-    // Spawn simple floor
-    commands.spawn((
-        Mesh2d(meshes.add(Rectangle::new(400.0, 400.0))),
-        MeshMaterial2d(materials.add(Color::srgb(0.4, 0.3, 0.3))), // Dark red
-        Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
-        DungeonEntity,
-    ));
-
-    // Add dungeon title text with depth
-    commands.spawn((
-        Text2d::new(format!("Dungeon - Depth {} - Combat Zone", dungeon_state.depth)),
-        TextFont {
-            font_size: 24.0,
-            ..default()
-        },
-        TextColor(Color::srgb(0.8, 0.3, 0.3)),
-        Transform::from_translation(Vec3::new(0.0, 150.0, 1.0)),
         DungeonEntity,
     ));
 
@@ -58,18 +42,6 @@ pub fn setup_dungeon_scene(
             })
         ),
         crate::world::InteractableHighlight::with_radius(1.4),
-    ));
-
-    // Add portal label
-    commands.spawn((
-        Text2d::new("Portal to Sanctuary"),
-        TextFont {
-            font_size: 16.0,
-            ..default()
-        },
-        TextColor(Color::WHITE),
-        Transform::from_translation(Vec3::new(0.0, -200.0, 1.0)),
-        DungeonEntity,
     ));
 
     // Spawn player at dungeon entrance

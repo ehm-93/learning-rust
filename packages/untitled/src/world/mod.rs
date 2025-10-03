@@ -6,13 +6,14 @@ pub mod scenes;
 pub mod interaction;
 pub mod states;
 pub mod tiles;
+pub mod chunks;
 
 // Re-export key types for easy access
 pub use interaction::{
     Interactable, InteractionEvent, InteractableHighlight, InteractionCallback,
 };
 pub use states::WorldState;
-pub use tiles::{TilePlugin, TileType, TilemapData, GameTilemap, WallTile};
+pub use tiles::{WallTile};
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
@@ -70,15 +71,18 @@ impl Plugin for WorldPlugin {
             // Events
             .add_event::<InteractionEvent>()
 
+            // Tile and chunk plugins
+            .add_plugins((
+                tiles::TilePlugin,
+                chunks::ChunkPlugin,
+            ))
+
             // Add scene plugins (each handles their own OnEnter/OnExit transitions)
             .add_plugins((
                 scenes::cathedral::CathedralPlugin,
                 scenes::sanctuary::SanctuaryPlugin,
                 scenes::dungeon::DungeonPlugin,
             ))
-
-            // Tile plugin
-            .add_plugins(tiles::TilePlugin)
 
             // Global interaction systems (run regardless of scene)
             .add_systems(Update, (

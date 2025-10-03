@@ -5057,6 +5057,7 @@ dependencies = [
  "bevy_ecs_tilemap",
  "bevy_rapier2d",
  "fastrand",
+ "image 0.25.8",
  "rand 0.9.2",
  "rayon",
  "serde",

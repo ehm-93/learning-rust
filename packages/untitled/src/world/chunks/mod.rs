@@ -8,7 +8,8 @@ pub mod systems;
 use bevy::prelude::*;
 use std::collections::HashMap;
 
-use crate::world::tiles::TileType;
+use crate::world::tiles;
+use crate::world::constants::MACRO_PX_PER_CHUNK;
 
 /// State to control whether chunking systems are active
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -51,7 +52,7 @@ pub struct Chunk {
     /// Position of this chunk in chunk coordinates
     pub position: ChunkCoord,
     /// 64x64 tile data for this chunk
-    pub tiles: [[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+    pub tiles: [[tiles::TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
     /// Whether this chunk has been modified and needs to be saved
     pub dirty: bool,
     /// The tilemap entity for this chunk (if spawned)
@@ -59,37 +60,64 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    /// Create a new chunk at the given position with default tile generation
-    pub fn new(position: ChunkCoord) -> Self {
+    /// Create a new chunk at the given position with macro map-driven generation
+    pub fn new(position: ChunkCoord, macro_map: &Vec<Vec<bool>>) -> Self {
         Self {
             position,
-            tiles: Self::generate_hardcoded_tiles(),
+            tiles: Self::generate_from_macro_map(position, macro_map),
             dirty: false,
             tilemap_entity: None,
         }
     }
 
-    /// Generate tiles for this chunk (temporary hardcoded implementation)
-    /// This will be replaced with proper generation in a later phase
-    fn generate_hardcoded_tiles() -> [[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] {
-        let mut tiles = [[TileType::Floor; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+    /// Generate tiles for this chunk based on the macro map
+    /// Uses the macro map to determine overall density, then fills with appropriate tile pattern
+    fn generate_from_macro_map(position: ChunkCoord, macro_map: &Vec<Vec<bool>>) -> [[tiles::TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] {
+        let mut tiles = [[tiles::TileType::Floor; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
 
-        // Near chunks: mostly floor with some scattered walls
-        for x in (10..CHUNK_SIZE as usize).step_by(15) {
-            for y in (10..CHUNK_SIZE as usize).step_by(15) {
-                if x < CHUNK_SIZE as usize - 1 && y < CHUNK_SIZE as usize - 1 {
-                    tiles[y][x] = TileType::Wall;
-                    tiles[y + 1][x] = TileType::Wall;
-                    tiles[y][x + 1] = TileType::Wall;
+        // Check if out of bounds of macro map, default to walls if so
+        let max_macro_x = position.x * MACRO_PX_PER_CHUNK as i32 + (MACRO_PX_PER_CHUNK as i32 - 1);
+        let max_macro_y = position.y * MACRO_PX_PER_CHUNK as i32 + (MACRO_PX_PER_CHUNK as i32 - 1);
+
+        if max_macro_x >= macro_map.len() as i32 || max_macro_y >= macro_map[0].len() as i32 {
+            for x in 0..CHUNK_SIZE {
+                for y in 0..CHUNK_SIZE {
+                    tiles[y as usize][x as usize] = tiles::TileType::Wall;
                 }
+            }
+            return tiles;
+        }
+
+        // Generate tiles based on macro map
+        // Each macro cell influences a region of the chunk
+        let tiles_per_macro_cell = CHUNK_SIZE / MACRO_PX_PER_CHUNK as u32;
+
+        for x in 0..CHUNK_SIZE {
+            for y in 0..CHUNK_SIZE {
+                // Determine which macro cell this tile corresponds to
+                let macro_cell_x = x / tiles_per_macro_cell;
+                let macro_cell_y = y / tiles_per_macro_cell;
+
+                // Get the macro map value for this region
+                let macro_x = position.x as usize * MACRO_PX_PER_CHUNK + macro_cell_x as usize;
+                let macro_y = position.y as usize * MACRO_PX_PER_CHUNK + macro_cell_y as usize;
+
+                let is_open = macro_map[macro_x][macro_y];
+                tiles[y as usize][x as usize] = if is_open {
+                    tiles::TileType::Floor
+                } else {
+                    tiles::TileType::Wall
+                };
             }
         }
 
         tiles
     }
 
+
+
     /// Get the tile at the given local coordinates within this chunk
-    pub fn get_tile(&self, local_x: u32, local_y: u32) -> Option<TileType> {
+    pub fn get_tile(&self, local_x: u32, local_y: u32) -> Option<tiles::TileType> {
         if local_x < CHUNK_SIZE && local_y < CHUNK_SIZE {
             Some(self.tiles[local_y as usize][local_x as usize])
         } else {
@@ -98,7 +126,7 @@ impl Chunk {
     }
 
     /// Set the tile at the given local coordinates within this chunk
-    pub fn set_tile(&mut self, local_x: u32, local_y: u32, tile_type: TileType) -> bool {
+    pub fn set_tile(&mut self, local_x: u32, local_y: u32, tile_type: tiles::TileType) -> bool {
         if local_x < CHUNK_SIZE && local_y < CHUNK_SIZE {
             self.tiles[local_y as usize][local_x as usize] = tile_type;
             self.dirty = true;
@@ -133,10 +161,10 @@ impl ChunkManager {
     }
 
     /// Get a chunk at the given coordinates, loading it if necessary
-    pub fn get_or_create_chunk(&mut self, chunk_coord: ChunkCoord) -> &mut Chunk {
+    pub fn get_or_create_chunk(&mut self, chunk_coord: ChunkCoord, macro_map: &Vec<Vec<bool>>) -> &mut Chunk {
         self.chunks.entry(chunk_coord).or_insert_with(|| {
             info!("Creating new chunk at {:?}", chunk_coord);
-            Chunk::new(chunk_coord)
+            Chunk::new(chunk_coord, macro_map)
         })
     }
 

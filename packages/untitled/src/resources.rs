@@ -7,15 +7,3 @@ pub enum GameState {
     Playing,
     GameOver,
 }
-
-/// Dungeon generation parameters
-#[derive(Resource)]
-pub struct DungeonParams {
-}
-
-impl Default for DungeonParams {
-    fn default() -> Self {
-        Self {
-        }
-    }
-}

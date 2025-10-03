@@ -2,6 +2,7 @@
 //!
 //! This module is responsible for world initialization and state-based scene management.
 
+pub mod constants;
 pub mod scenes;
 pub mod interaction;
 pub mod states;
@@ -9,13 +10,12 @@ pub mod tiles;
 pub mod chunks;
 pub mod mapgen;
 
-// Re-export key types for easy access
+pub use constants::*;
 pub use interaction::{
     Interactable, InteractionEvent, InteractableHighlight, InteractionCallback,
 };
 pub use states::WorldState;
 pub use tiles::{WallTile};
-pub use mapgen::{Level, MacroMap, MapGenPlugin};
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;

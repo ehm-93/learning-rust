@@ -53,7 +53,6 @@ fn main() {
         .add_event::<GrenadeExplosionEvent>()
         .add_event::<PortalActivationEvent>()
         .insert_resource(GameState::default())
-        .insert_resource(DungeonParams::default())
         .insert_resource(ui::tooltip::TooltipState::default())
         .add_systems(Startup, (disable_gravity, setup_health_bar, load_sounds))
         .add_systems(Update, (

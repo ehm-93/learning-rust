@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use super::*;
+use crate::world::scenes::dungeon::resources::DungeonState;
 use crate::world::tiles::{TileType, TILE_SIZE};
 use crate::player::Player;
 
@@ -9,6 +10,7 @@ use crate::player::Player;
 pub fn manage_chunk_loading(
     mut commands: Commands,
     mut chunk_manager: ResMut<ChunkManager>,
+    level: Res<DungeonState>,
     player_query: Query<&Transform, With<Player>>,
 ) {
     let Ok(player_transform) = player_query.single() else {
@@ -24,7 +26,7 @@ pub fn manage_chunk_loading(
     // Load any missing chunks
     for chunk_coord in required_chunks {
         let needs_spawning = {
-            let chunk = chunk_manager.get_or_create_chunk(chunk_coord);
+            let chunk = chunk_manager.get_or_create_chunk(chunk_coord, &level.macro_map);
             chunk.tilemap_entity.is_none()
         };
 

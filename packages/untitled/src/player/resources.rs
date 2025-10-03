@@ -57,7 +57,7 @@ impl Default for CameraZoom {
         Self {
             level: 1.5,      // Start at 1.5x zoom out
             min_zoom: 0.5,   // Can zoom in to 0.5x (closer)
-            max_zoom: 3.0,   // Can zoom out to 3.0x (further)
+            max_zoom: 10.0,   // Can zoom out to 3.0x (further)
             sensitivity: 0.1, // Each scroll step changes zoom by 0.1
         }
     }

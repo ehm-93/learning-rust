@@ -15,6 +15,7 @@ mod ui;
 mod sounds;
 mod line_of_sight;
 mod inventory;
+mod debug;
 
 // Import everything we need
 use events::*;
@@ -27,6 +28,7 @@ use sounds::*;
 use inventory::InventoryPlugin;
 use world::WorldPlugin;
 use player::PlayerPlugin;
+use debug::DebugOverlayPlugin;
 
 fn main() {
     App::new()
@@ -44,17 +46,16 @@ fn main() {
         .add_plugins(PlayerPlugin)
         .add_plugins(InventoryPlugin)
         .add_plugins(WorldPlugin)
+        .add_plugins(DebugOverlayPlugin)
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()
         .add_event::<HitFlashEvent>()
         .add_event::<GrenadeExplosionEvent>()
         .add_event::<PortalActivationEvent>()
-        .insert_resource(Score::default())
         .insert_resource(GameState::default())
-        .insert_resource(GameMode::default())
         .insert_resource(DungeonParams::default())
         .insert_resource(ui::tooltip::TooltipState::default())
-        .add_systems(Startup, (disable_gravity, setup_health_bar, setup_score_display, load_sounds))
+        .add_systems(Startup, (disable_gravity, setup_health_bar, load_sounds))
         .add_systems(Update, (
             // Enemy systems
             enemy_ai.run_if(resource_equals(GameState::Playing)),
@@ -63,7 +64,6 @@ fn main() {
             // UI systems
             update_health_bar,
             update_health_bar_color,
-            update_score_display,
             show_game_over_overlay,
             handle_restart_button,
 

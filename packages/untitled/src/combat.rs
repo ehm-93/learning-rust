@@ -153,7 +153,6 @@ pub fn process_damage(
 pub fn cleanup_dead_entities(
     mut commands: Commands,
     health_query: Query<(Entity, &Health, Option<&Enemy>, Option<&Player>)>,
-    mut score: ResMut<Score>,
     mut game_state: ResMut<GameState>,
 ) {
     for (entity, health, enemy, player) in health_query.iter() {
@@ -167,7 +166,6 @@ pub fn cleanup_dead_entities(
                     EnemyArchetype::Sniper => 75,
                     EnemyArchetype::MachineGunner => 40,
                 };
-                score.current += points;
             }
 
             // Check if player died - set game over but don't despawn player

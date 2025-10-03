@@ -85,12 +85,6 @@ pub struct LaserSight {
 #[derive(Component)]
 pub struct HealthBar;
 
-
-
-/// Score display UI component
-#[derive(Component)]
-pub struct ScoreText;
-
 /// Game over overlay UI component
 #[derive(Component)]
 pub struct GameOverOverlay;

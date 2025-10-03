@@ -95,42 +95,9 @@ pub fn update_health_bar_color(
     }
 }
 
-/// Sets up the score display UI
-pub fn setup_score_display(
-    mut commands: Commands,
-) {
-    // Create score display in top-right corner
-    commands.spawn((
-        Text::new("Score: 0"),
-        TextFont {
-            font_size: 24.0,
-            ..default()
-        },
-        TextColor(Color::WHITE),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(20.0),
-            right: Val::Px(20.0),
-            ..default()
-        },
-        ScoreText,
-    ));
-}
-
-/// Updates the score display text
-pub fn update_score_display(
-    score: Res<Score>,
-    mut query: Query<&mut Text, With<ScoreText>>,
-) {
-    if let Ok(mut text) = query.single_mut() {
-        **text = format!("Score: {}", score.current);
-    }
-}
-
 /// Sets up the game over overlay
 pub fn setup_game_over_overlay(
     mut commands: Commands,
-    score: Res<Score>,
 ) {
     // Semi-transparent dark overlay
     commands.spawn((
@@ -160,20 +127,6 @@ pub fn setup_game_over_overlay(
             TextColor(Color::srgb(1.0, 0.2, 0.2)),
             Node {
                 margin: UiRect::bottom(Val::Px(20.0)),
-                ..default()
-            },
-        ));
-
-        // Final score
-        parent.spawn((
-            Text::new(format!("Final Score: {}", score.current)),
-            TextFont {
-                font_size: 32.0,
-                ..default()
-            },
-            TextColor(Color::WHITE),
-            Node {
-                margin: UiRect::bottom(Val::Px(30.0)),
                 ..default()
             },
         ));
@@ -208,7 +161,6 @@ pub fn setup_game_over_overlay(
 pub fn handle_restart_button(
     mut interaction_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut commands: Commands,
-    mut score: ResMut<Score>,
     mut game_state: ResMut<GameState>,
     overlay_query: Query<Entity, With<GameOverOverlay>>,
     entities_query: Query<Entity, (Or<(With<Enemy>, With<Projectile>)>, Without<Player>, Without<MainCamera>)>,
@@ -243,7 +195,6 @@ pub fn handle_restart_button(
 
         // Reset game state
         *game_state = GameState::Playing;
-        score.current = 0;
         fire_timer.timer.reset();
 
         // Return to Cathedral with fresh progress
@@ -255,10 +206,9 @@ pub fn handle_restart_button(
 pub fn show_game_over_overlay(
     commands: Commands,
     game_state: Res<GameState>,
-    score: Res<Score>,
     overlay_query: Query<Entity, With<GameOverOverlay>>,
 ) {
     if *game_state == GameState::GameOver && overlay_query.is_empty() {
-        setup_game_over_overlay(commands, score);
+        setup_game_over_overlay(commands);
     }
 }

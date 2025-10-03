@@ -31,7 +31,7 @@ pub fn setup_dungeon_scene(
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::new(60.0, 80.0))),
         MeshMaterial2d(materials.add(Color::srgb(0.3, 0.8, 0.3))), // Green portal
-        Transform::from_translation(Vec3::new(0.0, -150.0, 0.0)),
+        Transform::from_translation(Vec3::new(0.0, -150.0, 1.0)), // Z=1.0 to render above floor tiles
         DungeonExitPortal,
         DungeonEntity,
         crate::world::Interactable::new(

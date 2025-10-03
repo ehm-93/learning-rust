@@ -13,7 +13,7 @@ use bevy::{
 
 use crate::{
     player::Player,
-    world::chunks::{world_pos_to_chunk_coord, ChunkManager, ChunkCoord, CHUNK_SIZE},
+    world::chunks::{world_pos_to_chunk_coord, ChunkManager, ChunkCoord, CHUNK_SIZE, ChunkingState},
     components::MainCamera,
     resources::GameState,
 };
@@ -71,8 +71,8 @@ fn setup_debug_overlay(mut commands: Commands) {
             position_type: PositionType::Absolute,
             top: Val::Px(10.0),
             left: Val::Px(10.0),
-            width: Val::Px(400.0),
-            height: Val::Px(300.0),
+            width: Val::Px(450.0),
+            height: Val::Px(500.0), // Increased height to show more debug info
             padding: UiRect::all(Val::Px(10.0)),
             display: Display::None, // Initially hidden
             ..default()
@@ -86,13 +86,14 @@ fn setup_debug_overlay(mut commands: Commands) {
         parent.spawn((
             Text::new("Debug Information"),
             TextFont {
-                font_size: 14.0,
+                font_size: 12.0, // Smaller font to fit more text
                 ..default()
             },
             TextColor(Color::WHITE),
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
+                overflow: Overflow::clip(), // Clip overflow content
                 ..default()
             },
             DebugText,
@@ -139,7 +140,8 @@ fn update_debug_text(
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
     player_query: Query<&Transform, With<Player>>,
     camera_query: Query<&Transform, (With<MainCamera>, Without<Player>)>,
-    chunk_manager: Option<Res<ChunkManager>>,
+    chunk_manager: Res<ChunkManager>,
+    chunking_state: Res<State<ChunkingState>>,
     game_state: Res<GameState>,
     diagnostics: Res<DiagnosticsStore>,
     time: Res<Time>,
@@ -159,7 +161,7 @@ fn update_debug_text(
 
         if let Some(frame_time_diag) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_TIME) {
             if let Some(frame_time) = frame_time_diag.smoothed() {
-                debug_info.push_str(&format!("Frame Time: {:.2}ms\n", frame_time * 1000.0));
+                debug_info.push_str(&format!("Frame Time: {:.2}ms\n", frame_time));
             }
         }
 
@@ -207,24 +209,25 @@ fn update_debug_text(
         debug_info.push('\n');
 
         // Chunk system information
-        if let Some(chunk_manager) = chunk_manager {
-            debug_info.push_str(&format!("Chunks:\n"));
-            debug_info.push_str(&format!("  Loaded: {}\n", chunk_manager.chunk_count()));
+        debug_info.push_str(&format!("Chunks:\n"));
+        debug_info.push_str(&format!("  State: {:?}\n", chunking_state.get()));
+        debug_info.push_str(&format!("  Loaded: {}\n", chunk_manager.chunk_count()));
 
-            // List loaded chunk coordinates (limit to prevent text overflow)
-            let mut loaded_chunks: Vec<_> = chunk_manager.loaded_chunks().collect();
-            loaded_chunks.sort_by_key(|coord| (coord.x, coord.y));
+        // List loaded chunk coordinates (limit to prevent text overflow)
+        let mut loaded_chunks: Vec<_> = chunk_manager.loaded_chunks().collect();
+        loaded_chunks.sort_by_key(|coord| (coord.x, coord.y));
 
-            if loaded_chunks.len() <= 10 {
-                debug_info.push_str("  Coordinates: ");
-                for (i, coord) in loaded_chunks.iter().enumerate() {
-                    if i > 0 { debug_info.push_str(", "); }
-                    debug_info.push_str(&format!("({}, {})", coord.x, coord.y));
-                }
-                debug_info.push('\n');
-            } else {
-                debug_info.push_str(&format!("  (Too many chunks to list: {})\n", loaded_chunks.len()));
+        if loaded_chunks.len() <= 10 && loaded_chunks.len() > 0 {
+            debug_info.push_str("  Coordinates: ");
+            for (i, coord) in loaded_chunks.iter().enumerate() {
+                if i > 0 { debug_info.push_str(", "); }
+                debug_info.push_str(&format!("({}, {})", coord.x, coord.y));
             }
+            debug_info.push('\n');
+        } else if loaded_chunks.len() > 10 {
+            debug_info.push_str(&format!("  (Too many chunks to list: {})\n", loaded_chunks.len()));
+        } else {
+            debug_info.push_str("  (No chunks loaded)\n");
         }
 
         debug_info.push('\n');
@@ -241,7 +244,7 @@ fn render_chunk_boundaries(
     mut gizmos: Gizmos,
     player_query: Query<&Transform, With<Player>>,
     camera_query: Query<&Transform, (With<MainCamera>, Without<Player>)>,
-    chunk_manager: Option<Res<ChunkManager>>,
+    chunk_manager: Res<ChunkManager>,
 ) {
     if let Ok(player_transform) = player_query.single() {
         let player_pos = player_transform.translation.truncate();
@@ -277,10 +280,7 @@ fn render_chunk_boundaries(
                 );
 
                 // Determine line color based on whether chunk is loaded
-                let is_loaded = chunk_manager
-                    .as_ref()
-                    .map(|cm| cm.get_chunk(chunk_coord).is_some())
-                    .unwrap_or(false);
+                let is_loaded = chunk_manager.get_chunk(chunk_coord).is_some();
 
                 let line_color = if is_loaded {
                     Color::srgb(0.0, 1.0, 0.0) // Green for loaded chunks

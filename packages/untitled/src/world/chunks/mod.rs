@@ -248,7 +248,6 @@ impl Plugin for ChunkPlugin {
             .add_systems(Update, (
                 systems::manage_chunk_loading,
                 systems::manage_chunk_unloading.after(systems::manage_chunk_loading),
-                systems::debug_chunk_info,
             ).run_if(in_state(ChunkingState::Enabled)))
             // Add cleanup system when entering disabled state
             .add_systems(OnEnter(ChunkingState::Disabled), systems::cleanup_all_chunks);

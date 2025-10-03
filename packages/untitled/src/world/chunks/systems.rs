@@ -84,7 +84,7 @@ fn spawn_chunk_tilemap(
     let tilemap_transform = Transform::from_translation(Vec3::new(
         chunk_world_pos.x - half_chunk_size,
         chunk_world_pos.y - half_chunk_size,
-        0.0,
+        -1.0,
     ));
 
     // Create tiles for the chunk
@@ -157,51 +157,6 @@ pub fn initialize_chunk_manager(
     let chunk_manager = ChunkManager::new(tilemap_data.texture_handle.clone());
     commands.insert_resource(chunk_manager);
     info!("Initialized ChunkManager");
-}
-
-/// System to display debug information about loaded chunks
-pub fn debug_chunk_info(
-    chunk_manager: Res<ChunkManager>,
-    player_query: Query<&Transform, With<Player>>,
-    mut gizmos: Gizmos,
-) {
-    if let Ok(player_transform) = player_query.single() {
-        let player_pos = player_transform.translation.truncate();
-        let player_chunk = world_pos_to_chunk_coord(player_pos);
-
-        // Draw chunk boundaries for all loaded chunks
-        for chunk_coord in chunk_manager.loaded_chunks() {
-            let chunk_world_pos = chunk_coord_to_world_pos(chunk_coord);
-            let _half_size = CHUNK_SIZE as f32 * TILE_SIZE * 0.5;
-
-            // Choose color based on distance from player
-            let distance = (chunk_coord - player_chunk).abs().max_element();
-            let color = match distance {
-                0 => Color::srgb(0.0, 1.0, 0.0), // Green for player chunk
-                1..=2 => Color::srgb(1.0, 1.0, 0.0), // Yellow for loading radius
-                _ => Color::srgb(1.0, 0.0, 0.0), // Red for chunks that should be unloaded
-            };
-
-            // Draw chunk boundary rectangle
-            gizmos.rect_2d(
-                chunk_world_pos,
-                Vec2::new(CHUNK_SIZE as f32 * TILE_SIZE, CHUNK_SIZE as f32 * TILE_SIZE),
-                color,
-            );
-
-            // Draw chunk coordinate text (only for nearby chunks to avoid clutter)
-            if distance <= 3 {
-                // Note: We can't draw text with gizmos, but we can log the info
-                // In a real game, you'd use a UI overlay or 3D text
-            }
-        }
-
-        // Also draw the player position
-        gizmos.circle_2d(player_pos, 8.0, Color::WHITE);
-
-        // Note: For debugging, we can add a timer resource later to log periodically
-        // For now, we'll just log when chunks change significantly
-    }
 }
 
 /// System to clean up all chunks when chunking is disabled

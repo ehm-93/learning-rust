@@ -1,5 +1,4 @@
 pub mod ca;
-pub mod dla;
 pub mod simplex;
 
 use rand::Rng;
@@ -54,9 +53,6 @@ pub fn freeform(size: usize) -> Vec<Vec<bool>> {
 
     // Smoothing
     ca::cellular_automata(&mut map, 5, |_, _| { });
-
-    // dump to png for debug
-    save_png(&map, "out/dungeon_macro_map.png");
 
     map
 }

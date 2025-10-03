@@ -55,8 +55,8 @@ pub struct Chunk {
     pub tiles: [[tiles::TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
     /// Whether this chunk has been modified and needs to be saved
     pub dirty: bool,
-    /// The tilemap entity for this chunk (if spawned)
-    pub tilemap_entity: Option<Entity>,
+    /// The parent entity for this chunk that contains all chunk-related entities (if spawned)
+    pub parent_entity: Option<Entity>,
 }
 
 impl Chunk {
@@ -66,7 +66,7 @@ impl Chunk {
             position,
             tiles: Self::generate_from_macro_map(position, macro_map),
             dirty: false,
-            tilemap_entity: None,
+            parent_entity: None,
         }
     }
 
@@ -181,7 +181,7 @@ impl ChunkManager {
     /// Remove and despawn a chunk
     pub fn unload_chunk(&mut self, chunk_coord: ChunkCoord, commands: &mut Commands) -> bool {
         if let Some(chunk) = self.chunks.remove(&chunk_coord) {
-            if let Some(entity) = chunk.tilemap_entity {
+            if let Some(entity) = chunk.parent_entity {
                 commands.entity(entity).despawn();
                 info!("Unloaded chunk at {:?}", chunk_coord);
             }
@@ -216,6 +216,7 @@ impl ChunkManager {
     }
 
     /// Calculate which chunks should be unloaded (beyond the given radius)
+    /// Uses the same square-based distance logic as loading for consistency
     pub fn calculate_chunks_to_unload(&self, world_pos: Vec2, unload_radius: i32) -> Vec<ChunkCoord> {
         let center_chunk = world_pos_to_chunk_coord(world_pos);
         let mut to_unload = Vec::new();
@@ -224,6 +225,7 @@ impl ChunkManager {
             let distance = (chunk_coord - center_chunk).abs();
             let max_distance = distance.x.max(distance.y);
 
+            // Use the same square-based logic as loading: unload if outside the square
             if max_distance > unload_radius {
                 to_unload.push(chunk_coord);
             }
@@ -236,6 +238,12 @@ impl ChunkManager {
 /// Component to mark chunk tilemap entities
 #[derive(Component)]
 pub struct ChunkTilemap {
+    pub chunk_coord: ChunkCoord,
+}
+
+/// Component to mark chunk parent entities that hold all chunk-related entities
+#[derive(Component)]
+pub struct ChunkParent {
     pub chunk_coord: ChunkCoord,
 }
 

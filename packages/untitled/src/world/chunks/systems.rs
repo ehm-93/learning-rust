@@ -27,17 +27,17 @@ pub fn manage_chunk_loading(
     for chunk_coord in required_chunks {
         let needs_spawning = {
             let chunk = chunk_manager.get_or_create_chunk(chunk_coord, &level.macro_map);
-            chunk.tilemap_entity.is_none()
+            chunk.parent_entity.is_none()
         };
 
-        // Spawn tilemap if not already spawned
+        // Spawn chunk if not already spawned
         if needs_spawning {
             let chunk = chunk_manager.get_chunk(chunk_coord).unwrap();
-            let tilemap_entity = spawn_chunk_tilemap(&mut commands, &texture_handle, chunk);
+            let parent_entity = spawn_chunk_tilemap(&mut commands, &texture_handle, chunk);
 
-            // Update the chunk with the tilemap entity
+            // Update the chunk with the parent entity
             let chunk = chunk_manager.get_chunk_mut(chunk_coord).unwrap();
-            chunk.tilemap_entity = Some(tilemap_entity);
+            chunk.parent_entity = Some(parent_entity);
         }
     }
 }
@@ -54,8 +54,8 @@ pub fn manage_chunk_unloading(
 
     let player_pos = player_transform.translation.truncate();
 
-    // Calculate chunks to unload (beyond distance 7)
-    let chunks_to_unload = chunk_manager.calculate_chunks_to_unload(player_pos, 7);
+    // Calculate chunks to unload (beyond distance 3 - one chunk buffer beyond 5x5 load area)
+    let chunks_to_unload = chunk_manager.calculate_chunks_to_unload(player_pos, 3);
 
     // Unload distant chunks
     for chunk_coord in chunks_to_unload {
@@ -63,7 +63,7 @@ pub fn manage_chunk_unloading(
     }
 }
 
-/// Helper function to spawn a tilemap for a chunk
+/// Helper function to spawn a tilemap for a chunk with proper hierarchy
 fn spawn_chunk_tilemap(
     commands: &mut Commands,
     texture_handle: &Handle<Image>,
@@ -74,18 +74,36 @@ fn spawn_chunk_tilemap(
         y: CHUNK_SIZE,
     };
 
-    let tilemap_entity = commands.spawn_empty().id();
-    let mut tile_storage = TileStorage::empty(map_size);
-
     // Calculate world position for this chunk
     let chunk_world_pos = chunk_coord_to_world_pos(chunk.position);
-
-    // Calculate transform for the tilemap
-    // Position tilemap so its bottom-left corner aligns with chunk bottom-left
     let half_chunk_size = (CHUNK_SIZE as f32 * TILE_SIZE) * 0.5;
+
+    // Create the parent entity for this chunk
+    let parent_entity = commands.spawn((
+        ChunkParent {
+            chunk_coord: chunk.position,
+        },
+        Transform::from_translation(Vec3::new(
+            chunk_world_pos.x,
+            chunk_world_pos.y,
+            0.0,
+        )),
+        GlobalTransform::default(),
+        Visibility::default(),
+        InheritedVisibility::default(),
+        ViewVisibility::default(),
+    )).id();
+
+    // Spawn the tilemap as a child of the parent
+    let tilemap_entity = commands.spawn_empty().id();
+    commands.entity(parent_entity).add_child(tilemap_entity);
+
+    let mut tile_storage = TileStorage::empty(map_size);
+
+    // Calculate transform for the tilemap (relative to parent)
     let tilemap_transform = Transform::from_translation(Vec3::new(
-        chunk_world_pos.x - half_chunk_size,
-        chunk_world_pos.y - half_chunk_size,
+        -half_chunk_size,
+        -half_chunk_size,
         -1.0,
     ));
 
@@ -115,24 +133,27 @@ fn spawn_chunk_tilemap(
             }
 
             let tile_entity = tile_cmd.id();
+            commands.entity(tilemap_entity).add_child(tile_entity);
             tile_storage.set(&tile_pos, tile_entity);
         }
     }
 
-    // Now spawn separate collider entities for each wall
-    // Position at bottom-left corner of each tile (like cathedral system)
+    // Now spawn separate collider entities for each wall as children of the parent
     for (x, y) in wall_positions {
-        let tile_world_x = chunk_world_pos.x - half_chunk_size + x as f32 * TILE_SIZE;
-        let tile_world_y = chunk_world_pos.y - half_chunk_size + y as f32 * TILE_SIZE;
+        let tile_world_x = -half_chunk_size + x as f32 * TILE_SIZE;
+        let tile_world_y = -half_chunk_size + y as f32 * TILE_SIZE;
 
-        commands.spawn((
+        let wall_collider = commands.spawn((
             crate::world::tiles::WallTile,
             bevy_rapier2d::prelude::Collider::cuboid(TILE_SIZE * 0.5, TILE_SIZE * 0.5),
             bevy_rapier2d::prelude::RigidBody::Fixed,
             Transform::from_translation(Vec3::new(tile_world_x, tile_world_y, 0.0)),
+            GlobalTransform::default(),
             Visibility::Hidden, // Invisible collider - visual handled by tile
             ChunkTilemap { chunk_coord: chunk.position }, // Tag for cleanup
-        ));
+        )).id();
+
+        commands.entity(parent_entity).add_child(wall_collider);
     }
 
     // Configure the tilemap
@@ -154,8 +175,8 @@ fn spawn_chunk_tilemap(
             crate::world::tiles::GameTilemap,
         ));
 
-    info!("Spawned tilemap for chunk {:?} at world pos {:?}", chunk.position, chunk_world_pos);
-    tilemap_entity
+    info!("Spawned chunk {:?} at world pos {:?} with parent entity {:?}", chunk.position, chunk_world_pos, parent_entity);
+    parent_entity
 }
 
 /// System to initialize the ChunkManager resource

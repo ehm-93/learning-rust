@@ -3,6 +3,7 @@
 //! This module handles the spatial partitioning of the world into 64x64 tile chunks,
 //! dynamic loading/unloading based on player position, and chunk-based tile generation.
 
+pub mod collision;
 pub mod systems;
 
 use bevy::prelude::*;

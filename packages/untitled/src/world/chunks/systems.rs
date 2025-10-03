@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use super::*;
+use super::collision;
 use crate::world::scenes::dungeon::resources::DungeonState;
 use crate::world::tiles::{TileType, TILE_SIZE};
 use crate::player::Player;
@@ -19,8 +20,8 @@ pub fn manage_chunk_loading(
 
     let player_pos = player_transform.translation.truncate();
 
-    // Calculate required chunks (5x5 grid around player)
-    let required_chunks = ChunkManager::calculate_required_chunks(player_pos, 2); // radius 2 = 5x5 grid
+    // Calculate required chunks (7x7 grid around player for stress testing)
+    let required_chunks = ChunkManager::calculate_required_chunks(player_pos, 5);
     let texture_handle = chunk_manager.texture_handle.clone();
 
     // Load any missing chunks
@@ -54,8 +55,8 @@ pub fn manage_chunk_unloading(
 
     let player_pos = player_transform.translation.truncate();
 
-    // Calculate chunks to unload (beyond distance 3 - one chunk buffer beyond 5x5 load area)
-    let chunks_to_unload = chunk_manager.calculate_chunks_to_unload(player_pos, 3);
+    // Calculate chunks to unload (beyond distance 5 - buffer beyond 7x7 load area for stress testing)
+    let chunks_to_unload = chunk_manager.calculate_chunks_to_unload(player_pos, 10);
 
     // Unload distant chunks
     for chunk_coord in chunks_to_unload {
@@ -107,9 +108,7 @@ fn spawn_chunk_tilemap(
         -1.0,
     ));
 
-    // Create tiles for the chunk and collect wall positions
-    let mut wall_positions = Vec::new();
-
+    // Create tiles for the chunk
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
             let tile_pos = TilePos { x, y };
@@ -129,7 +128,6 @@ fn spawn_chunk_tilemap(
 
             if tile_type == TileType::Wall {
                 tile_cmd.insert(crate::world::tiles::WallTile);
-                wall_positions.push((x, y));
             }
 
             let tile_entity = tile_cmd.id();
@@ -138,22 +136,49 @@ fn spawn_chunk_tilemap(
         }
     }
 
-    // Now spawn separate collider entities for each wall as children of the parent
-    for (x, y) in wall_positions {
-        let tile_world_x = -half_chunk_size + x as f32 * TILE_SIZE;
-        let tile_world_y = -half_chunk_size + y as f32 * TILE_SIZE;
+    // Create efficient polygon colliders using flood fill and boundary tracing
+    let wall_regions = collision::find_wall_regions(&chunk.tiles);
 
-        let wall_collider = commands.spawn((
-            crate::world::tiles::WallTile,
-            bevy_rapier2d::prelude::Collider::cuboid(TILE_SIZE * 0.5, TILE_SIZE * 0.5),
-            bevy_rapier2d::prelude::RigidBody::Fixed,
-            Transform::from_translation(Vec3::new(tile_world_x, tile_world_y, 0.0)),
-            GlobalTransform::default(),
-            Visibility::Hidden, // Invisible collider - visual handled by tile
-            ChunkTilemap { chunk_coord: chunk.position }, // Tag for cleanup
-        )).id();
+    for region in wall_regions {
+        for boundary_polyline in region.boundary_polylines {
+            if boundary_polyline.len() >= 3 {
+                // Convert tile-space polyline to world-space coordinates
+                let world_polyline = collision::polylines_to_world_space(
+                    &[boundary_polyline],
+                    Vec2::new(0.0, 0.0), // Offset handled by transform
+                    TILE_SIZE
+                );
 
-        commands.entity(parent_entity).add_child(wall_collider);
+                if let Some(world_points) = world_polyline.first() {
+                    // Create a polyline collider from the boundary points
+                    let points: Vec<Vec2> = world_points.clone();
+
+                    // Create indices for the polyline (consecutive vertex pairs)
+                    let mut indices = Vec::new();
+                    for i in 0..(points.len().saturating_sub(1)) {
+                        indices.push([i as u32, (i + 1) as u32]);
+                    }
+                    // Close the loop if we have enough points
+                    if points.len() >= 3 {
+                        indices.push([points.len() as u32 - 1, 0]);
+                    }
+
+                    let collider = bevy_rapier2d::prelude::Collider::polyline(points, Some(indices));
+
+                    let wall_collider = commands.spawn((
+                        crate::world::tiles::WallTile,
+                        collider,
+                        bevy_rapier2d::prelude::RigidBody::Fixed,
+                        Transform::default(),
+                        GlobalTransform::default(),
+                        Visibility::Hidden, // Invisible collider - visual handled by tile
+                        ChunkTilemap { chunk_coord: chunk.position }, // Tag for cleanup
+                    )).id();
+
+                    commands.entity(parent_entity).add_child(wall_collider);
+                }
+            }
+        }
     }
 
     // Configure the tilemap

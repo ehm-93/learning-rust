@@ -3,6 +3,10 @@ name = "untitled"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+debug-physics = []
+
 [dependencies]
 bevy = { version = "0.16", features = ["vorbis", "wav"] }
 bevy_ecs_tilemap = "0.16"

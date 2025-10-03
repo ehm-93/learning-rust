@@ -31,8 +31,8 @@ use player::PlayerPlugin;
 use debug::DebugOverlayPlugin;
 
 fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
+    let mut app = App::new();
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Combat Sandbox - Enemy Archetypes".to_string(),
                 resolution: (1280.0, 720.0).into(),
@@ -41,7 +41,6 @@ fn main() {
             ..default()
         }))
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-        // .add_plugins(RapierDebugRenderPlugin::default())
         .add_plugins(TilemapPlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(InventoryPlugin)
@@ -84,8 +83,12 @@ fn main() {
             cleanup_dead_entities, // Run after hit flash
             update_hit_flash,
             cleanup_projectiles.run_if(resource_equals(GameState::Playing)),
-        ))
-        .run();
+        ));
+
+    #[cfg(feature = "debug-physics")]
+    app.add_plugins(RapierDebugRenderPlugin::default());
+
+    app.run();
 }
 
 

@@ -25,7 +25,7 @@ pub fn manage_chunk_loading(
 
     let player_pos = player_transform.translation.truncate();
 
-    // Calculate required chunks (7x7 grid around player for stress testing)
+    // Calculate required chunks (11x11 grid around player for stress testing)
     let required_chunks = ChunkManager::calculate_required_chunks(player_pos, 5);
 
     // Request loading for any missing chunks
@@ -44,28 +44,75 @@ pub fn manage_chunk_loading(
 }
 
 /// System to spawn chunks that have finished loading
-/// Limit 1 chunk spawn per frame to avoid hitches
+/// With a frame budget and debt system to maintain consistent frame times
+const CHUNK_FRAME_BUDGET_MS: f32 = 0.1;
 pub fn spawn_loaded_chunks(
     mut commands: Commands,
     mut chunk_manager: ResMut<ChunkManager>,
+    mut frame_debt: Local<f32>,
 ) {
-    // Find one chunk that is loaded but not yet spawned
-    if let Some((chunk_coord, chunk_data)) = chunk_manager.chunks.iter()
-        .find_map(|(coord, state)| {
-            if let super::ChunkLoadingState::Loaded(data) = state {
-                Some((*coord, data.clone()))
+    use std::time::Instant;
+    let start_time = Instant::now();
+
+    // Calculate available budget this frame (budget minus any debt from previous frames)
+    let available_budget_ms = (CHUNK_FRAME_BUDGET_MS - *frame_debt).max(0.0);
+
+    // If we're in too much debt, skip this frame entirely
+    if available_budget_ms <= 0.0 {
+        // Reduce debt by the budget we would have used
+        *frame_debt -= CHUNK_FRAME_BUDGET_MS;
+        *frame_debt = frame_debt.max(0.0);
+        return;
+    }
+
+    let mut chunks_spawned = 0;
+
+    // Collect chunk coords that are ready to spawn
+    let ready_chunks: Vec<ChunkCoord> = chunk_manager.chunks.iter()
+        .filter_map(|(coord, state)| {
+            if let ChunkLoadingState::Loaded(_) = state {
+                Some(*coord)
             } else {
                 None
             }
         })
-    {
-        // Spawn the chunk's tilemap and colliders
-        let parent_entity = spawn_chunk_tilemap(&mut commands, &chunk_manager.texture_handle, &chunk_data);
+        .collect();
 
-        // Update the chunk state to Spawned
-        chunk_manager.mark_chunk_spawned(chunk_coord, parent_entity);
+    for chunk_coord in ready_chunks {
+        if let Some(ChunkLoadingState::Loaded(chunk_data)) = chunk_manager.chunks.remove(&chunk_coord) {
+            // Spawn the chunk's tilemap and colliders
+            let parent_entity = spawn_chunk_tilemap(&mut commands, &chunk_manager.texture_handle, &chunk_data);
 
-        info!("Spawned chunk at {:?} with parent entity {:?}", chunk_coord, parent_entity);
+            // Update chunk state to Spawned
+            chunk_manager.mark_chunk_spawned(chunk_coord, parent_entity);
+
+            chunks_spawned += 1;
+
+            // Check elapsed time to enforce frame budget
+            let elapsed_ms = start_time.elapsed().as_millis() as f32;
+            if elapsed_ms >= available_budget_ms {
+                break; // Exit to avoid exceeding available budget
+            }
+        }
+    }
+
+    // Update frame debt based on actual time spent
+    let total_elapsed_ms = start_time.elapsed().as_millis() as f32;
+
+    if total_elapsed_ms > available_budget_ms {
+        // We overspent - add the overage to our debt
+        let overage = total_elapsed_ms - available_budget_ms;
+        *frame_debt += overage;
+    } else {
+        // We came in under budget - pay down some debt
+        let unused_budget = available_budget_ms - total_elapsed_ms;
+        *frame_debt -= unused_budget * 0.5; // Pay down debt at 50% rate to be conservative
+        *frame_debt = frame_debt.max(0.0);
+    }
+
+    if chunks_spawned > 0 {
+        info!("Spawned {} chunks this frame ({}ms spent, {}ms debt)",
+              chunks_spawned, total_elapsed_ms, *frame_debt);
     }
 }
 
@@ -81,7 +128,7 @@ pub fn manage_chunk_unloading(
 
     let player_pos = player_transform.translation.truncate();
 
-    // Calculate chunks to unload (beyond distance 10 - buffer beyond 7x7 load area for stress testing)
+    // Calculate chunks to unload (beyond distance 10 - buffer beyond 11x11 load area for stress testing)
     let chunks_to_unload = chunk_manager.calculate_chunks_to_unload(player_pos, 10);
 
     // Unload distant chunks

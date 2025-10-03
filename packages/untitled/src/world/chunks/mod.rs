@@ -1,6 +1,6 @@
 //! Chunk system for procedural terrain generation
 //!
-//! This module handles the spatial partitioning of the world into 64x64 tile chunks,
+//! This module handles the spatial partitioning of the world into NxN tile chunks,
 //! dynamic loading/unloading based on player position, and chunk-based tile generation.
 //! Supports async chunk loading to keep the render pipeline smooth.
 
@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use std::collections::HashMap;
 
-use crate::world::constants::MACRO_PX_PER_CHUNK;
+use crate::world::constants::{MACRO_PX_PER_CHUNK, METERS_PER_CHUNK, TILES_PER_METER};
 use crate::world::tiles;
 
 /// State to control whether chunking systems are active
@@ -24,16 +24,16 @@ pub enum ChunkingState {
     Enabled,
 }
 
-/// Size of a single chunk in tiles (64x64 tiles = 32m x 32m at 0.5m/tile)
-pub const CHUNK_SIZE: u32 = 64;
+/// Size of a single chunk in tiles (calculated from world constants)
+pub const CHUNK_SIZE: u32 = (METERS_PER_CHUNK * TILES_PER_METER) as u32;
 
 /// Chunk coordinate type
 pub type ChunkCoord = IVec2;
 
 /// Convert world position to chunk coordinates
 pub fn world_pos_to_chunk_coord(world_pos: Vec2) -> ChunkCoord {
-    // Each tile is 0.5m (16 units), chunk is 64 tiles = 32m
-    let chunk_size_world = CHUNK_SIZE as f32 * 16.0; // 64 * 16 = 1024 units = 32m
+    // Each chunk is METERS_PER_CHUNK meters, each meter has TILES_PER_METER tiles
+    let chunk_size_world = CHUNK_SIZE as f32 * crate::world::tiles::TILE_SIZE;
     IVec2::new(
         (world_pos.x / chunk_size_world).floor() as i32,
         (world_pos.y / chunk_size_world).floor() as i32,
@@ -42,7 +42,7 @@ pub fn world_pos_to_chunk_coord(world_pos: Vec2) -> ChunkCoord {
 
 /// Convert chunk coordinates to world position (center of chunk)
 pub fn chunk_coord_to_world_pos(chunk_coord: ChunkCoord) -> Vec2 {
-    let chunk_size_world = CHUNK_SIZE as f32 * 16.0;
+    let chunk_size_world = CHUNK_SIZE as f32 * crate::world::tiles::TILE_SIZE;
     Vec2::new(
         chunk_coord.x as f32 * chunk_size_world + chunk_size_world * 0.5,
         chunk_coord.y as f32 * chunk_size_world + chunk_size_world * 0.5,
@@ -76,12 +76,12 @@ pub enum ChunkLoadingState {
     Spawned(Entity), // Parent entity
 }
 
-/// A single chunk containing a 64x64 grid of tiles
+/// A single chunk containing an NxN grid of tiles (size from CHUNK_SIZE)
 #[derive(Debug, Clone)]
 pub struct Chunk {
     /// Position of this chunk in chunk coordinates
     pub position: ChunkCoord,
-    /// 64x64 tile data for this chunk
+    /// NxN tile data for this chunk (size determined by CHUNK_SIZE constant)
     pub tiles: [[tiles::TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
     /// Whether this chunk has been modified and needs to be saved
     pub dirty: bool,
@@ -233,6 +233,7 @@ impl ChunkManager {
         }
 
         // Generate tiles based on macro map
+        // Each macro cell maps to multiple tiles within the chunk
         let tiles_per_macro_cell = CHUNK_SIZE / MACRO_PX_PER_CHUNK as u32;
 
         for x in 0..CHUNK_SIZE {

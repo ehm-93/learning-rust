@@ -79,7 +79,7 @@ fn spawn_chunk_tilemap(
     let chunk_world_pos = chunk_coord_to_world_pos(chunk.position);
 
     // Calculate transform for the tilemap
-    // Adjust for the fact that tilemap origin is at bottom-left of the chunk
+    // Position tilemap so its bottom-left corner aligns with chunk bottom-left
     let half_chunk_size = (CHUNK_SIZE as f32 * TILE_SIZE) * 0.5;
     let tilemap_transform = Transform::from_translation(Vec3::new(
         chunk_world_pos.x - half_chunk_size,
@@ -87,7 +87,9 @@ fn spawn_chunk_tilemap(
         -1.0,
     ));
 
-    // Create tiles for the chunk
+    // Create tiles for the chunk and collect wall positions
+    let mut wall_positions = Vec::new();
+
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
             let tile_pos = TilePos { x, y };
@@ -107,23 +109,28 @@ fn spawn_chunk_tilemap(
 
             if tile_type == TileType::Wall {
                 tile_cmd.insert(crate::world::tiles::WallTile);
+                wall_positions.push((x, y));
             }
 
             let tile_entity = tile_cmd.id();
-
-            if tile_type == TileType::Wall {
-                // Add physics collider for wall tiles
-                let tile_world_x = chunk_world_pos.x - half_chunk_size + (x as f32 + 0.5) * TILE_SIZE;
-                let tile_world_y = chunk_world_pos.y - half_chunk_size + (y as f32 + 0.5) * TILE_SIZE;
-
-                commands.entity(tile_entity).insert((
-                    bevy_rapier2d::prelude::Collider::cuboid(TILE_SIZE * 0.5, TILE_SIZE * 0.5),
-                    Transform::from_translation(Vec3::new(tile_world_x, tile_world_y, 0.0)),
-                ));
-            }
-
             tile_storage.set(&tile_pos, tile_entity);
         }
+    }
+
+    // Now spawn separate collider entities for each wall
+    // Position at bottom-left corner of each tile (like cathedral system)
+    for (x, y) in wall_positions {
+        let tile_world_x = chunk_world_pos.x - half_chunk_size + x as f32 * TILE_SIZE;
+        let tile_world_y = chunk_world_pos.y - half_chunk_size + y as f32 * TILE_SIZE;
+
+        commands.spawn((
+            crate::world::tiles::WallTile,
+            bevy_rapier2d::prelude::Collider::cuboid(TILE_SIZE * 0.5, TILE_SIZE * 0.5),
+            bevy_rapier2d::prelude::RigidBody::Fixed,
+            Transform::from_translation(Vec3::new(tile_world_x, tile_world_y, 0.0)),
+            Visibility::Hidden, // Invisible collider - visual handled by tile
+            ChunkTilemap { chunk_coord: chunk.position }, // Tag for cleanup
+        ));
     }
 
     // Configure the tilemap

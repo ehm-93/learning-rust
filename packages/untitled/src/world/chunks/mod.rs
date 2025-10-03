@@ -63,7 +63,7 @@ impl Chunk {
     pub fn new(position: ChunkCoord) -> Self {
         Self {
             position,
-            tiles: Self::generate_hardcoded_tiles(position),
+            tiles: Self::generate_hardcoded_tiles(),
             dirty: false,
             tilemap_entity: None,
         }
@@ -71,34 +71,16 @@ impl Chunk {
 
     /// Generate tiles for this chunk (temporary hardcoded implementation)
     /// This will be replaced with proper generation in a later phase
-    fn generate_hardcoded_tiles(position: ChunkCoord) -> [[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] {
+    fn generate_hardcoded_tiles() -> [[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] {
         let mut tiles = [[TileType::Floor; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
 
-        // Create a simple pattern based on chunk position
-        // Center chunks (0,0) area should be mostly floor
-        // Outer chunks should have some walls
-
-        let distance_from_origin = ((position.x.pow(2) + position.y.pow(2)) as f32).sqrt();
-
-        if distance_from_origin > 2.0 {
-            // Far chunks: create border walls
-            for x in 0..CHUNK_SIZE as usize {
-                tiles[0][x] = TileType::Wall; // Top
-                tiles[CHUNK_SIZE as usize - 1][x] = TileType::Wall; // Bottom
-            }
-            for y in 0..CHUNK_SIZE as usize {
-                tiles[y][0] = TileType::Wall; // Left
-                tiles[y][CHUNK_SIZE as usize - 1] = TileType::Wall; // Right
-            }
-        } else {
-            // Near chunks: mostly floor with some scattered walls
-            for x in (10..CHUNK_SIZE as usize).step_by(15) {
-                for y in (10..CHUNK_SIZE as usize).step_by(15) {
-                    if x < CHUNK_SIZE as usize - 1 && y < CHUNK_SIZE as usize - 1 {
-                        tiles[y][x] = TileType::Wall;
-                        tiles[y + 1][x] = TileType::Wall;
-                        tiles[y][x + 1] = TileType::Wall;
-                    }
+        // Near chunks: mostly floor with some scattered walls
+        for x in (10..CHUNK_SIZE as usize).step_by(15) {
+            for y in (10..CHUNK_SIZE as usize).step_by(15) {
+                if x < CHUNK_SIZE as usize - 1 && y < CHUNK_SIZE as usize - 1 {
+                    tiles[y][x] = TileType::Wall;
+                    tiles[y + 1][x] = TileType::Wall;
+                    tiles[y][x + 1] = TileType::Wall;
                 }
             }
         }

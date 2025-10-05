@@ -65,7 +65,7 @@ pub fn find_wall_regions(tiles: &[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as
         for x in 0..CHUNK_SIZE {
             let point = TilePoint::new(x, y);
 
-            if !visited.contains(&point) && tiles[y as usize][x as usize] == TileType::Wall {
+            if !visited.contains(&point) && tiles[x as usize][y as usize] == TileType::Wall {
                 // Found an unvisited wall tile, start flood fill
                 let region_tiles = flood_fill_region(tiles, point, &mut visited);
                 if !region_tiles.is_empty() {
@@ -98,7 +98,7 @@ fn flood_fill_region(
     while let Some(current) = queue.pop_front() {
         for neighbor in current.neighbors() {
             if !visited.contains(&neighbor)
-                && tiles[neighbor.y as usize][neighbor.x as usize] == TileType::Wall {
+                && tiles[neighbor.x as usize][neighbor.y as usize] == TileType::Wall {
                 visited.insert(neighbor);
                 region.insert(neighbor);
                 queue.push_back(neighbor);

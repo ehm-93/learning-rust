@@ -13,7 +13,7 @@ use bevy::{
 
 use crate::{
     player::Player,
-    world::chunks::{world_pos_to_chunk_coord, ChunkManager, ChunkCoord, CHUNK_SIZE, ChunkingState},
+    world::chunks::{world_pos_to_chunk_coord, ChunkCoord, CHUNK_SIZE, ChunkingState},
     components::MainCamera,
     resources::GameState,
 };
@@ -140,7 +140,7 @@ fn update_debug_text(
     mut debug_text_query: Query<&mut Text, With<DebugText>>,
     player_query: Query<&Transform, With<Player>>,
     camera_query: Query<&Transform, (With<MainCamera>, Without<Player>)>,
-    chunk_manager: Res<ChunkManager>,
+    chunk_registry: Res<crate::world::chunks::ChunkRegistry>,
     chunking_state: Res<State<ChunkingState>>,
     game_state: Res<GameState>,
     diagnostics: Res<DiagnosticsStore>,
@@ -211,10 +211,12 @@ fn update_debug_text(
         // Chunk system information
         debug_info.push_str(&format!("Chunks:\n"));
         debug_info.push_str(&format!("  State: {:?}\n", chunking_state.get()));
-        debug_info.push_str(&format!("  Loaded: {}\n", chunk_manager.chunk_count()));
+
+        // Get active chunks from the new ChunkRegistry
+        let mut loaded_chunks: Vec<_> = chunk_registry.active_chunks().collect();
+        debug_info.push_str(&format!("  Active: {}\n", loaded_chunks.len()));
 
         // List loaded chunk coordinates (limit to prevent text overflow)
-        let mut loaded_chunks: Vec<_> = chunk_manager.loaded_chunks().collect();
         loaded_chunks.sort_by_key(|coord| (coord.x, coord.y));
 
         if loaded_chunks.len() <= 10 && loaded_chunks.len() > 0 {
@@ -244,7 +246,7 @@ fn render_chunk_boundaries(
     mut gizmos: Gizmos,
     player_query: Query<&Transform, With<Player>>,
     camera_query: Query<&Transform, (With<MainCamera>, Without<Player>)>,
-    chunk_manager: Res<ChunkManager>,
+    chunk_registry: Res<crate::world::chunks::ChunkRegistry>,
 ) {
     if let Ok(player_transform) = player_query.single() {
         let player_pos = player_transform.translation.truncate();
@@ -279,17 +281,13 @@ fn render_chunk_boundaries(
                     chunk_coord.y as f32 * chunk_size_world,
                 );
 
-                // Determine line color based on chunk loading state
-                let is_loaded = matches!(
-                    chunk_manager.chunks.get(&chunk_coord),
-                    Some(crate::world::chunks::ChunkLoadingState::Loaded(_)) |
-                    Some(crate::world::chunks::ChunkLoadingState::Spawned(_))
-                );
+                // Determine line color based on chunk registry state
+                let is_active = chunk_registry.get_refcount(chunk_coord) > 0;
 
-                let line_color = if is_loaded {
-                    Color::srgb(0.0, 1.0, 0.0) // Green for loaded chunks
+                let line_color = if is_active {
+                    Color::srgb(0.0, 1.0, 0.0) // Green for active chunks
                 } else {
-                    Color::srgb(0.5, 0.5, 0.5) // Gray for unloaded chunks
+                    Color::srgb(0.5, 0.5, 0.5) // Gray for inactive chunks
                 };
 
                 // Draw chunk boundary rectangle

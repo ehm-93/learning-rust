@@ -56,6 +56,8 @@ pub fn freeform(size: usize, seed: u64) -> Vec<Vec<bool>> {
     // Smoothing
     ca::cellular_automata(&mut map, 5, |_, _| { });
 
+    save_png(&map, "out/macro_map.png");
+
     map
 }
 

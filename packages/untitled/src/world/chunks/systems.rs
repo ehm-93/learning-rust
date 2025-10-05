@@ -1,302 +1,126 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
+use std::collections::{HashMap, HashSet};
 
 use super::*;
-use super::collision;
-use super::ChunkData;
-use crate::world::scenes::dungeon::resources::DungeonState;
-use crate::world::tiles::{TileType, TILE_SIZE};
-use crate::player::Player;
 
-/// System to poll async chunk loading tasks
-pub fn poll_chunk_loading_tasks(mut chunk_manager: ResMut<ChunkManager>) {
-    chunk_manager.poll_loading_tasks();
-}
+// ===== Event-Driven Chunk Systems =====
 
-/// System to start loading chunks around the player asynchronously
-pub fn manage_chunk_loading(
-    mut chunk_manager: ResMut<ChunkManager>,
-    level: Res<DungeonState>,
-    player_query: Query<&Transform, With<Player>>,
+/// Core system that tracks chunk loader entities and publishes chunk events
+pub fn track_chunk_loaders(
+    mut registry: ResMut<ChunkRegistry>,
+    mut load_events: EventWriter<LoadChunk>,
+    mut preload_events: EventWriter<PreloadChunk>,
+    mut unload_events: EventWriter<UnloadChunk>,
+    loaders: Query<(Entity, &Transform, &ChunkLoader)>,
 ) {
-    let Ok(player_transform) = player_query.single() else {
-        return; // No player found
-    };
+    // Build new registry from current loaders
+    let mut new_active_chunks: HashMap<ChunkCoord, HashSet<Entity>> = HashMap::new();
+    let mut chunks_to_load: HashMap<ChunkCoord, Vec<Entity>> = HashMap::new();
+    let mut chunks_to_preload: HashMap<ChunkCoord, Vec<Entity>> = HashMap::new();
 
-    let player_pos = player_transform.translation.truncate();
+    // 1. Process all current loaders to determine what chunks are needed
+    for (entity, transform, loader) in loaders.iter() {
+        let world_pos = transform.translation.truncate();
+        let chunk_pos = world_pos_to_chunk_coord(world_pos);
 
-    // Calculate required chunks (11x11 grid around player for stress testing)
-    let required_chunks = ChunkManager::calculate_required_chunks(player_pos, 5);
+        // Calculate chunks this loader needs
+        let critical_chunks = calculate_chunks_in_radius(chunk_pos, loader.radius);
+        let preload_chunks = if let Some(preload_radius) = loader.preload_radius {
+            calculate_chunks_in_radius(chunk_pos, preload_radius)
+        } else {
+            Vec::new()
+        };
 
-    // Request loading for any missing chunks
-    for chunk_coord in required_chunks {
-        // Check if we need to start loading this chunk
-        match chunk_manager.chunks.get(&chunk_coord) {
-            None | Some(super::ChunkLoadingState::Unloaded) => {
-                // Start async loading
-                chunk_manager.request_chunk_load(chunk_coord, level.macro_map.clone());
+        // Add critical chunks to new registry
+        for chunk_coord in critical_chunks {
+            new_active_chunks.entry(chunk_coord).or_insert_with(HashSet::new).insert(entity);
+
+            // If this chunk wasn't previously active, mark it for loading
+            if !registry.active_chunks.contains_key(&chunk_coord) {
+                chunks_to_load.entry(chunk_coord).or_insert_with(Vec::new).push(entity);
             }
-            _ => {
-                // Already loading, loaded, or spawned - do nothing
+        }
+
+        // Add preload chunks (only if not already critical)
+        for chunk_coord in preload_chunks {
+            if !new_active_chunks.contains_key(&chunk_coord) {
+                // If this chunk wasn't previously active, mark it for preloading
+                if !registry.active_chunks.contains_key(&chunk_coord) {
+                    chunks_to_preload.entry(chunk_coord).or_insert_with(Vec::new).push(entity);
+                }
             }
         }
     }
-}
 
-/// System to spawn chunks that have finished loading
-/// With a frame budget and debt system to maintain consistent frame times
-const CHUNK_FRAME_BUDGET_MS: f32 = 0.1;
-pub fn spawn_loaded_chunks(
-    mut commands: Commands,
-    mut chunk_manager: ResMut<ChunkManager>,
-    mut frame_debt: Local<f32>,
-) {
-    use std::time::Instant;
-    let start_time = Instant::now();
+    // 2. Find chunks that need unloading (beyond all loaders' unload radius)
+    let chunks_to_unload: Vec<ChunkCoord> = registry.active_chunks.iter()
+        .filter_map(|(chunk_coord, _)| {
+            // Check if this chunk is beyond all loaders' unload radius
+            let should_unload = loaders.iter().all(|(_entity, transform, loader)| {
+                let world_pos = transform.translation.truncate();
+                let loader_chunk_pos = world_pos_to_chunk_coord(world_pos);
+                let distance = (chunk_coord.x - loader_chunk_pos.x).abs().max((chunk_coord.y - loader_chunk_pos.y).abs());
+                distance > loader.unload_radius
+            });
 
-    // Calculate available budget this frame (budget minus any debt from previous frames)
-    let available_budget_ms = (CHUNK_FRAME_BUDGET_MS - *frame_debt).max(0.0);
-
-    // If we're in too much debt, skip this frame entirely
-    if available_budget_ms <= 0.0 {
-        // Reduce debt by the budget we would have used
-        *frame_debt -= CHUNK_FRAME_BUDGET_MS;
-        *frame_debt = frame_debt.max(0.0);
-        return;
-    }
-
-    let mut chunks_spawned = 0;
-
-    // Collect chunk coords that are ready to spawn
-    let ready_chunks: Vec<ChunkCoord> = chunk_manager.chunks.iter()
-        .filter_map(|(coord, state)| {
-            if let ChunkLoadingState::Loaded(_) = state {
-                Some(*coord)
+            if should_unload {
+                Some(*chunk_coord)
             } else {
                 None
             }
         })
         .collect();
 
-    for chunk_coord in ready_chunks {
-        if let Some(ChunkLoadingState::Loaded(chunk_data)) = chunk_manager.chunks.remove(&chunk_coord) {
-            // Spawn the chunk's tilemap and colliders
-            let parent_entity = spawn_chunk_tilemap(&mut commands, &chunk_manager.texture_handle, &chunk_data);
-
-            // Update chunk state to Spawned
-            chunk_manager.mark_chunk_spawned(chunk_coord, parent_entity);
-
-            chunks_spawned += 1;
-
-            // Check elapsed time to enforce frame budget
-            let elapsed_ms = start_time.elapsed().as_millis() as f32;
-            if elapsed_ms >= available_budget_ms {
-                break; // Exit to avoid exceeding available budget
-            }
-        }
+    // 3. Publish events in correct order
+    // First: LoadChunk events (critical chunks)
+    for (chunk_coord, loader_entities) in chunks_to_load {
+        load_events.write(LoadChunk {
+            pos: chunk_coord,
+            world_pos: chunk_coord_to_world_pos(chunk_coord),
+            loaded_for: loader_entities,
+        });
     }
 
-    // Update frame debt based on actual time spent
-    let total_elapsed_ms = start_time.elapsed().as_millis() as f32;
-
-    if total_elapsed_ms > available_budget_ms {
-        // We overspent - add the overage to our debt
-        let overage = total_elapsed_ms - available_budget_ms;
-        *frame_debt += overage;
-    } else {
-        // We came in under budget - pay down some debt
-        let unused_budget = available_budget_ms - total_elapsed_ms;
-        *frame_debt -= unused_budget * 0.5; // Pay down debt at 50% rate to be conservative
-        *frame_debt = frame_debt.max(0.0);
+    // Second: PreloadChunk events (background chunks)
+    for (chunk_coord, loader_entities) in chunks_to_preload {
+        preload_events.write(PreloadChunk {
+            pos: chunk_coord,
+            world_pos: chunk_coord_to_world_pos(chunk_coord),
+            loaded_for: loader_entities,
+        });
     }
 
-    if chunks_spawned > 0 {
-        info!("Spawned {} chunks this frame ({}ms spent, {}ms debt)",
-              chunks_spawned, total_elapsed_ms, *frame_debt);
-    }
-}
-
-/// System to unload chunks that are too far from the player
-pub fn manage_chunk_unloading(
-    mut commands: Commands,
-    mut chunk_manager: ResMut<ChunkManager>,
-    player_query: Query<&Transform, With<Player>>,
-) {
-    let Ok(player_transform) = player_query.single() else {
-        return; // No player found
-    };
-
-    let player_pos = player_transform.translation.truncate();
-
-    // Calculate chunks to unload (beyond distance 10 - buffer beyond 11x11 load area for stress testing)
-    let chunks_to_unload = chunk_manager.calculate_chunks_to_unload(player_pos, 10);
-
-    // Unload distant chunks
+    // Third: UnloadChunk events
     for chunk_coord in chunks_to_unload {
-        chunk_manager.unload_chunk(chunk_coord, &mut commands);
+        unload_events.write(UnloadChunk {
+            pos: chunk_coord,
+            world_pos: chunk_coord_to_world_pos(chunk_coord),
+        });
     }
+
+    // 4. Update registry with new state
+    registry.active_chunks = new_active_chunks;
 }
 
-/// Helper function to spawn a tilemap for a chunk with proper hierarchy
-fn spawn_chunk_tilemap(
-    commands: &mut Commands,
-    texture_handle: &Handle<Image>,
-    chunk_data: &ChunkData,
-) -> Entity {
-    let map_size = TilemapSize {
-        x: CHUNK_SIZE,
-        y: CHUNK_SIZE,
-    };
-
-    // Calculate world position for this chunk
-    let chunk_world_pos = chunk_coord_to_world_pos(chunk_data.position);
-    let half_chunk_size = (CHUNK_SIZE as f32 * TILE_SIZE) * 0.5;
-
-    // Create the parent entity for this chunk
-    let parent_entity = commands.spawn((
-        ChunkParent {
-            chunk_coord: chunk_data.position,
-        },
-        Transform::from_translation(Vec3::new(
-            chunk_world_pos.x,
-            chunk_world_pos.y,
-            0.0,
-        )),
-        GlobalTransform::default(),
-        Visibility::default(),
-        InheritedVisibility::default(),
-        ViewVisibility::default(),
-    )).id();
-
-    // Spawn the tilemap as a child of the parent
-    let tilemap_entity = commands.spawn_empty().id();
-    commands.entity(parent_entity).add_child(tilemap_entity);
-
-    let mut tile_storage = TileStorage::empty(map_size);
-
-    // Calculate transform for the tilemap (relative to parent)
-    let tilemap_transform = Transform::from_translation(Vec3::new(
-        -half_chunk_size,
-        -half_chunk_size,
-        -1.0,
-    ));
-
-    // Create tiles for the chunk
-    for x in 0..CHUNK_SIZE {
-        for y in 0..CHUNK_SIZE {
-            let tile_pos = TilePos { x, y };
-            let tile_type = chunk_data.tiles[y as usize][x as usize];
-
-            let texture_index = match tile_type {
-                TileType::Floor => 0,
-                TileType::Wall => 1,
-            };
-
-            let mut tile_cmd = commands.spawn(TileBundle {
-                position: tile_pos,
-                tilemap_id: TilemapId(tilemap_entity),
-                texture_index: TileTextureIndex(texture_index),
-                ..Default::default()
-            });
-
-            if tile_type == TileType::Wall {
-                tile_cmd.insert(crate::world::tiles::WallTile);
-            }
-
-            let tile_entity = tile_cmd.id();
-            commands.entity(tilemap_entity).add_child(tile_entity);
-            tile_storage.set(&tile_pos, tile_entity);
+/// Helper function to calculate chunks within a given radius
+fn calculate_chunks_in_radius(center: ChunkCoord, radius: i32) -> Vec<ChunkCoord> {
+    let mut chunks = Vec::new();
+    for x in (center.x - radius)..=(center.x + radius) {
+        for y in (center.y - radius)..=(center.y + radius) {
+            chunks.push(ChunkCoord::new(x, y));
         }
     }
-
-    // Use pre-computed wall regions (calculated async off main thread)
-    let wall_regions = &chunk_data.wall_regions;
-
-    for region in wall_regions {
-        for boundary_polyline in &region.boundary_polylines {
-            if boundary_polyline.len() >= 3 {
-                // Convert tile-space polyline to world-space coordinates
-                let world_polyline = collision::polylines_to_world_space(
-                    &[boundary_polyline.clone()],
-                    Vec2::new(0.0, 0.0), // Offset handled by transform
-                    TILE_SIZE
-                );
-
-                if let Some(world_points) = world_polyline.first() {
-                    // Create a polyline collider from the boundary points
-                    let points: Vec<Vec2> = world_points.clone();
-
-                    // Create indices for the polyline (consecutive vertex pairs)
-                    let mut indices = Vec::new();
-                    for i in 0..(points.len().saturating_sub(1)) {
-                        indices.push([i as u32, (i + 1) as u32]);
-                    }
-                    // Close the loop if we have enough points
-                    if points.len() >= 3 {
-                        indices.push([points.len() as u32 - 1, 0]);
-                    }
-
-                    let collider = bevy_rapier2d::prelude::Collider::polyline(points, Some(indices));
-
-                    let wall_collider = commands.spawn((
-                        crate::world::tiles::WallTile,
-                        collider,
-                        bevy_rapier2d::prelude::RigidBody::Fixed,
-                        Transform::default(),
-                        GlobalTransform::default(),
-                        Visibility::Hidden, // Invisible collider - visual handled by tile
-                        ChunkTilemap { chunk_coord: chunk_data.position }, // Tag for cleanup
-                    )).id();
-
-                    commands.entity(parent_entity).add_child(wall_collider);
-                }
-            }
-        }
-    }
-
-    // Configure the tilemap
-    commands
-        .entity(tilemap_entity)
-        .insert((
-            TilemapBundle {
-                grid_size: TilemapGridSize { x: TILE_SIZE, y: TILE_SIZE },
-                size: map_size,
-                storage: tile_storage,
-                texture: TilemapTexture::Single(texture_handle.clone()),
-                tile_size: TilemapTileSize { x: 16.0, y: 16.0 }, // Texture size in pixels
-                transform: tilemap_transform,
-                ..Default::default()
-            },
-            ChunkTilemap {
-                chunk_coord: chunk_data.position,
-            },
-            crate::world::tiles::GameTilemap,
-        ));
-
-    info!("Spawned chunk {:?} at world pos {:?} with parent entity {:?}", chunk_data.position, chunk_world_pos, parent_entity);
-    parent_entity
+    chunks
 }
 
-/// System to initialize the ChunkManager resource
-pub fn initialize_chunk_manager(
-    mut commands: Commands,
-    tilemap_data: Res<crate::world::tiles::TilemapData>,
+pub fn unload_all_chunks(
+    mut registry: ResMut<ChunkRegistry>,
+    mut unload_events: EventWriter<UnloadChunk>,
 ) {
-    let chunk_manager = ChunkManager::new(tilemap_data.texture_handle.clone());
-    commands.insert_resource(chunk_manager);
-    info!("Initialized ChunkManager");
-}
-
-/// System to clean up all chunks when chunking is disabled
-pub fn cleanup_all_chunks(
-    mut commands: Commands,
-    mut chunk_manager: ResMut<ChunkManager>,
-) {
-    let chunk_coords: Vec<ChunkCoord> = chunk_manager.chunks.keys().copied().collect();
-
-    for chunk_coord in chunk_coords {
-        chunk_manager.unload_chunk(chunk_coord, &mut commands);
+    for (chunk_coord, _) in registry.active_chunks.drain() {
+        unload_events.write(UnloadChunk {
+            pos: chunk_coord,
+            world_pos: chunk_coord_to_world_pos(chunk_coord),
+        });
     }
-
-    info!("Cleaned up all chunks - chunking disabled");
 }

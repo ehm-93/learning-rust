@@ -1,4 +1,4 @@
-pub const MACRO_PX_PER_CHUNK: usize = 2; // Each chunk is 4x4 macro cells
+pub const MACRO_PX_PER_CHUNK: usize = 8; // Each chunk is 4x4 macro cells
 pub const METERS_PER_CHUNK: usize = 16; // Each chunk is 16x16 meters
 pub const TILES_PER_METER: usize = 2; // Each meter is 2x2 tiles
 pub const PX_PER_TILE: usize = 16; // Each tile is 16x16 pixels

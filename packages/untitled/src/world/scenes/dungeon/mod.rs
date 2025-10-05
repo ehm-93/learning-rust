@@ -1,6 +1,9 @@
-pub mod components;
 pub mod resources;
-pub mod systems;
+pub mod components;
+
+mod collision;
+mod systems;
+pub mod terrain;
 
 use bevy::prelude::*;
 
@@ -17,6 +20,7 @@ impl Plugin for DungeonPlugin {
             // Add systems for dungeon state transitions
             .add_systems(OnEnter(WorldState::Dungeon), systems::setup_dungeon_scene)
             .add_systems(OnExit(WorldState::Dungeon), systems::teardown_dungeon_scene)
+            .add_plugins(terrain::TerrainChunkPlugin)
 
             // Add systems that run while in dungeon
             .add_systems(Update, (

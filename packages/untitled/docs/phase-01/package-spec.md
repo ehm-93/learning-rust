@@ -309,3 +309,211 @@ Each follows the same pattern:
 The key insight: behaviors and effects are just one application of a general principle. Separate data (what to do) from logic (how to do it). Make logic composable. Let creativity emerge from combinations.
 
 That's the real power - not just adding fireballs without recompiling, but players creating effects you never imagined, sharing them, building on each other's work. The game becomes a platform for creativity rather than a fixed experience.
+
+---
+
+# Package Loading System: Development Phases
+
+## Core Principle
+Build the package infrastructure that enables the effect-behavior system. Each package gets an isolated Lua state with a shared `api` global that connects to the game engine.
+
+## Phase 0: Lua Runtime with API Bridge
+**Goal:** Lua VMs with game API access  
+**Delivers:** 
+- mlua integrated with Bevy
+- Create isolated Lua states per package
+- Global `api` object injected into each state
+- Basic API methods: `api.log()`, `api.register()`
+
+**Success:** Lua can call `api.log("Hello from package")`
+
+## Phase 1: Package Loading from Disk
+**Goal:** Load packages with standard structure  
+**Delivers:**
+```
+packages/
+  test/
+    package.toml    # name, version
+    init.lua        # entry point
+```
+- Scan `packages/` directory
+- Load package.toml for metadata
+- Execute init.lua with `api` global
+
+**Success:** Test package registers itself via `api.register("test", data)`
+
+## Phase 2: Registration System
+**Goal:** Packages can register game content  
+**Delivers:**
+- `api.behaviors.register(name, table)`
+- `api.effects.register(name, table)` 
+- `api.damage_types.register(name, table)`
+- Store registrations in Rust-side registries
+
+**Success:** Core package registers projectile behavior
+
+## Phase 3: Multi-Format Support
+**Goal:** Load from directories and .zip files  
+**Delivers:**
+- Load `packages/core/` (directory)
+- Load `packages/fire_magic.zip` (archive)
+- Both use same package.toml + init.lua structure
+- Package can `require()` its own files
+
+**Success:** Fire_magic.zip loads and registers content
+
+## Phase 4: Dependency Resolution
+**Goal:** Load packages in dependency order  
+**Delivers:**
+```toml
+[dependencies]
+core = "^1.0.0"
+```
+- Parse dependencies from package.toml
+- Build dependency graph
+- Topological sort
+- Load packages in correct order
+
+**Success:** Fire_magic loads after core it depends on
+
+## Phase 5: Semantic Versioning
+**Goal:** Version constraints that work  
+**Delivers:**
+- Support `^1.2.3` (compatible with 1.x.x)
+- Support `~1.2.3` (patch updates only)
+- Support `>=1.2.3` (minimum version)
+- Version conflict detection
+- Prevent incompatible packages from loading
+
+**Success:** Old packages work with newer compatible core versions
+
+## Phase 6: Hot-Reload System
+**Goal:** Reload packages without restart  
+**Delivers:**
+- File watcher on `packages/` directory
+- On change: clear package registrations
+- Create fresh Lua state with `api`
+- Re-run init.lua
+- Existing entities keep old closures until despawn
+
+**Success:** Edit behavior, see changes in <1 second
+
+## Phase 7: Extended API Surface
+**Goal:** Full game API for packages  
+**Delivers:**
+- `api.effects.spawn(name, config)`
+- `api.query.entities(filter)`
+- `api.damage.deal(target, amount)`
+- `api.particles.create(type, position)`
+- `api.sound.play(name, position)`
+- `api.native_available(behavior)` for hybrid Lua/Rust
+
+**Success:** Package can spawn effects and query world
+
+## Phase 8: Package Isolation
+**Goal:** Packages can't break each other  
+**Delivers:**
+- Each package gets isolated Lua state
+- Packages can't see each other's globals
+- Only communicate through `api`
+- Filesystem access only through `api.assets`
+- No network or system access
+
+**Success:** Broken package can't corrupt others
+
+## Phase 9: User Package Directories
+**Goal:** User-installed packages  
+**Delivers:**
+- Load built-in packages from game directory
+- Then load from user directories:
+  - Windows: `%APPDATA%/GameName/packages/`
+  - Mac: `~/Library/Application Support/GameName/packages/`
+  - Linux: `~/.local/share/GameName/packages/`
+- User packages can override built-ins
+
+**Success:** Players install packages without modifying game
+
+## Phase 10: Package Manager UI
+**Goal:** Visual package management  
+**Delivers:**
+- List all loaded packages with versions
+- Enable/disable packages
+- Show dependency graph
+- Display version conflicts
+- Performance impact per package
+- Error messages for failed loads
+
+**Success:** Non-programmer can manage their mods
+
+## Critical Path
+
+**Minimum Viable (Phase 0-3):** 
+- Packages can register behaviors/effects
+- Core systems work through Lua
+
+**Effect System (Phase 4-6):**
+- Dependencies enable package ecosystems
+- Versions prevent breaking changes
+- Hot-reload enables rapid iteration
+
+**Production Ready (Phase 7-8):**
+- Full API for complex behaviors
+- Isolation prevents crashes
+
+**Player Facing (Phase 9-10):**
+- Easy installation
+- Visual management
+
+## API Design
+
+The `api` global is the only bridge between packages and game:
+
+```lua
+-- What every init.lua sees
+api = {
+    -- Registration
+    behaviors = { register = function(name, def) end },
+    effects = { register = function(name, def) end, spawn = function(...) end },
+    damage_types = { register = function(name, def) end },
+    
+    -- Queries
+    query = { entities = function(filter) end, distance = function(...) end },
+    
+    -- Actions
+    damage = { deal = function(target, amount) end },
+    particles = { create = function(...) end },
+    sound = { play = function(...) end },
+    
+    -- Utilities
+    log = function(msg) end,
+    native_available = function(name) end,
+    assets = { read = function(path) end },
+}
+```
+
+## Package Structure Freedom
+
+Packages organize themselves however they want:
+
+```lua
+-- Simple: everything in init.lua
+api.behaviors.register("projectile", {
+    update = function(entity, dt) 
+        -- inline implementation
+    end
+})
+
+-- Modular: load from files  
+local behaviors = require("behaviors/all")
+for name, def in pairs(behaviors) do
+    api.behaviors.register(name, def)
+end
+
+-- Data-driven: parse JSON/TOML
+local effects = parse_json(api.assets.read("effects.json"))
+for id, effect in pairs(effects) do
+    api.effects.register(id, effect)
+end
+```
+
+The engine only cares that init.lua runs and uses the API.

@@ -55,10 +55,10 @@ fn main() {
         .add_event::<PortalActivationEvent>()
         .insert_resource(GameState::default())
         .insert_resource(ui::tooltip::TooltipState::default())
-        .add_systems(Startup, (disable_gravity, setup_health_bar, load_sounds, setup_lua_test_entities))
+        .add_systems(Startup, (disable_gravity, setup_health_bar, load_sounds, setup_homing_barrage_test))
         .add_systems(Update, (
-            // Lua systems
-            lua_update_system.run_if(resource_equals(GameState::Playing)),
+            // Phase 1 Effect systems
+            effect_update_system.run_if(resource_equals(GameState::Playing)),
 
             // Enemy systems
             enemy_ai.run_if(resource_equals(GameState::Playing)),

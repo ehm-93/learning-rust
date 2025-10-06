@@ -1,7 +1,6 @@
 pub mod resources;
 pub mod components;
 
-mod collision;
 mod systems;
 pub mod terrain;
 

@@ -80,6 +80,7 @@ pub struct PlayerBundle {
     pub dash: Dash,
     pub grenade_thrower: GrenadeThrower,
     pub inventory: crate::inventory::Inventory,
+    pub chunk_loader: crate::world::chunks::ChunkLoader,
 
     // Visual components
     pub mesh: Mesh2d,
@@ -112,6 +113,7 @@ impl PlayerBundle {
             dash: Dash::new(),
             grenade_thrower: GrenadeThrower::new(),
             inventory: crate::inventory::Inventory::player_inventory(),
+            chunk_loader: crate::world::chunks::ChunkLoader::new(10),
 
             // Visual components
             mesh: Mesh2d(mesh_handle),

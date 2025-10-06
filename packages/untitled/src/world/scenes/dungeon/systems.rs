@@ -67,7 +67,6 @@ pub fn setup_dungeon_scene(
             Vec3::new(spawn_pos.0 as f32, spawn_pos.1 as f32, 0.0),
         ),
         components::Dungeon,
-        crate::world::chunks::ChunkLoader::new(5), // Load chunks in a 11x11 area around player
     ));
 
     info!("Dungeon scene setup complete");

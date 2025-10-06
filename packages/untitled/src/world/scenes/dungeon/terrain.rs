@@ -3,11 +3,11 @@
 //! This module handles terrain-specific chunk loading/unloading by subscribing
 //! to chunk events from the core chunking system.
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy_ecs_tilemap::prelude::*;
 use std::collections::HashMap;
 
-use super::collision::*;
 use crate::world::chunks::*;
 use crate::world::tiles::{TileType, TILE_SIZE};
 use crate::world::scenes::dungeon::resources::DungeonState;
@@ -66,10 +66,8 @@ const MACRO_WALL_VALUE: f32 = 1.0;
 
 // === Collision Generation Constants ===
 
-/// Minimum number of vertices required to create a valid polyline collider
-const MIN_POLYLINE_VERTICES: usize = 3;
-/// Factor for calculating half chunk size (0.5 = half)
-const CHUNK_HALF_SIZE_FACTOR: f32 = 0.5;
+/// Minimum number of triangles required to create a valid trimesh collider
+const MIN_TRIMESH_TRIANGLES: usize = 1;
 
 // === Noise Scaling Constants ===
 
@@ -77,6 +75,9 @@ const CHUNK_HALF_SIZE_FACTOR: f32 = 0.5;
 const NOISE_SCALE_FACTOR: f32 = 2.0;
 /// Offset to center noise around zero
 const NOISE_OFFSET: f32 = 1.0;
+
+/// Budget (in seconds) for chunk loading per frame to avoid frame drops
+const CHUNK_LOADING_BUDGET: f32 = 0.004;
 
 /// Terrain-specific chunk state
 #[derive(Debug)]
@@ -151,13 +152,9 @@ fn handle_single_load_event(
         // Generate tile data (reuse existing logic from ChunkManager)
         let tiles = generate_chunk_tiles(chunk_coord, &macro_map);
 
-        // Perform heavy collision computation off main thread
-        let wall_regions = find_wall_regions(&tiles);
-
         ChunkData {
             position: chunk_coord,
             tiles,
-            wall_regions,
         }
     });
 
@@ -168,8 +165,18 @@ fn handle_single_load_event(
 pub fn poll_terrain_loading_tasks(
     mut commands: Commands,
     mut terrain_chunks: ResMut<TerrainChunks>,
+    mut frame_debt: Local<f32>,
+    chunk_loaders: Query<&Transform, With<ChunkLoader>>,
 ) {
+    if 0.0 < *frame_debt {
+        // Skip processing this frame to catch up
+        *frame_debt -= CHUNK_LOADING_BUDGET;
+        *frame_debt = frame_debt.max(0.0);
+        return;
+    }
+
     let mut completed_chunks = Vec::new();
+    let start_time = std::time::Instant::now();
 
     // Check which tasks have completed
     for (chunk_coord, state) in terrain_chunks.chunks.iter_mut() {
@@ -180,7 +187,17 @@ pub fn poll_terrain_loading_tasks(
         }
     }
 
-    // Process completed chunks
+    // Sort by distance to chunk loaders
+    let loaders = chunk_loaders.iter().collect::<Vec<&Transform>>();
+    completed_chunks.sort_by_key(|&chunk_coord| {
+        loaders.iter().map(|loader| {
+            let dx = loader.translation.x - (chunk_coord.x as f32 * CHUNK_SIZE as f32 * TILE_SIZE);
+            let dy = loader.translation.y - (chunk_coord.y as f32 * CHUNK_SIZE as f32 * TILE_SIZE);
+            dx * dx + dy * dy // Squared distance
+        }).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(f32::MAX) as i32 // Use minimum distance to any loader
+    });
+
+    // Process completed chunks, closest first, within time budget
     for chunk_coord in completed_chunks {
         if let Some(TerrainChunkState::Loading { task }) = terrain_chunks.chunks.remove(&chunk_coord) {
             match bevy::tasks::block_on(task) {
@@ -200,6 +217,12 @@ pub fn poll_terrain_loading_tasks(
                           chunk_coord, wall_count, parent_entity);
                 }
             }
+        }
+        // Check elapsed time and enforce budget
+        let elapsed_time = start_time.elapsed();
+        if elapsed_time.as_secs_f32() > CHUNK_LOADING_BUDGET {
+            *frame_debt += elapsed_time.as_secs_f32() - CHUNK_LOADING_BUDGET;
+            break;
         }
     }
 }
@@ -242,7 +265,7 @@ fn spawn_chunk_tilemap(
 
     // Calculate world position for this chunk
     let chunk_world_pos = chunk_coord_to_world_pos(chunk_data.position);
-    let half_chunk_size = (CHUNK_SIZE as f32 * TILE_SIZE) * CHUNK_HALF_SIZE_FACTOR;
+    let half_chunk_size = (CHUNK_SIZE as f32 * TILE_SIZE) * 0.5;
 
     // Create the parent entity for this chunk
     let parent_entity = commands.spawn((
@@ -301,39 +324,16 @@ fn spawn_chunk_tilemap(
         }
     }
 
-    // Use pre-computed wall regions (calculated async off main thread)
-    let wall_regions = &chunk_data.wall_regions;
-
-    for region in wall_regions {
-        for boundary_polyline in &region.boundary_polylines {
-            if boundary_polyline.len() >= MIN_POLYLINE_VERTICES {
-                // Convert tile-space polyline to world-space coordinates
-                let world_polyline = polylines_to_world_space(
-                    &[boundary_polyline.clone()],
-                    Vec2::new(0.0, 0.0), // Offset handled by transform
-                    TILE_SIZE
-                );
-
-                if let Some(world_points) = world_polyline.first() {
-                    // Create a polyline collider from the boundary points
-                    let points: Vec<Vec2> = world_points.clone();
-
-                    // Create indices for the polyline (consecutive vertex pairs)
-                    let mut indices = Vec::new();
-                    for i in 0..(points.len().saturating_sub(1)) {
-                        indices.push([i as u32, (i + 1) as u32]);
-                    }
-                    // Close the loop if we have enough points
-                    if points.len() >= 3 {
-                        indices.push([points.len() as u32 - 1, 0]);
-                    }
-
-                    let collider = bevy_rapier2d::prelude::Collider::polyline(points, Some(indices));
-
+    // Generate trimesh collider for all wall tiles in this chunk
+    if let Some((vertices, triangles)) = generate_wall_trimesh(&chunk_data.tiles) {
+        if triangles.len() >= MIN_TRIMESH_TRIANGLES {
+            // Create a trimesh collider from the vertices and triangles
+            match Collider::trimesh(vertices, triangles) {
+                Ok(collider) => {
                     let wall_collider = commands.spawn((
                         crate::world::tiles::WallTile,
                         collider,
-                        bevy_rapier2d::prelude::RigidBody::Fixed,
+                        RigidBody::Fixed,
                         Transform::default(),
                         GlobalTransform::default(),
                         Visibility::Hidden, // Invisible collider - visual handled by tile
@@ -341,6 +341,9 @@ fn spawn_chunk_tilemap(
                     )).id();
 
                     commands.entity(parent_entity).add_child(wall_collider);
+                }
+                Err(e) => {
+                    warn!("Failed to create trimesh collider for chunk {:?}: {:?}", chunk_data.position, e);
                 }
             }
         }
@@ -367,6 +370,199 @@ fn spawn_chunk_tilemap(
 
     info!("Spawned chunk {:?} at world pos {:?} with parent entity {:?}", chunk_data.position, chunk_world_pos, parent_entity);
     parent_entity
+}
+
+/// Represents a rectangular region of contiguous wall tiles
+#[derive(Debug, Clone)]
+struct WallRectangle {
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+}
+
+/// Generate trimesh collider data for wall tiles in a chunk using consolidated rectangles
+/// Returns vertices and triangle indices for creating a trimesh collider
+fn generate_wall_trimesh(
+    tiles: &[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+) -> Option<(Vec<Vec2>, Vec<[u32; 3]>)> {
+    let mut vertices = Vec::new();
+    let mut triangles = Vec::new();
+
+    // Find all rectangular regions of contiguous wall tiles
+    let wall_rectangles = find_wall_rectangles(tiles);
+
+    if wall_rectangles.is_empty() {
+        return None;
+    }
+
+    // Calculate offset to match tilemap positioning
+    let half_chunk_size = (CHUNK_SIZE as f32 * TILE_SIZE) * 0.5;
+
+    // Generate vertices and triangles for each wall rectangle
+    for rect in wall_rectangles {
+        // Calculate world coordinates for the rectangle corners
+        let left = (rect.x as f32 * TILE_SIZE) - half_chunk_size - TILE_SIZE * 0.5;
+        let right = ((rect.x + rect.width) as f32 * TILE_SIZE) - half_chunk_size - TILE_SIZE * 0.5;
+        let bottom = (rect.y as f32 * TILE_SIZE) - half_chunk_size - TILE_SIZE * 0.5;
+        let top = ((rect.y + rect.height) as f32 * TILE_SIZE) - half_chunk_size - TILE_SIZE * 0.5;
+
+        // Add four vertices for this rectangle
+        let base_index = vertices.len() as u32;
+        vertices.push(Vec2::new(left, bottom));   // bottom-left
+        vertices.push(Vec2::new(right, bottom));  // bottom-right
+        vertices.push(Vec2::new(left, top));      // top-left
+        vertices.push(Vec2::new(right, top));     // top-right
+
+        // Create two triangles for this rectangle
+        // Triangle 1: bottom-left, bottom-right, top-left
+        triangles.push([base_index, base_index + 1, base_index + 2]);
+        // Triangle 2: bottom-right, top-right, top-left
+        triangles.push([base_index + 1, base_index + 3, base_index + 2]);
+    }
+
+    Some((vertices, triangles))
+}
+
+/// Find rectangular regions of contiguous wall tiles using a largest-first rectangle packing algorithm
+fn find_wall_rectangles(
+    tiles: &[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+) -> Vec<WallRectangle> {
+    let mut rectangles = Vec::new();
+    let mut processed = vec![vec![false; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+
+    // Repeat until all wall tiles are covered
+    while has_unprocessed_wall_tiles(tiles, &processed) {
+        // Find the largest possible rectangle among all remaining wall tiles
+        let largest_rect = find_largest_rectangle_global(tiles, &processed);
+
+        if let Some(rect) = largest_rect {
+            // Mark this rectangle as processed
+            mark_rectangle_processed(&mut processed, &rect);
+            rectangles.push(rect);
+        } else {
+            // Safety break - shouldn't happen but prevents infinite loop
+            break;
+        }
+    }
+
+    rectangles
+}
+
+/// Check if there are any unprocessed wall tiles remaining
+fn has_unprocessed_wall_tiles(
+    tiles: &[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+    processed: &Vec<Vec<bool>>,
+) -> bool {
+    for y in 0..CHUNK_SIZE as usize {
+        for x in 0..CHUNK_SIZE as usize {
+            if tiles[x][y] == TileType::Wall && !processed[x][y] {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Find the largest possible rectangle among all unprocessed wall tiles
+fn find_largest_rectangle_global(
+    tiles: &[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+    processed: &Vec<Vec<bool>>,
+) -> Option<WallRectangle> {
+    let mut best_rect: Option<WallRectangle> = None;
+    let mut best_area = 0;
+
+    // Check every possible starting position
+    for y in 0..CHUNK_SIZE as usize {
+        for x in 0..CHUNK_SIZE as usize {
+            if tiles[x][y] == TileType::Wall && !processed[x][y] {
+                // Try to find the largest rectangle starting at this position
+                let rect = find_largest_rectangle_at(tiles, processed, x, y);
+                let area = rect.width * rect.height;
+
+                if area > best_area {
+                    best_area = area;
+                    best_rect = Some(rect);
+                }
+            }
+        }
+    }
+
+    best_rect
+}
+
+/// Find the largest rectangle of wall tiles starting at the given position
+fn find_largest_rectangle_at(
+    tiles: &[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+    processed: &Vec<Vec<bool>>,
+    start_x: usize,
+    start_y: usize,
+) -> WallRectangle {
+    let mut best_rect = WallRectangle {
+        x: start_x,
+        y: start_y,
+        width: 1,
+        height: 1,
+    };
+    let mut best_area = 1;
+
+    // Try different widths and find the maximum height for each
+    for width in 1..=(CHUNK_SIZE as usize - start_x) {
+        // Check if this width is valid (all tiles in the row are walls and unprocessed)
+        let mut width_valid = true;
+        for x in start_x..(start_x + width) {
+            if tiles[x][start_y] != TileType::Wall || processed[x][start_y] {
+                width_valid = false;
+                break;
+            }
+        }
+
+        if !width_valid {
+            break; // Can't extend width further
+        }
+
+        // Find maximum height for this width
+        let mut height = 1;
+        for y in (start_y + 1)..CHUNK_SIZE as usize {
+            let mut row_valid = true;
+            for x in start_x..(start_x + width) {
+                if tiles[x][y] != TileType::Wall || processed[x][y] {
+                    row_valid = false;
+                    break;
+                }
+            }
+            if row_valid {
+                height += 1;
+            } else {
+                break;
+            }
+        }
+
+        let area = width * height;
+        if area > best_area {
+            best_area = area;
+            best_rect = WallRectangle {
+                x: start_x,
+                y: start_y,
+                width,
+                height,
+            };
+        }
+    }
+
+    best_rect
+}
+
+/// Mark all tiles in a rectangle as processed
+fn mark_rectangle_processed(
+    processed: &mut Vec<Vec<bool>>,
+    rect: &WallRectangle,
+) {
+    for y in rect.y..(rect.y + rect.height) {
+        for x in rect.x..(rect.x + rect.width) {
+            processed[x][y] = true;
+        }
+    }
 }
 
 /// Generate chunk tiles (copied from ChunkManager for async use)
@@ -483,7 +679,7 @@ impl Plugin for TerrainChunkPlugin {
             )
             // Add terrain chunk management systems (only when chunking is enabled)
             // These run after the core chunk tracking system publishes events
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 handle_chunk_load_events
                     .after(crate::world::chunks::systems::track_chunk_loaders),
                 poll_terrain_loading_tasks
@@ -504,8 +700,6 @@ struct ChunkData {
     position: ChunkCoord,
     /// 64x64 tile data for this chunk
     tiles: [[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
-    /// Pre-computed wall regions for efficient collision generation
-    wall_regions: Vec<WallRegion>,
 }
 
 /// Loading state for chunk management

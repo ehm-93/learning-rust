@@ -251,14 +251,6 @@ pub fn effect_update_system(
         if effect_controlled.entity_data.get("should_despawn").copied().unwrap_or(0.0) > 0.0 {
             commands.entity(entity).despawn();
         }
-
-        // Handle area damage (simplified for Phase 1)
-        if effect_controlled.entity_data.contains_key("area_damage") {
-            info!("Area damage triggered at ({}, {})",
-                  effect_controlled.entity_data.get("x").unwrap_or(&0.0),
-                  effect_controlled.entity_data.get("y").unwrap_or(&0.0));
-            // In a full implementation, this would trigger an area damage system
-        }
     }
 }
 

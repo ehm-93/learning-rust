@@ -73,9 +73,9 @@ pub fn setup_sanctuary_scene(
             crate::world::Interactable::new(
                 format!("sanctuary_dungeon_portal_{}", i),
                 format!("Portal to {}", portal_labels[i]),
-                std::sync::Arc::new(move |_context| {
-                    info!("Sanctuary dungeon portal {} activated", i);
-                })
+                |_| {
+                    info!("Sanctuary dungeon portal activated");
+                }
             ),
             crate::world::InteractableHighlight::with_radius(1.4),
         ));
@@ -103,9 +103,9 @@ pub fn setup_sanctuary_scene(
         crate::world::Interactable::new(
             "sanctuary_exit_portal".to_string(),
             "Portal to Cathedral".to_string(),
-            std::sync::Arc::new(|_context| {
+            |_context| {
                 info!("Sanctuary exit portal activated");
-            })
+            }
         ),
         crate::world::InteractableHighlight::with_radius(1.4),
     ));

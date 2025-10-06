@@ -14,7 +14,8 @@ pub enum WorldState {
 
 impl Default for WorldState {
     fn default() -> Self {
-        WorldState::Cathedral
+        // Temporarily start in Dungeon to test chunk loading during movement
+        WorldState::Dungeon
     }
 }
 

@@ -20,6 +20,9 @@ pub fn player_movement(
     time: Res<Time>,
     config: Res<PlayerConfig>,
 ) {
+    // Debug: Only log when there are action events to reduce spam
+    let event_count = action_events.len();
+
     for (mut velocity, mut dash) in query.iter_mut() {
         // Update dash timers
         dash.cooldown_timer.tick(time.delta());
@@ -78,8 +81,11 @@ pub fn player_movement(
             // Normalize movement to prevent faster diagonal movement
             if movement != Vec2::ZERO {
                 movement = movement.normalize();
+                let new_velocity = movement * PLAYER_SPEED * config.movement_speed_multiplier;
+                velocity.linvel = new_velocity;
+            } else if velocity.linvel != Vec2::ZERO {
+                velocity.linvel = Vec2::ZERO;
             }
-            velocity.linvel = movement * PLAYER_SPEED * config.movement_speed_multiplier;
         }
     }
 }

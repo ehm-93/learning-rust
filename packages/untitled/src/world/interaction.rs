@@ -15,7 +15,7 @@ pub struct InteractionContext {
 }
 
 /// Callback function type for interactions
-pub type InteractionCallback = Arc<dyn Fn(&InteractionContext) + Send + Sync>;
+pub type InteractionCallback = fn(&InteractionContext);
 
 /// Simple interaction type with callback-based behavior
 #[derive(Clone)]
@@ -257,8 +257,6 @@ pub fn handle_basic_interactions(
                 source_entity: player_entity,
                 interaction_type: interactable.interaction_type.clone(),
             });
-
-            info!("Interaction: {}", interactable.display_name);
         }
     } else {
         debug!("Interact pressed but no hovered interactable found");

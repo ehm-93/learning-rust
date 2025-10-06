@@ -142,8 +142,6 @@ fn handle_single_load_event(
         return; // Already being handled
     }
 
-    info!("Starting terrain generation for chunk {:?}", chunk_coord);
-
     // Spawn async task to generate terrain data
     let task_pool = AsyncComputeTaskPool::get();
     let macro_map = dungeon_state.macro_map.clone();
@@ -213,8 +211,6 @@ pub fn poll_terrain_loading_tasks(
 
                     // Count wall tiles for debugging
                     let wall_count = chunk_data.tiles.iter().flatten().filter(|&&tile| tile == TileType::Wall).count();
-                    info!("Completed terrain generation for chunk {:?} with {} wall tiles spawned (entity: {:?})",
-                          chunk_coord, wall_count, parent_entity);
                 }
             }
         }
@@ -240,12 +236,10 @@ pub fn handle_chunk_unload_events(
             match state {
                 TerrainChunkState::Loading { task: _ } => {
                     // Task will be dropped automatically, canceling the async work
-                    info!("Cancelled terrain loading for chunk {:?}", chunk_coord);
                 }
                 TerrainChunkState::Loaded { entity, tiles: _ } => {
                     // Despawn the terrain entity tree
                     commands.entity(entity).despawn();
-                    info!("Unloaded terrain for chunk {:?}", chunk_coord);
                 }
             }
         }
@@ -368,7 +362,6 @@ fn spawn_chunk_tilemap(
             crate::world::tiles::GameTilemap,
         ));
 
-    info!("Spawned chunk {:?} at world pos {:?} with parent entity {:?}", chunk_data.position, chunk_world_pos, parent_entity);
     parent_entity
 }
 
@@ -663,7 +656,6 @@ pub fn initialize_terrain_chunks(
 ) {
     let terrain_chunks = TerrainChunks::new(tilemap_data.texture_handle.clone());
     commands.insert_resource(terrain_chunks);
-    info!("Initialized TerrainChunks");
 }
 
 /// Plugin for event-driven terrain chunk management

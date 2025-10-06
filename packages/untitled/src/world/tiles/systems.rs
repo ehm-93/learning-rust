@@ -18,7 +18,6 @@ pub fn load_tilemap_texture(
     };
 
     commands.insert_resource(tilemap_data);
-    info!("Loaded tilemap texture and initialized tilemap data");
 }
 
 // Tilemap creation is now handled directly in individual scene setup functions
@@ -31,7 +30,6 @@ pub fn cleanup_tilemap(
 ) {
     for entity in tilemap_query.iter() {
         commands.entity(entity).despawn();
-        info!("Despawned tilemap entity");
     }
     tilemap_data.tilemap_entity = None;
 }

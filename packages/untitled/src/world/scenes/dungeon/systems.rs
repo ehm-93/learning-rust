@@ -52,9 +52,9 @@ pub fn setup_dungeon_scene(
         crate::world::Interactable::new(
             "dungeon_exit_portal".to_string(),
             "Portal to Sanctuary".to_string(),
-            std::sync::Arc::new(|_context| {
+            |_context| {
                 info!("Dungeon exit portal activated");
-            })
+            }
         ),
         crate::world::InteractableHighlight::with_radius(1.4),
     ));

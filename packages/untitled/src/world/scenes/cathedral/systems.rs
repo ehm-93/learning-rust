@@ -19,8 +19,6 @@ pub fn setup_cathedral_scene(
     asset_server: Res<AssetServer>,
     camera_zoom: Res<crate::player::resources::CameraZoom>,
 ) {
-    info!("Entering Cathedral state - setting up scene");
-
      // Disable chunking in cathedral, fixed map
     commands.set_state(ChunkingState::Disabled);
 
@@ -142,9 +140,6 @@ pub fn setup_cathedral_scene(
     .insert(crate::world::tiles::GameTilemap)
     .insert(Cathedral); // Tag for cleanup
 
-    info!("Successfully spawned Cathedral tilemap with {} tiles",
-          crate::world::tiles::TILEMAP_WIDTH * crate::world::tiles::TILEMAP_HEIGHT);
-
     setup_cathedral_entities(
         &mut commands,
         &mut meshes,
@@ -160,8 +155,6 @@ pub fn teardown_cathedral_scene(
     mut cathedral_state: ResMut<CathedralState>,
     cathedral_entities: Query<Entity, With<Cathedral>>,
 ) {
-    info!("Leaving Cathedral state - cleaning up scene");
-
     // Mark Cathedral as inactive
     cathedral_state.is_active = false;
 
@@ -222,11 +215,6 @@ fn setup_cathedral_entities(
         .zip(portal_types.iter())
         .enumerate() {
 
-        // Create portal callback (currently just logs)
-        let portal_callback: InteractionCallback = Arc::new(move |_context| {
-            info!("Portal {:?} ({:?}) activated", portal_id, portal_type);
-        });
-
         // Create portal entity with different sizes for different types
         let (width, height) = match portal_type {
             PortalType::Dungeon => (80.0, 120.0),
@@ -246,7 +234,7 @@ fn setup_cathedral_entities(
             Interactable::new(
                 format!("portal_{:?}", portal_id),
                 format!("{:?} Portal", portal_id),
-                portal_callback
+                |context| { },
             ),
             InteractableHighlight::with_radius(1.4),
         ));
@@ -267,8 +255,6 @@ fn setup_cathedral_entities(
         Transform::from_translation(Vec3::new(title_x, 50.0, 1.0)), // Above portals, centered on tilemap
         Cathedral,
     ));
-
-    info!("Cathedral scene set up with three portals");
 }
 
 /// Initialize portal configurations with modifiers
@@ -291,8 +277,6 @@ pub fn initialize_portals(
         portal.depth = current_depth;
         portal.modifiers = modifier_system.get_portal_modifiers(current_depth, portal.id);
     }
-
-    info!("Portals initialized for depth {} with modifiers", current_depth);
 }
 
 /// Update portal display texts with current modifier information
@@ -341,8 +325,6 @@ pub fn handle_portal_interaction_events(
     for event in interaction_events.read() {
         // Check if the interaction is with a portal (by checking if the entity has a Portal component)
         if let Ok(portal) = portal_query.get(event.target_entity) {
-            info!("Portal interaction detected: {:?} -> depth {}", portal.id, portal.depth);
-
             // Send portal activation event instead of directly transitioning
             portal_activation_events.write(crate::events::PortalActivationEvent {
                 portal_id: portal.id,
@@ -350,7 +332,6 @@ pub fn handle_portal_interaction_events(
                 modifiers: portal.modifiers.iter().map(|m| m.display_name()).collect(),
             });
 
-            info!("Portal activation event sent for {:?}", portal.id);
             return;
         }
     }
@@ -371,7 +352,6 @@ pub fn handle_portal_activation(
             if let Some(portal) = portals.iter().find(|p| p.id == event.portal_id) {
                 match portal.portal_type {
                     super::components::PortalType::Dungeon => {
-                        info!("Cathedral: Activating dungeon portal {:?} for depth {}", portal.id, event.depth);
                         next_state.set(WorldState::Dungeon);
                     },
                 }

@@ -264,7 +264,7 @@ fn render_chunk_boundaries(
         };
 
         // Calculate visible area (with some margin)
-        let visible_radius = 10_000.0 / cam_scale.x.min(cam_scale.y); // Adjust based on zoom
+        let visible_radius = 1000.0 * cam_scale.x.min(cam_scale.y); // Adjust based on zoom
         let min_pos = cam_pos - Vec2::splat(visible_radius);
         let max_pos = cam_pos + Vec2::splat(visible_radius);
 

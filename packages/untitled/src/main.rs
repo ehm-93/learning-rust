@@ -17,6 +17,7 @@ mod line_of_sight;
 mod inventory;
 mod debug;
 mod packages;
+mod behavior;
 
 // Import everything we need
 use events::*;
@@ -31,6 +32,7 @@ use world::WorldPlugin;
 use player::PlayerPlugin;
 use debug::DebugOverlayPlugin;
 use packages::*;
+use behavior::BehaviorPlugin;
 
 fn main() {
     let mut app = App::new();
@@ -48,6 +50,7 @@ fn main() {
         .add_plugins(InventoryPlugin)
         .add_plugins(WorldPlugin)
         .add_plugins(DebugOverlayPlugin)
+        .add_plugins(BehaviorPlugin)
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()
         .add_event::<HitFlashEvent>()

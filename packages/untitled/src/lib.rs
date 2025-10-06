@@ -11,3 +11,4 @@
  pub mod resources;
  pub mod sounds;
  pub mod ui;
+ pub mod behavior;

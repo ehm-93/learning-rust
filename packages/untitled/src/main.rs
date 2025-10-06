@@ -7,7 +7,7 @@ mod components;
 mod constants;
 mod events;
 mod resources;
-mod combat;
+// mod combat; // Temporarily disabled for Phase 0
 mod enemy;
 mod player;
 mod world;
@@ -16,11 +16,12 @@ mod sounds;
 mod line_of_sight;
 mod inventory;
 mod debug;
+mod packages;
 
 // Import everything we need
 use events::*;
 use resources::*;
-use combat::*;
+// use combat::*; // Temporarily disabled for Phase 0
 use enemy::*;
 use world::*;
 use ui::*;
@@ -29,6 +30,7 @@ use inventory::InventoryPlugin;
 use world::WorldPlugin;
 use player::PlayerPlugin;
 use debug::DebugOverlayPlugin;
+use packages::*;
 
 fn main() {
     let mut app = App::new();
@@ -53,8 +55,11 @@ fn main() {
         .add_event::<PortalActivationEvent>()
         .insert_resource(GameState::default())
         .insert_resource(ui::tooltip::TooltipState::default())
-        .add_systems(Startup, (disable_gravity, setup_health_bar, load_sounds))
+        .add_systems(Startup, (disable_gravity, setup_health_bar, load_sounds, setup_lua_test_entities))
         .add_systems(Update, (
+            // Lua systems
+            lua_update_system.run_if(resource_equals(GameState::Playing)),
+
             // Enemy systems
             enemy_ai.run_if(resource_equals(GameState::Playing)),
             laser_sight_system.run_if(resource_equals(GameState::Playing)),
@@ -68,22 +73,23 @@ fn main() {
             // Tooltip systems
             ui::tooltip::handle_tooltip_hover.run_if(resource_equals(GameState::Playing)),
             ui::tooltip::cleanup_orphaned_tooltips,
-        ))
-        .add_systems(Update, (
-            // Combat systems
-            detect_projectile_collisions.run_if(resource_equals(GameState::Playing)),
-            handle_projectile_impacts.run_if(resource_equals(GameState::Playing)),
-            detect_enemy_player_collisions.run_if(resource_equals(GameState::Playing)),
-            handle_grenade_explosions.run_if(resource_equals(GameState::Playing)),
-            process_grenade_explosions.run_if(resource_equals(GameState::Playing)),
-            update_explosion_effects.run_if(resource_equals(GameState::Playing)),
-            manage_grenade_speed.run_if(resource_equals(GameState::Playing)),
-            process_damage.run_if(resource_equals(GameState::Playing)),
-            handle_hit_flash.run_if(resource_equals(GameState::Playing)), // Run before cleanup
-            cleanup_dead_entities, // Run after hit flash
-            update_hit_flash,
-            cleanup_projectiles.run_if(resource_equals(GameState::Playing)),
         ));
+        // Combat systems temporarily disabled for Phase 0
+        // .add_systems(Update, (
+        //     // Combat systems
+        //     detect_projectile_collisions.run_if(resource_equals(GameState::Playing)),
+        //     handle_projectile_impacts.run_if(resource_equals(GameState::Playing)),
+        //     detect_enemy_player_collisions.run_if(resource_equals(GameState::Playing)),
+        //     handle_grenade_explosions.run_if(resource_equals(GameState::Playing)),
+        //     process_grenade_explosions.run_if(resource_equals(GameState::Playing)),
+        //     update_explosion_effects.run_if(resource_equals(GameState::Playing)),
+        //     manage_grenade_speed.run_if(resource_equals(GameState::Playing)),
+        //     process_damage.run_if(resource_equals(GameState::Playing)),
+        //     handle_hit_flash.run_if(resource_equals(GameState::Playing)), // Run before cleanup
+        //     cleanup_dead_entities, // Run after hit flash
+        //     update_hit_flash,
+        //     cleanup_projectiles.run_if(resource_equals(GameState::Playing)),
+        // ));
 
     #[cfg(feature = "debug-physics")]
     app.add_plugins(RapierDebugRenderPlugin::default());

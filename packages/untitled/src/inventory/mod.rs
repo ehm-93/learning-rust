@@ -30,7 +30,6 @@ impl Plugin for InventoryPlugin {
                 registry::setup_item_registry,
                 factory::setup_item_factory,
             ))
-            // Add update systems
             .add_systems(Update, (
                 // Core inventory systems
                 operations::inventory_operations_system,

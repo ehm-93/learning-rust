@@ -7,9 +7,7 @@
 pub mod core;
 pub mod registry;
 pub mod component;
-pub mod world_api;
 pub mod composition;
-pub mod atomic;
 pub mod systems;
 pub mod plugin;
 
@@ -17,8 +15,6 @@ pub mod plugin;
 pub use core::*;
 pub use registry::*;
 pub use component::*;
-pub use world_api::*;
 pub use composition::*;
-pub use atomic::*;
 pub use systems::*;
 pub use plugin::*;

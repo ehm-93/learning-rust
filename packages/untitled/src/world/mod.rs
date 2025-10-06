@@ -87,7 +87,7 @@ impl Plugin for WorldPlugin {
             ))
 
             // Global interaction systems (run regardless of scene)
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 // First update cooldowns and highlights (based on player/cursor position)
                 interaction::update_interactable_cooldowns,
                 interaction::update_interactable_highlights,

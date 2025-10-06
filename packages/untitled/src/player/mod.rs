@@ -36,10 +36,12 @@ impl Plugin for PlayerPlugin {
             .add_systems(PreUpdate, player_input_system)
 
             // Add player systems
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 player_movement,
                 shoot_projectiles,
                 throw_grenades,
+            ))
+            .add_systems(Update, (
                 camera_follow,
                 handle_camera_zoom,
             ));

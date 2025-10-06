@@ -44,6 +44,10 @@ fn main() {
             }),
             ..default()
         }))
+
+        // Set fixed timestep to 20 Hz for more consistent physics and behavior updates
+        .insert_resource(Time::<Fixed>::from_hz(20.0))
+
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugins(TilemapPlugin)
         .add_plugins(PlayerPlugin)
@@ -51,15 +55,30 @@ fn main() {
         .add_plugins(WorldPlugin)
         .add_plugins(DebugOverlayPlugin)
         .add_plugins(BehaviorPlugin)
+
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()
         .add_event::<HitFlashEvent>()
         .add_event::<GrenadeExplosionEvent>()
         .add_event::<PortalActivationEvent>()
+
         .insert_resource(GameState::default())
         .insert_resource(ui::tooltip::TooltipState::default())
-        .add_systems(Startup, (disable_gravity, setup_health_bar, load_sounds, setup_homing_barrage_test))
+
+        .add_systems(Startup, (
+            disable_gravity,
+            setup_health_bar,
+            load_sounds,
+            setup_homing_barrage_test,
+        ))
         .add_systems(Update, (
+            handle_restart_button,
+
+            // Tooltip systems
+            ui::tooltip::cleanup_orphaned_tooltips,
+            ui::tooltip::handle_tooltip_hover.run_if(resource_equals(GameState::Playing)),
+        ))
+        .add_systems(FixedUpdate, (
             // Phase 1 Effect systems
             effect_update_system.run_if(resource_equals(GameState::Playing)),
 
@@ -71,28 +90,7 @@ fn main() {
             update_health_bar,
             update_health_bar_color,
             show_game_over_overlay,
-            handle_restart_button,
-
-            // Tooltip systems
-            ui::tooltip::handle_tooltip_hover.run_if(resource_equals(GameState::Playing)),
-            ui::tooltip::cleanup_orphaned_tooltips,
         ));
-        // Combat systems temporarily disabled for Phase 0
-        // .add_systems(Update, (
-        //     // Combat systems
-        //     detect_projectile_collisions.run_if(resource_equals(GameState::Playing)),
-        //     handle_projectile_impacts.run_if(resource_equals(GameState::Playing)),
-        //     detect_enemy_player_collisions.run_if(resource_equals(GameState::Playing)),
-        //     handle_grenade_explosions.run_if(resource_equals(GameState::Playing)),
-        //     process_grenade_explosions.run_if(resource_equals(GameState::Playing)),
-        //     update_explosion_effects.run_if(resource_equals(GameState::Playing)),
-        //     manage_grenade_speed.run_if(resource_equals(GameState::Playing)),
-        //     process_damage.run_if(resource_equals(GameState::Playing)),
-        //     handle_hit_flash.run_if(resource_equals(GameState::Playing)), // Run before cleanup
-        //     cleanup_dead_entities, // Run after hit flash
-        //     update_hit_flash,
-        //     cleanup_projectiles.run_if(resource_equals(GameState::Playing)),
-        // ));
 
     #[cfg(feature = "debug-physics")]
     app.add_plugins(RapierDebugRenderPlugin::default());

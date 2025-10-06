@@ -18,7 +18,7 @@ impl Plugin for CathedralPlugin {
             .add_systems(OnEnter(WorldState::Cathedral), setup_cathedral_scene)
             .add_systems(OnExit(WorldState::Cathedral), teardown_cathedral_scene)
             .add_systems(
-                Update,
+                FixedUpdate,
                 (
                     handle_portal_interaction_events.run_if(in_state(WorldState::Cathedral)),
                     handle_portal_activation.run_if(in_state(WorldState::Cathedral)),

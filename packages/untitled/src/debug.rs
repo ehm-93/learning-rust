@@ -33,6 +33,8 @@ impl Plugin for DebugOverlayPlugin {
             .add_systems(Update, (
                 // Toggle debug overlay with F3 key
                 toggle_debug_overlay,
+            ))
+            .add_systems(FixedUpdate, (
                 // Update debug information when overlay is visible
                 update_debug_text.run_if(resource_exists::<DebugOverlayVisible>),
                 // Render chunk boundaries when overlay is visible

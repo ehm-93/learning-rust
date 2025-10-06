@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use std::collections::HashMap;
 
-use crate::behavior::world_api::WorldApi;
-
 /// Parameter value types that can be passed to behaviors
 #[derive(Debug, Clone)]
 pub enum ParamValue {
@@ -155,22 +153,22 @@ impl Params {
 /// The core behavior trait - all behaviors implement this
 pub trait Behavior: Send + Sync {
     /// Called when the behavior is first spawned on an entity
-    fn on_spawn(&mut self, _world: &mut WorldApi) {}
+    fn on_spawn(&mut self, _world: &mut World) {}
 
     /// Called every frame while the behavior is active
-    fn on_update(&mut self, _world: &mut WorldApi, _dt: f32) {}
+    fn on_update(&mut self, _world: &mut World, _dt: f32) {}
 
     /// Called when the behavior is about to be despawned
-    fn on_despawn(&mut self, _world: &mut WorldApi) {}
+    fn on_despawn(&mut self, _world: &mut World) {}
 
     /// Called when the entity enters collision with another entity
-    fn on_collision_enter(&mut self, _world: &mut WorldApi, _other: Entity) {}
+    fn on_collision_enter(&mut self, _world: &mut World, _other: Entity) {}
 
     /// Called while the entity is in collision with another entity
-    fn on_collision_stay(&mut self, _world: &mut WorldApi, _other: Entity) {}
+    fn on_collision_stay(&mut self, _world: &mut World, _other: Entity) {}
 
     /// Called when the entity exits collision with another entity
-    fn on_collision_exit(&mut self, _world: &mut WorldApi, _other: Entity) {}
+    fn on_collision_exit(&mut self, _world: &mut World, _other: Entity) {}
 }
 
 /// Type alias for behavior definition functions

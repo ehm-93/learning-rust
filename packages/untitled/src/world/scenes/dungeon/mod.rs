@@ -23,7 +23,7 @@ impl Plugin for DungeonPlugin {
             .add_plugins(terrain::TerrainChunkPlugin)
 
             // Add systems that run while in dungeon
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 systems::handle_dungeon_portal_interactions,
             ).run_if(in_state(WorldState::Dungeon)));
     }

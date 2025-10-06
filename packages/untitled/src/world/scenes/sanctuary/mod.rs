@@ -22,7 +22,7 @@ impl Plugin for SanctuaryPlugin {
             .add_systems(OnExit(WorldState::Sanctuary), systems::teardown_sanctuary_scene)
 
             // Add systems that run while in sanctuary
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 systems::handle_sanctuary_portal_interactions,
             ).run_if(in_state(WorldState::Sanctuary)));
     }

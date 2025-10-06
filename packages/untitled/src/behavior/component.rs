@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::behavior::{Behavior, world_api::WorldApi};
+use crate::behavior::Behavior;
 
 /// Component to store behavior instances on an entity
 #[derive(Component)]
@@ -14,42 +14,42 @@ impl BehaviorComponent {
     }
 
     /// Call on_spawn for all behaviors
-    pub fn on_spawn(&mut self, world: &mut WorldApi) {
+    pub fn on_spawn(&mut self, world: &mut World) {
         for behavior in &mut self.behaviors {
             behavior.on_spawn(world);
         }
     }
 
     /// Call on_update for all behaviors
-    pub fn on_update(&mut self, world: &mut WorldApi, dt: f32) {
+    pub fn on_update(&mut self, world: &mut World, dt: f32) {
         for behavior in &mut self.behaviors {
             behavior.on_update(world, dt);
         }
     }
 
     /// Call on_despawn for all behaviors
-    pub fn on_despawn(&mut self, world: &mut WorldApi) {
+    pub fn on_despawn(&mut self, world: &mut World) {
         for behavior in &mut self.behaviors {
             behavior.on_despawn(world);
         }
     }
 
     /// Call on_collision_enter for all behaviors
-    pub fn on_collision_enter(&mut self, world: &mut WorldApi, other: Entity) {
+    pub fn on_collision_enter(&mut self, world: &mut World, other: Entity) {
         for behavior in &mut self.behaviors {
             behavior.on_collision_enter(world, other);
         }
     }
 
     /// Call on_collision_stay for all behaviors
-    pub fn on_collision_stay(&mut self, world: &mut WorldApi, other: Entity) {
+    pub fn on_collision_stay(&mut self, world: &mut World, other: Entity) {
         for behavior in &mut self.behaviors {
             behavior.on_collision_stay(world, other);
         }
     }
 
     /// Call on_collision_exit for all behaviors
-    pub fn on_collision_exit(&mut self, world: &mut WorldApi, other: Entity) {
+    pub fn on_collision_exit(&mut self, world: &mut World, other: Entity) {
         for behavior in &mut self.behaviors {
             behavior.on_collision_exit(world, other);
         }

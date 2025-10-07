@@ -64,7 +64,7 @@ pub fn setup_package_system(
 
     // Register built-in Rust behaviors first
     info!("📚 Registering built-in behaviors...");
-    crate::behavior::register_builtin_behaviors(&mut behavior_registry);
+    crate::behavior::builtin::register_builtins(&mut behavior_registry);
     info!("✅ Built-in behaviors registered");
 
     // Phase 1: Load packages from disk
@@ -129,9 +129,31 @@ pub fn setup_package_system(
                                                     // Convert params to Lua table
                                                     let params_table = lua_lock.create_table().unwrap();
 
-                                                    // Add entity_id to params if present
-                                                    if let Some(crate::behavior::ParamValue::EntityId(entity)) = params.get("entity") {
-                                                        params_table.set("entity_id", entity.to_bits()).unwrap();
+                                                    // Convert all params to Lua values
+                                                    for (key, value) in params.iter() {
+                                                        match value {
+                                                            crate::behavior::ParamValue::Float(f) => {
+                                                                params_table.set(key.as_str(), *f).unwrap();
+                                                            }
+                                                            crate::behavior::ParamValue::Int(i) => {
+                                                                params_table.set(key.as_str(), *i).unwrap();
+                                                            }
+                                                            crate::behavior::ParamValue::String(s) => {
+                                                                params_table.set(key.as_str(), s.as_str()).unwrap();
+                                                            }
+                                                            crate::behavior::ParamValue::EntityId(entity) => {
+                                                                // Use special key for entity
+                                                                params_table.set("entity_id", entity.to_bits()).unwrap();
+                                                            }
+                                                            crate::behavior::ParamValue::Vec3(v) => {
+                                                                let vec_table = lua_lock.create_table().unwrap();
+                                                                vec_table.set("x", v.x).unwrap();
+                                                                vec_table.set("y", v.y).unwrap();
+                                                                vec_table.set("z", v.z).unwrap();
+                                                                params_table.set(key.as_str(), vec_table).unwrap();
+                                                            }
+                                                            _ => {} // Skip unsupported types
+                                                        }
                                                     }
 
                                                     // Get factory from registry and call it

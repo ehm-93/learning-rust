@@ -12,7 +12,7 @@ pub fn freeform(size: usize, seed: u64) -> Vec<Vec<bool>> {
     let (cx, cy) = center(&map);
 
     // Spawn room
-    square_fill(&mut map, 4);
+    square_fill(&mut map, 8);
 
     // Add some random paths
     let mut path_count = (size as i32) / 256;

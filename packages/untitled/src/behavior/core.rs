@@ -148,10 +148,18 @@ impl Params {
         }
         params_obj
     }
+
+    /// Iterate over all parameters
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &ParamValue)> {
+        self.inner.iter()
+    }
 }
 
 /// The core behavior trait - all behaviors implement this
 pub trait Behavior: Send + Sync {
+    /// Set the entity this behavior is attached to
+    fn set_entity(&mut self, _entity: Entity) {}
+
     /// Called when the behavior is first spawned on an entity
     fn on_spawn(&mut self, _world: &mut World) {}
 

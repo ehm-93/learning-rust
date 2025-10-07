@@ -56,7 +56,6 @@ pub fn track_chunk_loaders(
     }
 
     // Step 1: Preload events for chunks in preload radius not in registry
-    let mut preload_count = 0;
     for chunk_coord in &all_preload_chunks {
         if !registry.active_chunks.contains_key(chunk_coord) && !all_load_chunks.contains(chunk_coord) {
             let loader_entities = chunk_to_loaders.get(chunk_coord).cloned().unwrap_or_default();
@@ -65,12 +64,10 @@ pub fn track_chunk_loaders(
                 world_pos: chunk_coord_to_world_pos(*chunk_coord),
                 loaded_for: loader_entities,
             });
-            preload_count += 1;
         }
     }
 
     // Step 2: Load events for chunks in load radius not in registry, then add them to registry
-    let mut load_count = 0;
     for chunk_coord in &all_load_chunks {
         if !registry.active_chunks.contains_key(chunk_coord) {
             let loader_entities = chunk_to_loaders.get(chunk_coord).cloned().unwrap_or_default();
@@ -79,7 +76,6 @@ pub fn track_chunk_loaders(
                 world_pos: chunk_coord_to_world_pos(*chunk_coord),
                 loaded_for: loader_entities.clone(),
             });
-            load_count += 1;
 
             // Add to registry
             registry.active_chunks.insert(*chunk_coord, loader_entities.into_iter().collect());
@@ -95,7 +91,6 @@ pub fn track_chunk_loaders(
     }
 
     // Step 3: Unload events for registry chunks outside unload radius, then remove them
-    let mut unload_count = 0;
     let chunks_to_remove: Vec<ChunkCoord> = registry.active_chunks
         .keys()
         .filter(|chunk_coord| !all_unload_chunks.contains(chunk_coord))
@@ -108,7 +103,6 @@ pub fn track_chunk_loaders(
             world_pos: chunk_coord_to_world_pos(chunk_coord),
         });
         registry.active_chunks.remove(&chunk_coord);
-        unload_count += 1;
     }
 }
 

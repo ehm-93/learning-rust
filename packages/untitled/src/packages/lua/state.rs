@@ -103,6 +103,156 @@ fn inject_api(lua: &Lua, package_name: &str) -> LuaResult<()> {
     })?;
 
     behaviors_table.set("register", behaviors_register_fn)?;
+
+    // Add api.behaviors.create() method
+    // Creates a behavior instance by calling a registered factory
+    let behaviors_create_fn = lua.create_function(|lua, (name, params): (String, LuaTable)| {
+        let globals = lua.globals();
+        let behaviors_storage: LuaTable = globals.get("__behaviors__")?;
+
+        // Get the factory function
+        let factory: LuaFunction = behaviors_storage.get(name.clone())?;
+
+        // Call the factory with params to create the behavior
+        let behavior_table: LuaTable = factory.call(params)?;
+
+        Ok(behavior_table)
+    })?;
+
+    behaviors_table.set("create", behaviors_create_fn)?;
+
+    // Add api.behaviors.compose() method
+    // Helper to create composite behavior definitions that pass through all lifecycle calls
+    // Usage: api.behaviors.compose("my_composite", {"behavior1", "behavior2"})
+    // The params will be passed when the behavior is instantiated (like any other behavior)
+    let behaviors_compose_fn = lua.create_function(|lua, (name, behavior_names): (String, Vec<String>)| {
+        let behavior_count = behavior_names.len();
+
+        // Create a factory function that composes the behaviors
+        // This factory accepts params at instantiation time
+        let factory = lua.create_function(move |lua, params: LuaTable| {
+            let behavior_names = behavior_names.clone();
+
+            // Create the composite behavior table
+            let composite = lua.create_table()?;
+
+            // Create instances of all sub-behaviors with the provided params
+            let mut sub_behaviors = Vec::new();
+            let globals = lua.globals();
+            let behaviors_storage: LuaTable = globals.get("__behaviors__")?;
+
+            for behavior_name in &behavior_names {
+                let factory: LuaFunction = behaviors_storage.get(behavior_name.clone())?;
+                let behavior_table: LuaTable = factory.call(params.clone())?;
+                sub_behaviors.push(behavior_table);
+            }
+
+            // Store sub-behaviors
+            let sub_behaviors_table = lua.create_table()?;
+            for (i, behavior) in sub_behaviors.iter().enumerate() {
+                sub_behaviors_table.set(i + 1, behavior.clone())?;
+            }
+            composite.set("__sub_behaviors", sub_behaviors_table.clone())?;
+
+            // on_spawn: call all sub-behaviors
+            let sub_behaviors_clone = sub_behaviors_table.clone();
+            composite.set("on_spawn", lua.create_function(move |_lua, world: LuaTable| {
+                let sub_behaviors: LuaTable = sub_behaviors_clone.clone();
+                for pair in sub_behaviors.pairs::<usize, LuaTable>() {
+                    let (_, behavior) = pair?;
+                    if let Ok(on_spawn) = behavior.get::<LuaFunction>("on_spawn") {
+                        on_spawn.call::<()>(world.clone())?;
+                    }
+                }
+                Ok(())
+            })?)?;
+
+            // update: call all sub-behaviors
+            let sub_behaviors_clone = sub_behaviors_table.clone();
+            composite.set("update", lua.create_function(move |_lua, (world, dt): (LuaTable, f32)| {
+                let sub_behaviors: LuaTable = sub_behaviors_clone.clone();
+                for pair in sub_behaviors.pairs::<usize, LuaTable>() {
+                    let (_, behavior) = pair?;
+                    if let Ok(update) = behavior.get::<LuaFunction>("update") {
+                        update.call::<()>((world.clone(), dt))?;
+                    }
+                }
+                Ok(())
+            })?)?;
+
+            // on_despawn: call all sub-behaviors
+            let sub_behaviors_clone = sub_behaviors_table.clone();
+            composite.set("on_despawn", lua.create_function(move |_lua, world: LuaTable| {
+                let sub_behaviors: LuaTable = sub_behaviors_clone.clone();
+                for pair in sub_behaviors.pairs::<usize, LuaTable>() {
+                    let (_, behavior) = pair?;
+                    if let Ok(on_despawn) = behavior.get::<LuaFunction>("on_despawn") {
+                        on_despawn.call::<()>(world.clone())?;
+                    }
+                }
+                Ok(())
+            })?)?;
+
+            // on_collision_enter: call all sub-behaviors
+            let sub_behaviors_clone = sub_behaviors_table.clone();
+            composite.set("on_collision_enter", lua.create_function(move |_lua, (world, other): (LuaTable, LuaValue)| {
+                let sub_behaviors: LuaTable = sub_behaviors_clone.clone();
+                for pair in sub_behaviors.pairs::<usize, LuaTable>() {
+                    let (_, behavior) = pair?;
+                    if let Ok(handler) = behavior.get::<LuaFunction>("on_collision_enter") {
+                        handler.call::<()>((world.clone(), other.clone()))?;
+                    }
+                }
+                Ok(())
+            })?)?;
+
+            // on_collision_stay: call all sub-behaviors
+            let sub_behaviors_clone = sub_behaviors_table.clone();
+            composite.set("on_collision_stay", lua.create_function(move |_lua, (world, other): (LuaTable, LuaValue)| {
+                let sub_behaviors: LuaTable = sub_behaviors_clone.clone();
+                for pair in sub_behaviors.pairs::<usize, LuaTable>() {
+                    let (_, behavior) = pair?;
+                    if let Ok(handler) = behavior.get::<LuaFunction>("on_collision_stay") {
+                        handler.call::<()>((world.clone(), other.clone()))?;
+                    }
+                }
+                Ok(())
+            })?)?;
+
+            // on_collision_exit: call all sub-behaviors
+            let sub_behaviors_clone = sub_behaviors_table.clone();
+            composite.set("on_collision_exit", lua.create_function(move |_lua, (world, other): (LuaTable, LuaValue)| {
+                let sub_behaviors: LuaTable = sub_behaviors_clone.clone();
+                for pair in sub_behaviors.pairs::<usize, LuaTable>() {
+                    let (_, behavior) = pair?;
+                    if let Ok(handler) = behavior.get::<LuaFunction>("on_collision_exit") {
+                        handler.call::<()>((world.clone(), other.clone()))?;
+                    }
+                }
+                Ok(())
+            })?)?;
+
+            Ok(composite)
+        })?;
+
+        // Register the composite behavior factory
+        let globals = lua.globals();
+        let behaviors_storage: LuaTable = match globals.get("__behaviors__") {
+            Ok(table) => table,
+            Err(_) => {
+                let table = lua.create_table()?;
+                globals.set("__behaviors__", table.clone())?;
+                table
+            }
+        };
+
+        behaviors_storage.set(name.clone(), factory)?;
+        info!("[Lua] Composite behavior '{}' registered with {} sub-behaviors", name, behavior_count);
+
+        Ok(())
+    })?;
+
+    behaviors_table.set("compose", behaviors_compose_fn)?;
     api_table.set("behaviors", behaviors_table)?;
 
     // Set the global 'api' object

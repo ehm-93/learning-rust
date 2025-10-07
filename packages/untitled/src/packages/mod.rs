@@ -9,7 +9,5 @@
 
 pub mod lua;
 mod plugin;
-mod behaviors;  // Legacy behavior system, will be replaced by package system
 
 pub use plugin::*;
-pub use behaviors::*;  // Re-export for backward compatibility

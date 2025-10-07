@@ -20,9 +20,6 @@ pub fn player_movement(
     time: Res<Time>,
     config: Res<PlayerConfig>,
 ) {
-    // Debug: Only log when there are action events to reduce spam
-    let event_count = action_events.len();
-
     for (mut velocity, mut dash) in query.iter_mut() {
         // Update dash timers
         dash.cooldown_timer.tick(time.delta());

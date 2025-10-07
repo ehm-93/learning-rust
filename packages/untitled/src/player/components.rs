@@ -113,7 +113,7 @@ impl PlayerBundle {
             dash: Dash::new(),
             grenade_thrower: GrenadeThrower::new(),
             inventory: crate::inventory::Inventory::player_inventory(),
-            chunk_loader: crate::world::chunks::ChunkLoader::new(10),
+            chunk_loader: crate::world::chunks::ChunkLoader::new(14),
 
             // Visual components
             mesh: Mesh2d(mesh_handle),

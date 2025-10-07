@@ -1,3 +1,5 @@
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+
 use bevy::prelude::*;
 
 /// Resource tracking the current dungeon state and configuration
@@ -36,7 +38,7 @@ impl Default for DungeonState {
             is_completed: false,
             difficulty_multiplier: 1.0,
             loot_tier: 1,
-            seed: 42, // Default seed
+            seed: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             macro_map: vec![],
         }
     }
@@ -51,7 +53,7 @@ impl DungeonState {
             is_completed: false,
             difficulty_multiplier: 1.0 + (depth as f32 * 0.2), // 20% harder per depth
             loot_tier: 1 + (depth / 3), // Better loot every 3 depths
-            seed: 42 + depth as u64, // Deterministic seed based on depth
+            seed: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             macro_map: vec![],
         }
     }

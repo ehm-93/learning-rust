@@ -47,6 +47,7 @@ fn setup_test_scene(
             GlobalTransform::default(),
             RigidBody::Dynamic,
             Collider::ball(20.0),
+            Velocity::zero(),
         )).id();
 
         params.insert("entity", ParamValue::EntityId(entity));
@@ -73,6 +74,7 @@ fn setup_test_scene(
             GlobalTransform::default(),
             RigidBody::Dynamic,
             Collider::ball(15.0),
+            Velocity::zero(),
         )).id();
 
         params.insert("entity", ParamValue::EntityId(entity));
@@ -101,6 +103,7 @@ fn setup_test_scene(
             GlobalTransform::default(),
             RigidBody::Dynamic,
             Collider::ball(18.0),
+            Velocity::zero(),
         )).id();
 
         params.insert("entity", ParamValue::EntityId(entity));
@@ -126,6 +129,7 @@ fn setup_test_scene(
             GlobalTransform::default(),
             RigidBody::Dynamic,
             Collider::ball(22.0),
+            Velocity::zero(),
         )).id();
 
         params.insert("entity", ParamValue::EntityId(entity));
@@ -154,6 +158,7 @@ fn setup_test_scene(
             GlobalTransform::default(),
             RigidBody::Dynamic,
             Collider::ball(25.0),
+            Velocity::zero(),
         )).id();
 
         params.insert("entity", ParamValue::EntityId(entity));
@@ -182,6 +187,7 @@ fn setup_test_scene(
             GlobalTransform::default(),
             RigidBody::Dynamic,
             Collider::ball(16.0),
+            Velocity::zero(),
         )).id();
 
         params.insert("entity", ParamValue::EntityId(entity));
@@ -211,6 +217,7 @@ fn setup_test_scene(
             GlobalTransform::default(),
             RigidBody::Dynamic,
             Collider::ball(20.0),
+            Velocity::zero(),
         )).id();
 
         params.insert("entity", ParamValue::EntityId(entity));
@@ -250,9 +257,13 @@ fn setup_test_scene(
             GlobalTransform::default(),
             RigidBody::Dynamic,
             Collider::ball(24.0),
+            Velocity::zero(),
         )).id();
 
         params.insert("entity", ParamValue::EntityId(entity));
+        params.insert("search_radius", ParamValue::Float(300.0));
+        params.insert("seek_speed", ParamValue::Float(40.0));
+        params.insert("rotation_speed", ParamValue::Float(5.0));
 
         if let Some(behavior) = behavior_registry.instantiate("spinning_seeker", params) {
             commands.entity(entity).insert(BehaviorComponent::new(vec![behavior]));
@@ -260,6 +271,29 @@ fn setup_test_scene(
         } else {
             warn!("⚠️  Failed to create spinning_seeker behavior - check if test package loaded");
         }
+    }
+
+    // Spawn a swarm of small white entities for seekers to chase
+    info!("🐝 Spawning swarm of 20 small entities for seekers to chase...");
+    for i in 0..20 {
+        let angle = (i as f32 / 20.0) * 2.0 * std::f32::consts::PI;
+        let radius = 50.0 + (i as f32 * 5.0); // Spiral pattern
+        let x = radius * angle.cos();
+        let y = radius * angle.sin();
+
+        commands.spawn((
+            TestEntity,
+            Sprite {
+                color: Color::srgb(0.9, 0.9, 0.9),
+                custom_size: Some(Vec2::splat(12.0)),
+                ..default()
+            },
+            Transform::from_xyz(x, y, 0.0),
+            GlobalTransform::default(),
+            RigidBody::Dynamic,
+            Collider::ball(6.0),
+            Velocity::zero(),
+        ));
     }
 
     info!("🎬 Behavior test scene setup complete!");

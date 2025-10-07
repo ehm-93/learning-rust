@@ -14,8 +14,7 @@ pub enum WorldState {
 
 impl Default for WorldState {
     fn default() -> Self {
-        // Start in MainMenu - no scene active, just behavior tests
-        WorldState::MainMenu
+        WorldState::Cathedral
     }
 }
 

@@ -45,7 +45,7 @@ fn main() {
             ..default()
         }))
 
-        // Set fixed timestep to 20 Hz for more consistent physics and behavior updates
+        // Set fixed timestep to 20 Hz for more consistent behavior updates
         .insert_resource(Time::<Fixed>::from_hz(20.0))
 
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
@@ -56,7 +56,6 @@ fn main() {
         .add_plugins(DebugOverlayPlugin)
         .add_plugins(BehaviorPlugin)
         .add_plugins(PackagePlugin)
-        .add_plugins(BehaviorTestScenePlugin) // Behavior stress test
 
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()
@@ -80,9 +79,6 @@ fn main() {
             ui::tooltip::handle_tooltip_hover.run_if(resource_equals(GameState::Playing)),
         ))
         .add_systems(FixedUpdate, (
-            // Phase 1 Effect systems
-            effect_update_system.run_if(resource_equals(GameState::Playing)),
-
             // Enemy systems
             enemy_ai.run_if(resource_equals(GameState::Playing)),
             laser_sight_system.run_if(resource_equals(GameState::Playing)),

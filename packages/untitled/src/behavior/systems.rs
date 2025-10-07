@@ -87,6 +87,8 @@ pub fn spawn_behaviors(world: &mut World) {
     for entity in new_behaviors {
         if let Some(mut behavior_comp) = world.entity_mut(entity).take::<BehaviorComponent>() {
             info!("Spawning behaviors for entity {:?}", entity);
+            // Set the entity for all behaviors
+            behavior_comp.set_entity(entity);
             behavior_comp.on_spawn(world);
             // Check if entity still exists (behavior might have despawned it in on_spawn)
             if let Ok(mut entity_mut) = world.get_entity_mut(entity) {

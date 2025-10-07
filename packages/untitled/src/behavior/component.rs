@@ -13,6 +13,13 @@ impl BehaviorComponent {
         Self { behaviors }
     }
 
+    /// Set the entity for all behaviors
+    pub fn set_entity(&mut self, entity: Entity) {
+        for behavior in &mut self.behaviors {
+            behavior.set_entity(entity);
+        }
+    }
+
     /// Call on_spawn for all behaviors
     pub fn on_spawn(&mut self, world: &mut World) {
         for behavior in &mut self.behaviors {

@@ -3,6 +3,7 @@
 //! Provides a Lua-friendly wrapper around Bevy's World for behaviors to interact with the ECS.
 
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use mlua::prelude::*;
 use std::cell::UnsafeCell;
 
@@ -113,6 +114,45 @@ impl LuaUserData for LuaWorldApi {
             Ok(())
         });
 
+        // Get entity velocity (if it has Velocity from rapier)
+        methods.add_method("get_velocity", |lua, this, ()| {
+            unsafe {
+                let world = this.world();
+                if let Some(velocity) = world.get::<Velocity>(this.entity) {
+                    let table = lua.create_table()?;
+                    table.set("x", velocity.linvel.x)?;
+                    table.set("y", velocity.linvel.y)?;
+                    table.set("angular", velocity.angvel)?;
+                    Ok(table)
+                } else {
+                    lua.create_table()
+                }
+            }
+        });
+
+        // Set entity velocity (if it has Velocity from rapier)
+        methods.add_method("set_velocity", |_, this, (x, y): (f32, f32)| {
+            unsafe {
+                let world = this.world_mut();
+                if let Some(mut velocity) = world.get_mut::<Velocity>(this.entity) {
+                    velocity.linvel.x = x;
+                    velocity.linvel.y = y;
+                }
+            }
+            Ok(())
+        });
+
+        // Set entity angular velocity (if it has Velocity from rapier)
+        methods.add_method("set_angular_velocity", |_, this, angular: f32| {
+            unsafe {
+                let world = this.world_mut();
+                if let Some(mut velocity) = world.get_mut::<Velocity>(this.entity) {
+                    velocity.angvel = angular;
+                }
+            }
+            Ok(())
+        });
+
         // Despawn the entity
         methods.add_method("despawn", |_, this, ()| {
             unsafe {
@@ -157,6 +197,30 @@ impl LuaUserData for LuaWorldApi {
                 }
 
                 Ok(results)
+            }
+        });
+
+        // Spawn a new entity with position, rotation, velocity
+        // Returns the entity ID as a number
+        // Note: For now this is a simple spawn. In a full implementation,
+        // you'd want to queue spawns to avoid mutation during iteration.
+        methods.add_method("spawn_entity", |_, this, (x, y, z, yaw): (f32, f32, f32, f32)| {
+            unsafe {
+                let world = this.world_mut();
+
+                // Spawn basic entity with transform and physics
+                let entity = world.spawn((
+                    Transform::from_xyz(x, y, z)
+                        .with_rotation(Quat::from_rotation_z(yaw)),
+                    GlobalTransform::default(),
+                    RigidBody::Dynamic,
+                    Collider::ball(5.0), // Small default collider
+                    Velocity::zero(),
+                )).id();
+
+                info!("[Lua Behavior] Spawned entity {:?} at ({:.1}, {:.1}, {:.1})", entity, x, y, z);
+
+                Ok(entity.index())
             }
         });
     }

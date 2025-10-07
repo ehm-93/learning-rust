@@ -144,7 +144,7 @@ impl LuaBehavior {
 
         let entity = self.entity.unwrap_or(Entity::PLACEHOLDER);
         let world_api = super::world_api::create_world_api_userdata(&lua, entity, world)?;
-        
+
         let func: LuaFunction = lua.registry_value(reg_key)?;
         func.call((world_api, args))
     }

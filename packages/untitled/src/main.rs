@@ -28,11 +28,11 @@ use world::*;
 use ui::*;
 use sounds::*;
 use inventory::InventoryPlugin;
+use behavior::{BehaviorPlugin, BehaviorTestScenePlugin};
 use world::WorldPlugin;
 use player::PlayerPlugin;
 use debug::DebugOverlayPlugin;
 use packages::*;
-use behavior::BehaviorPlugin;
 
 fn main() {
     let mut app = App::new();
@@ -56,6 +56,7 @@ fn main() {
         .add_plugins(DebugOverlayPlugin)
         .add_plugins(BehaviorPlugin)
         .add_plugins(PackagePlugin)
+        .add_plugins(BehaviorTestScenePlugin) // Behavior stress test
 
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()

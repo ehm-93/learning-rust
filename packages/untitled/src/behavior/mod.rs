@@ -10,6 +10,8 @@ pub mod component;
 pub mod composition;
 pub mod systems;
 pub mod plugin;
+pub mod builtin;
+pub mod test_scene;
 
 // Re-export core types
 pub use core::*;
@@ -18,3 +20,5 @@ pub use component::*;
 pub use composition::*;
 pub use systems::*;
 pub use plugin::*;
+pub use builtin::*;
+pub use test_scene::*;

@@ -14,7 +14,6 @@ impl Plugin for BehaviorPlugin {
             spawn_behaviors,
             update_behaviors,
             handle_collisions,
-            process_behavior_spawn_queue,
         ).chain()); // Chain to ensure proper execution order
 
         app.add_systems(Last, despawn_behaviors);

@@ -55,19 +55,24 @@ impl Plugin for PackagePlugin {
 }
 
 /// System to set up the package system during startup
-fn setup_package_system(
+pub fn setup_package_system(
     mut package_manager: ResMut<PackageManager>,
     mut behavior_registry: ResMut<crate::behavior::BehaviorRegistry>,
 ) {
     println!("🚀 PackagePlugin::setup_package_system called!");
     info!("Initializing package system...");
 
+    // Register built-in Rust behaviors first
+    info!("📚 Registering built-in behaviors...");
+    crate::behavior::register_builtin_behaviors(&mut behavior_registry);
+    info!("✅ Built-in behaviors registered");
+
     // Phase 1: Load packages from disk
     use super::lua::{PackageLoader, LuaPackageState, LuaBehavior};
     use crate::behavior::Params;
     use std::fs;
 
-    let packages_dir = "packages";
+    let packages_dir = "packages/untitled/packages";
     let loader = PackageLoader::new(packages_dir);
 
     match loader.discover_packages() {

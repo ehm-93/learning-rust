@@ -16,8 +16,6 @@ mod sounds;
 mod line_of_sight;
 mod inventory;
 mod debug;
-mod packages;
-mod behavior;
 
 // Import everything we need
 use events::*;
@@ -28,11 +26,9 @@ use world::*;
 use ui::*;
 use sounds::*;
 use inventory::InventoryPlugin;
-use behavior::{BehaviorPlugin, BehaviorTestScenePlugin};
 use world::WorldPlugin;
 use player::PlayerPlugin;
 use debug::DebugOverlayPlugin;
-use packages::*;
 
 fn main() {
     let mut app = App::new();
@@ -54,8 +50,6 @@ fn main() {
         .add_plugins(InventoryPlugin)
         .add_plugins(WorldPlugin)
         .add_plugins(DebugOverlayPlugin)
-        .add_plugins(BehaviorPlugin)
-        .add_plugins(PackagePlugin)
 
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()

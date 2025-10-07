@@ -6,9 +6,7 @@
  pub mod enemy;
  pub mod events;
  pub mod line_of_sight;
- pub mod packages;
  pub mod player;
  pub mod resources;
  pub mod sounds;
  pub mod ui;
- pub mod behavior;

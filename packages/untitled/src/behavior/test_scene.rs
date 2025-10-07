@@ -27,6 +27,10 @@ fn setup_test_scene(
 ) {
     info!("🎬 Setting up behavior test scene...");
 
+    // Spawn camera so we can see the entities
+    commands.spawn(Camera2d::default());
+    info!("📷 Camera spawned");
+
     // Test 1: Entity with log_lifecycle behavior (Rust)
     {
         let mut params = Params::new();
@@ -34,6 +38,11 @@ fn setup_test_scene(
 
         let entity = commands.spawn((
             TestEntity,
+            Sprite {
+                color: Color::srgb(1.0, 0.0, 0.0),
+                custom_size: Some(Vec2::splat(40.0)),
+                ..default()
+            },
             Transform::from_xyz(-200.0, 0.0, 0.0),
             GlobalTransform::default(),
             RigidBody::Dynamic,
@@ -55,6 +64,11 @@ fn setup_test_scene(
 
         let entity = commands.spawn((
             TestEntity,
+            Sprite {
+                color: Color::srgb(0.0, 1.0, 0.0),
+                custom_size: Some(Vec2::splat(30.0)),
+                ..default()
+            },
             Transform::from_xyz(-100.0, 0.0, 0.0),
             GlobalTransform::default(),
             RigidBody::Dynamic,
@@ -78,6 +92,11 @@ fn setup_test_scene(
 
         let entity = commands.spawn((
             TestEntity,
+            Sprite {
+                color: Color::srgb(0.0, 0.0, 1.0),
+                custom_size: Some(Vec2::splat(36.0)),
+                ..default()
+            },
             Transform::from_xyz(0.0, 0.0, 0.0),
             GlobalTransform::default(),
             RigidBody::Dynamic,
@@ -98,6 +117,11 @@ fn setup_test_scene(
 
         let entity = commands.spawn((
             TestEntity,
+            Sprite {
+                color: Color::srgb(1.0, 1.0, 0.0),
+                custom_size: Some(Vec2::splat(44.0)),
+                ..default()
+            },
             Transform::from_xyz(100.0, 0.0, 0.0),
             GlobalTransform::default(),
             RigidBody::Dynamic,
@@ -121,6 +145,11 @@ fn setup_test_scene(
 
         let entity = commands.spawn((
             TestEntity,
+            Sprite {
+                color: Color::srgb(1.0, 0.0, 1.0),
+                custom_size: Some(Vec2::splat(50.0)),
+                ..default()
+            },
             Transform::from_xyz(200.0, 0.0, 0.0),
             GlobalTransform::default(),
             RigidBody::Dynamic,
@@ -144,6 +173,11 @@ fn setup_test_scene(
 
         let entity = commands.spawn((
             TestEntity,
+            Sprite {
+                color: Color::srgb(0.0, 1.0, 1.0),
+                custom_size: Some(Vec2::splat(32.0)),
+                ..default()
+            },
             Transform::from_xyz(-200.0, 150.0, 0.0),
             GlobalTransform::default(),
             RigidBody::Dynamic,
@@ -168,6 +202,11 @@ fn setup_test_scene(
 
         let entity = commands.spawn((
             TestEntity,
+            Sprite {
+                color: Color::srgb(0.5, 0.5, 1.0),
+                custom_size: Some(Vec2::splat(40.0)),
+                ..default()
+            },
             Transform::from_xyz(0.0, -150.0, 0.0),
             GlobalTransform::default(),
             RigidBody::Dynamic,
@@ -202,6 +241,11 @@ fn setup_test_scene(
 
         let entity = commands.spawn((
             TestEntity,
+            Sprite {
+                color: Color::srgb(1.0, 0.5, 0.0),
+                custom_size: Some(Vec2::splat(48.0)),
+                ..default()
+            },
             Transform::from_xyz(200.0, 150.0, 0.0),
             GlobalTransform::default(),
             RigidBody::Dynamic,

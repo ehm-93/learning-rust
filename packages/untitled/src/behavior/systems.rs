@@ -20,7 +20,10 @@ pub fn update_behaviors(world: &mut World) {
     for entity in entities {
         if let Some(mut behavior_comp) = world.entity_mut(entity).take::<BehaviorComponent>() {
             behavior_comp.on_update(world, dt);
-            world.entity_mut(entity).insert(behavior_comp);
+            // Check if entity still exists (behavior might have despawned it)
+            if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
+                entity_mut.insert(behavior_comp);
+            }
         }
     }
 }
@@ -40,24 +43,32 @@ pub fn handle_collisions(world: &mut World) {
                 // Call on_collision_enter for entity 1
                 if let Some(mut behavior_comp) = world.entity_mut(e1).take::<BehaviorComponent>() {
                     behavior_comp.on_collision_enter(world, e2);
-                    world.entity_mut(e1).insert(behavior_comp);
+                    if let Ok(mut entity_mut) = world.get_entity_mut(e1) {
+                        entity_mut.insert(behavior_comp);
+                    }
                 }
                 // Call on_collision_enter for entity 2
                 if let Some(mut behavior_comp) = world.entity_mut(e2).take::<BehaviorComponent>() {
                     behavior_comp.on_collision_enter(world, e1);
-                    world.entity_mut(e2).insert(behavior_comp);
+                    if let Ok(mut entity_mut) = world.get_entity_mut(e2) {
+                        entity_mut.insert(behavior_comp);
+                    }
                 }
             },
             CollisionEvent::Stopped(e1, e2, _flags) => {
                 // Call on_collision_exit for entity 1
                 if let Some(mut behavior_comp) = world.entity_mut(e1).take::<BehaviorComponent>() {
                     behavior_comp.on_collision_exit(world, e2);
-                    world.entity_mut(e1).insert(behavior_comp);
+                    if let Ok(mut entity_mut) = world.get_entity_mut(e1) {
+                        entity_mut.insert(behavior_comp);
+                    }
                 }
                 // Call on_collision_exit for entity 2
                 if let Some(mut behavior_comp) = world.entity_mut(e2).take::<BehaviorComponent>() {
                     behavior_comp.on_collision_exit(world, e1);
-                    world.entity_mut(e2).insert(behavior_comp);
+                    if let Ok(mut entity_mut) = world.get_entity_mut(e2) {
+                        entity_mut.insert(behavior_comp);
+                    }
                 }
             },
         }
@@ -77,7 +88,10 @@ pub fn spawn_behaviors(world: &mut World) {
         if let Some(mut behavior_comp) = world.entity_mut(entity).take::<BehaviorComponent>() {
             info!("Spawning behaviors for entity {:?}", entity);
             behavior_comp.on_spawn(world);
-            world.entity_mut(entity).insert(behavior_comp);
+            // Check if entity still exists (behavior might have despawned it in on_spawn)
+            if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
+                entity_mut.insert(behavior_comp);
+            }
         }
     }
 }

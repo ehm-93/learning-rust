@@ -71,7 +71,6 @@ fn main() {
             disable_gravity,
             setup_health_bar,
             load_sounds,
-            setup_homing_barrage_test,
         ))
         .add_systems(Update, (
             handle_restart_button,

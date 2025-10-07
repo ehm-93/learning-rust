@@ -31,7 +31,7 @@ fn setup_test_scene(
     {
         let mut params = Params::new();
         params.insert("name", ParamValue::String("TestEntity1".to_string()));
-        
+
         let entity = commands.spawn((
             TestEntity,
             Transform::from_xyz(-200.0, 0.0, 0.0),
@@ -39,9 +39,9 @@ fn setup_test_scene(
             RigidBody::Dynamic,
             Collider::ball(20.0),
         )).id();
-        
+
         params.insert("entity", ParamValue::EntityId(entity));
-        
+
         if let Some(behavior) = behavior_registry.instantiate("log_lifecycle", params) {
             commands.entity(entity).insert(BehaviorComponent::new(vec![behavior]));
             info!("✅ Spawned entity with log_lifecycle behavior");
@@ -52,7 +52,7 @@ fn setup_test_scene(
     {
         let mut params = Params::new();
         params.insert("lifetime", ParamValue::Float(5.0));
-        
+
         let entity = commands.spawn((
             TestEntity,
             Transform::from_xyz(-100.0, 0.0, 0.0),
@@ -60,9 +60,9 @@ fn setup_test_scene(
             RigidBody::Dynamic,
             Collider::ball(15.0),
         )).id();
-        
+
         params.insert("entity", ParamValue::EntityId(entity));
-        
+
         if let Some(behavior) = behavior_registry.instantiate("lifetime", params) {
             commands.entity(entity).insert(BehaviorComponent::new(vec![behavior]));
             info!("✅ Spawned entity with lifetime behavior (5s)");
@@ -75,7 +75,7 @@ fn setup_test_scene(
         params.insert("amplitude", ParamValue::Float(2.0));
         params.insert("frequency", ParamValue::Float(1.5));
         params.insert("axis", ParamValue::Vec3(Vec3::Y));
-        
+
         let entity = commands.spawn((
             TestEntity,
             Transform::from_xyz(0.0, 0.0, 0.0),
@@ -83,9 +83,9 @@ fn setup_test_scene(
             RigidBody::Dynamic,
             Collider::ball(18.0),
         )).id();
-        
+
         params.insert("entity", ParamValue::EntityId(entity));
-        
+
         if let Some(behavior) = behavior_registry.instantiate("oscillate", params) {
             commands.entity(entity).insert(BehaviorComponent::new(vec![behavior]));
             info!("✅ Spawned entity with oscillate behavior");
@@ -95,7 +95,7 @@ fn setup_test_scene(
     // Test 4: Entity with spinner behavior (Lua)
     {
         let mut params = Params::new();
-        
+
         let entity = commands.spawn((
             TestEntity,
             Transform::from_xyz(100.0, 0.0, 0.0),
@@ -103,10 +103,10 @@ fn setup_test_scene(
             RigidBody::Dynamic,
             Collider::ball(22.0),
         )).id();
-        
+
         params.insert("entity", ParamValue::EntityId(entity));
         params.insert("rotation_speed", ParamValue::Float(3.0));
-        
+
         if let Some(behavior) = behavior_registry.instantiate("spinner", params) {
             commands.entity(entity).insert(BehaviorComponent::new(vec![behavior]));
             info!("✅ Spawned entity with spinner behavior (Lua)");
@@ -118,7 +118,7 @@ fn setup_test_scene(
     // Test 5: Entity with pulse_and_die behavior (Lua)
     {
         let mut params = Params::new();
-        
+
         let entity = commands.spawn((
             TestEntity,
             Transform::from_xyz(200.0, 0.0, 0.0),
@@ -126,10 +126,10 @@ fn setup_test_scene(
             RigidBody::Dynamic,
             Collider::ball(25.0),
         )).id();
-        
+
         params.insert("entity", ParamValue::EntityId(entity));
         params.insert("lifetime", ParamValue::Float(8.0));
-        
+
         if let Some(behavior) = behavior_registry.instantiate("pulse_and_die", params) {
             commands.entity(entity).insert(BehaviorComponent::new(vec![behavior]));
             info!("✅ Spawned entity with pulse_and_die behavior (Lua)");
@@ -141,7 +141,7 @@ fn setup_test_scene(
     // Test 6: Entity with seeker behavior (Lua)
     {
         let mut params = Params::new();
-        
+
         let entity = commands.spawn((
             TestEntity,
             Transform::from_xyz(-200.0, 150.0, 0.0),
@@ -149,11 +149,11 @@ fn setup_test_scene(
             RigidBody::Dynamic,
             Collider::ball(16.0),
         )).id();
-        
+
         params.insert("entity", ParamValue::EntityId(entity));
         params.insert("search_radius", ParamValue::Float(300.0));
         params.insert("seek_speed", ParamValue::Float(50.0));
-        
+
         if let Some(behavior) = behavior_registry.instantiate("seeker", params) {
             commands.entity(entity).insert(BehaviorComponent::new(vec![behavior]));
             info!("✅ Spawned entity with seeker behavior (Lua)");
@@ -165,7 +165,7 @@ fn setup_test_scene(
     // Test 7: Entity with multiple behaviors (Rust + Lua composite)
     {
         let mut params = Params::new();
-        
+
         let entity = commands.spawn((
             TestEntity,
             Transform::from_xyz(0.0, -150.0, 0.0),
@@ -173,23 +173,23 @@ fn setup_test_scene(
             RigidBody::Dynamic,
             Collider::ball(20.0),
         )).id();
-        
+
         params.insert("entity", ParamValue::EntityId(entity));
-        
+
         let mut behaviors = Vec::new();
-        
+
         // Add log_lifecycle
         let mut log_params = params.clone();
         log_params.insert("name", ParamValue::String("CompositeEntity".to_string()));
         if let Some(behavior) = behavior_registry.instantiate("log_lifecycle", log_params) {
             behaviors.push(behavior);
         }
-        
+
         // Add collision_logger (Lua)
         if let Some(behavior) = behavior_registry.instantiate("collision_logger", params.clone()) {
             behaviors.push(behavior);
         }
-        
+
         if !behaviors.is_empty() {
             commands.entity(entity).insert(BehaviorComponent::new(behaviors));
             info!("✅ Spawned entity with composite behaviors (log + collision_logger)");
@@ -199,7 +199,7 @@ fn setup_test_scene(
     // Test 8: Entity with spinning_seeker (Lua composite behavior)
     {
         let mut params = Params::new();
-        
+
         let entity = commands.spawn((
             TestEntity,
             Transform::from_xyz(200.0, 150.0, 0.0),
@@ -207,9 +207,9 @@ fn setup_test_scene(
             RigidBody::Dynamic,
             Collider::ball(24.0),
         )).id();
-        
+
         params.insert("entity", ParamValue::EntityId(entity));
-        
+
         if let Some(behavior) = behavior_registry.instantiate("spinning_seeker", params) {
             commands.entity(entity).insert(BehaviorComponent::new(vec![behavior]));
             info!("✅ Spawned entity with spinning_seeker behavior (Lua composite)");

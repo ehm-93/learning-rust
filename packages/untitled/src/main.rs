@@ -55,6 +55,7 @@ fn main() {
         .add_plugins(WorldPlugin)
         .add_plugins(DebugOverlayPlugin)
         .add_plugins(BehaviorPlugin)
+        .add_plugins(PackagePlugin)
 
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()

@@ -7,7 +7,7 @@ mod components;
 mod constants;
 mod events;
 mod resources;
-// mod combat; // Temporarily disabled for Phase 0
+mod combat;
 mod enemy;
 mod player;
 mod world;
@@ -20,7 +20,6 @@ mod debug;
 // Import everything we need
 use events::*;
 use resources::*;
-// use combat::*; // Temporarily disabled for Phase 0
 use enemy::*;
 use world::*;
 use ui::*;
@@ -50,6 +49,7 @@ fn main() {
         .add_plugins(InventoryPlugin)
         .add_plugins(WorldPlugin)
         .add_plugins(DebugOverlayPlugin)
+        .add_plugins(combat::FowPlugin)
 
         .add_event::<ProjectileImpactEvent>()
         .add_event::<DamageEvent>()

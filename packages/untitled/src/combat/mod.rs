@@ -4,7 +4,9 @@
 //! data-driven effect system that can handle any type of combat interaction.
 
 pub mod effects;
+pub mod fow;
 pub mod resolver;
 
 pub use effects::*;
+pub use fow::*;
 pub use resolver::*;

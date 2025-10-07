@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use std::collections::HashMap;
 
 use super::effects::*;
@@ -277,7 +278,7 @@ pub fn tick_status_effects(
     mut status_query: Query<(Entity, &mut StatusEffect)>,
 ) {
     for (entity, mut status) in status_query.iter_mut() {
-        status.remaining_duration -= time.delta_seconds();
+        status.remaining_duration -= time.delta_secs();
 
         if status.remaining_duration <= 0.0 {
             commands.entity(entity).remove::<StatusEffect>();

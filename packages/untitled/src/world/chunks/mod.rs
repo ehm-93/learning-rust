@@ -22,6 +22,7 @@ pub enum ChunkingState {
 }
 
 /// Size of a single chunk in tiles (calculated from world constants)
+/// In tiles
 pub const CHUNK_SIZE: u32 = (METERS_PER_CHUNK * TILES_PER_METER) as u32;
 
 /// Chunk coordinate type

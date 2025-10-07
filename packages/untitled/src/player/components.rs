@@ -81,6 +81,7 @@ pub struct PlayerBundle {
     pub grenade_thrower: GrenadeThrower,
     pub inventory: crate::inventory::Inventory,
     pub chunk_loader: crate::world::chunks::ChunkLoader,
+    pub fow_revealer: crate::combat::FowRevealer,
 
     // Visual components
     pub mesh: Mesh2d,
@@ -114,6 +115,7 @@ impl PlayerBundle {
             grenade_thrower: GrenadeThrower::new(),
             inventory: crate::inventory::Inventory::player_inventory(),
             chunk_loader: crate::world::chunks::ChunkLoader::new(14),
+            fow_revealer: crate::combat::FowRevealer::new(24),
 
             // Visual components
             mesh: Mesh2d(mesh_handle),

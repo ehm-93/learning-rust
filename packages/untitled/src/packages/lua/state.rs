@@ -4,7 +4,6 @@ use std::sync::{Arc, Mutex};
 
 /// Represents a single package with its isolated Lua state
 /// The Lua state is protected by a Mutex to make it Send + Sync
-#[derive(Debug)]
 pub struct LuaPackageState {
     pub name: String,
     pub version: String,
@@ -28,6 +27,11 @@ impl LuaPackageState {
         })
     }
 
+    /// Get a reference to the Lua state
+    pub fn lua(&self) -> Arc<Mutex<Lua>> {
+        Arc::clone(&self.lua)
+    }
+
     /// Execute Lua code in this package's context
     pub fn execute(&self, lua_code: &str) -> Result<(), Box<dyn std::error::Error>> {
         let lua = self.lua.lock().map_err(|e| format!("Failed to lock Lua state: {}", e))?;
@@ -35,13 +39,27 @@ impl LuaPackageState {
         Ok(())
     }
 
-    /// Execute a Lua function by name (simplified for Phase 0)
-    pub fn call_function(&self, function_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    /// Get all registered behavior factories from this package's Lua state
+    /// Returns a list of (name, factory_function) pairs
+    pub fn get_registered_behaviors(&self) -> Result<Vec<(String, LuaFunction)>, Box<dyn std::error::Error>> {
         let lua = self.lua.lock().map_err(|e| format!("Failed to lock Lua state: {}", e))?;
         let globals = lua.globals();
-        let function: LuaFunction = globals.get(function_name)?;
-        function.call::<()>(())?;
-        Ok(())
+
+        // Get the __behaviors__ table if it exists
+        let behaviors_storage: LuaTable = match globals.get("__behaviors__") {
+            Ok(table) => table,
+            Err(_) => return Ok(Vec::new()), // No behaviors registered
+        };
+
+        let mut behaviors = Vec::new();
+
+        // Iterate over all behaviors in the storage
+        for pair in behaviors_storage.pairs::<String, LuaFunction>() {
+            let (name, factory) = pair?;
+            behaviors.push((name, factory));
+        }
+
+        Ok(behaviors)
     }
 }
 
@@ -58,13 +76,34 @@ fn inject_api(lua: &Lua, package_name: &str) -> LuaResult<()> {
     })?;
     api_table.set("log", log_fn)?;
 
-    // Add api.register() method - for Phase 0 this just logs the registration
+    // Create api.behaviors table
+    let behaviors_table = lua.create_table()?;
+
+    // Add api.behaviors.register() method
+    // Accepts a factory function that takes params and returns a behavior definition table
     let pkg_name = package_name.to_string();
-    let register_fn = lua.create_function(move |_, (name, data): (String, LuaValue)| {
-        info!("[Package: {}] Registered '{}': {:?}", pkg_name, name, data);
+    let behaviors_register_fn = lua.create_function(move |lua, (name, factory): (String, LuaFunction)| {
+        info!("[Package: {}] Registering behavior factory: {}", pkg_name, name);
+
+        // Store the factory function in a global table for later retrieval
+        let globals = lua.globals();
+        let behaviors_storage: LuaTable = match globals.get("__behaviors__") {
+            Ok(table) => table,
+            Err(_) => {
+                let table = lua.create_table()?;
+                globals.set("__behaviors__", table.clone())?;
+                table
+            }
+        };
+
+        behaviors_storage.set(name.clone(), factory)?;
+        info!("[Package: {}] Behavior factory '{}' registered successfully", pkg_name, name);
+
         Ok(())
     })?;
-    api_table.set("register", register_fn)?;
+
+    behaviors_table.set("register", behaviors_register_fn)?;
+    api_table.set("behaviors", behaviors_table)?;
 
     // Set the global 'api' object
     lua.globals().set("api", api_table)?;

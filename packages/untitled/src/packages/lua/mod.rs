@@ -6,7 +6,10 @@
 mod state;
 mod manifest;
 mod loader;
+mod behavior;
+mod world_api;
 
-pub use state::*;
-pub use manifest::*;
-pub use loader::*;
+// Public API - only expose what's needed by the plugin
+pub use state::LuaPackageState;
+pub use loader::PackageLoader;
+pub use behavior::LuaBehavior;

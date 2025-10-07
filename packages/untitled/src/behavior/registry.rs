@@ -45,7 +45,7 @@ impl BehaviorRegistry {
     /// Instantiate a behavior by name, returning the behavior
     pub fn instantiate(&self, name: &str, params: Params) -> Option<Box<dyn Behavior>> {
         if let Some(def) = self.behaviors.get(name) {
-            Some(def(params))
+            Some((def)(params))
         } else {
             None
         }

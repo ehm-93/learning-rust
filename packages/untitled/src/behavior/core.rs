@@ -172,4 +172,5 @@ pub trait Behavior: Send + Sync {
 }
 
 /// Type alias for behavior definition functions
-pub type BehaviorDefinition = fn(Params) -> Box<dyn Behavior>;
+/// Changed to Box<dyn Fn> to support closures (needed for Lua behaviors)
+pub type BehaviorDefinition = Box<dyn Fn(Params) -> Box<dyn Behavior> + Send + Sync>;

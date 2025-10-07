@@ -55,12 +55,16 @@ impl Plugin for PackagePlugin {
 }
 
 /// System to set up the package system during startup
-fn setup_package_system(mut package_manager: ResMut<PackageManager>) {
+fn setup_package_system(
+    mut package_manager: ResMut<PackageManager>,
+    mut behavior_registry: ResMut<crate::behavior::BehaviorRegistry>,
+) {
     println!("🚀 PackagePlugin::setup_package_system called!");
     info!("Initializing package system...");
 
     // Phase 1: Load packages from disk
-    use super::lua::{PackageLoader, LuaPackageState};
+    use super::lua::{PackageLoader, LuaPackageState, LuaBehavior};
+    use crate::behavior::Params;
     use std::fs;
 
     let packages_dir = "packages";
@@ -92,7 +96,67 @@ fn setup_package_system(mut package_manager: ResMut<PackageManager>) {
                                 if let Err(e) = lua_state.execute(&init_lua_code) {
                                     error!("Failed to execute init.lua for {}: {}", name, e);
                                 } else {
-                                    info!("✅ Successfully loaded package: {}", name);
+                                    info!("✅ Successfully executed init.lua for package: {}", name);
+
+                                    // Phase 2: Extract and register behavior factories
+                                    match lua_state.get_registered_behaviors() {
+                                        Ok(behaviors) => {
+                                            info!("📝 Registering {} behavior(s) from {}", behaviors.len(), name);
+
+                                            let lua = lua_state.lua();
+                                            for (behavior_name, factory_fn) in behaviors {
+                                                info!("  → Registering behavior: {}", behavior_name);
+
+                                                // Store factory function in registry to prevent GC
+                                                let factory_key = {
+                                                    let lua_lock = lua.lock().unwrap();
+                                                    lua_lock.create_registry_value(factory_fn).unwrap()
+                                                };
+
+                                                // Create a Rust factory function that calls the Lua factory
+                                                let lua_clone = lua.clone();
+                                                let def_name = behavior_name.clone();
+
+                                                let factory: crate::behavior::BehaviorDefinition = Box::new(move |params: Params| {
+                                                    // Call the Lua factory function with params
+                                                    let lua_lock = lua_clone.lock().unwrap();
+
+                                                    // Convert params to Lua table
+                                                    let params_table = lua_lock.create_table().unwrap();
+
+                                                    // Add entity_id to params if present
+                                                    if let Some(crate::behavior::ParamValue::EntityId(entity)) = params.get("entity") {
+                                                        params_table.set("entity_id", entity.to_bits()).unwrap();
+                                                    }
+
+                                                    // Get factory from registry and call it
+                                                    let factory_fn: mlua::Function = lua_lock.registry_value(&factory_key).unwrap();
+                                                    let definition: mlua::Table = factory_fn.call(params_table).unwrap();
+                                                    drop(lua_lock);
+
+                                                    // Create LuaBehavior from the returned definition
+                                                    match LuaBehavior::new(
+                                                        def_name.clone(),
+                                                        lua_clone.clone(),
+                                                        definition,
+                                                        params,
+                                                    ) {
+                                                        Ok(behavior) => Box::new(behavior) as Box<dyn crate::behavior::Behavior>,
+                                                        Err(e) => {
+                                                            error!("Failed to create LuaBehavior: {}", e);
+                                                            panic!("Failed to create LuaBehavior: {}", e);
+                                                        }
+                                                    }
+                                                });
+
+                                                behavior_registry.register(&behavior_name, factory);
+                                                info!("  ✓ Behavior '{}' registered", behavior_name);
+                                            }
+                                        }
+                                        Err(e) => {
+                                            error!("Failed to get registered behaviors from {}: {}", name, e);
+                                        }
+                                    }
                                 }
                             }
                             Err(e) => {
@@ -110,7 +174,7 @@ fn setup_package_system(mut package_manager: ResMut<PackageManager>) {
                 warn!("No packages found in {}/", packages_dir);
                 println!("⚠️  No packages found. Create a test package at {}/test/", packages_dir);
             } else {
-                println!("✅ Phase 1 success: Loaded {} package(s) from disk", package_count);
+                println!("✅ Phase 1-2 success: Loaded {} package(s) with behaviors", package_count);
             }
         }
         Err(e) => {

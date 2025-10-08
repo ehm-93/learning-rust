@@ -1,5 +1,49 @@
 use rand::Rng;
 
+pub fn flood_fill(map: &Vec<Vec<bool>>, start: (usize, usize)) -> Vec<(usize, usize)> {
+    let width = map[0].len();
+    let height = map.len();
+    let mut filled = vec![vec![false; width]; height];
+    let mut to_fill = vec![start];
+    let mut result = Vec::new();
+
+    while let Some((x, y)) = to_fill.pop() {
+        if x >= width || y >= height || filled[y][x] || !map[y][x] {
+            continue;
+        }
+        filled[y][x] = true;
+        result.push((x, y));
+
+        if x > 0 { to_fill.push((x - 1, y)); }
+        if x < width - 1 { to_fill.push((x + 1, y)); }
+        if y > 0 { to_fill.push((x, y - 1)); }
+        if y < height - 1 { to_fill.push((x, y + 1)); }
+    }
+
+    result
+}
+
+pub fn flood_fill_bool(map: &Vec<Vec<bool>>, start: (usize, usize)) -> Vec<Vec<bool>> {
+    let width = map[0].len();
+    let height = map.len();
+    let mut filled = vec![vec![false; width]; height];
+    let mut to_fill = vec![start];
+
+    while let Some((x, y)) = to_fill.pop() {
+        if x >= width || y >= height || filled[y][x] || !map[y][x] {
+            continue;
+        }
+        filled[y][x] = true;
+
+        if x > 0 { to_fill.push((x - 1, y)); }
+        if x < width - 1 { to_fill.push((x + 1, y)); }
+        if y > 0 { to_fill.push((x, y - 1)); }
+        if y < height - 1 { to_fill.push((x, y + 1)); }
+    }
+
+    filled
+}
+
 pub fn save_png(map: &Vec<Vec<bool>>, filename: &str) {
     let width = map[0].len() as u32;
     let height = map.len() as u32;
@@ -148,12 +192,12 @@ pub fn circle(map: &Vec<Vec<bool>>, thickness: usize, radius: usize, center: (us
     seeds
 }
 
-/// Draw a filled square of seeds centered on the map with the given half-size
-pub fn square_fill(map: &mut Vec<Vec<bool>>, half_size: usize) {
+/// Draw a filled square of seeds centered on the passed point
+pub fn square_fill(map: &mut Vec<Vec<bool>>, half_size: usize, center: (usize, usize)) {
     let width = map[0].len();
     let height = map.len();
-    let center_x = width / 2;
-    let center_y = height / 2;
+    let center_x = center.0;
+    let center_y = center.1;
 
     for y in center_y.saturating_sub(half_size)..=(center_y + half_size).min(height - 1) {
         for x in center_x.saturating_sub(half_size)..=(center_x + half_size).min(width - 1) {
@@ -189,4 +233,53 @@ pub fn diamond(map: &Vec<Vec<bool>>, thickness: usize, half_size: usize, center:
         }
     }
     seeds
+}
+
+pub fn line(start: (usize, usize), end: (usize, usize), width: usize) -> Vec<(usize, usize)> {
+    let mut points = Vec::new();
+    let (mut x0, mut y0) = (start.0 as isize, start.1 as isize);
+    let (x1, y1) = (end.0 as isize, end.1 as isize);
+    let dx = (x1 - x0).abs();
+    let dy = -(y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx + dy;
+
+    let half_width = width as isize / 2;
+
+    loop {
+        // Draw a square of the specified width centered on the current point
+        for wx in -half_width..=half_width {
+            for wy in -half_width..=half_width {
+                points.push(((x0 + wx) as usize, (y0 + wy) as usize));
+            }
+        }
+
+        if x0 == x1 && y0 == y1 {
+            break;
+        }
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x0 += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y0 += sy;
+        }
+    }
+
+    points
+}
+
+pub fn line_fill(map: &mut Vec<Vec<bool>>, start: (usize, usize), end: (usize, usize), width: usize) {
+    let line_points = line(start, end, width);
+    let height = map.len();
+    let map_width = map[0].len();
+
+    for (x, y) in line_points {
+        if x < map_width && y < height {
+            map[y][x] = true;
+        }
+    }
 }

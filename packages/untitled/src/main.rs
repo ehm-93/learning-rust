@@ -30,6 +30,29 @@ use world::WorldPlugin;
 use player::PlayerPlugin;
 use debug::DebugOverlayPlugin;
 
+#[cfg(feature = "mapgen-test")]
+fn main() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let size = 8192;
+    let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let arg = std::env::args().into_iter().nth(1).unwrap_or_default();
+    // if first arg is "roomy" then generate a roomy map and save to out/roomy_test.png
+    if arg == "roomy" {
+        let map = crate::world::mapgen::roomy::roomy(size, seed);
+        crate::world::mapgen::save_png(&map, "out/roomy_test.png");
+        let fill = crate::world::mapgen::operators::flood_fill_bool(&map, (map[0].len() / 2, map.len() / 2));
+        crate::world::mapgen::save_png(&fill, "out/roomy_test_filled.png");
+        return;
+    }
+    // otherwise generate a freeform map and save to out/freeform_test.png
+    let map = crate::world::mapgen::freeform::freeform(size, seed);
+    crate::world::mapgen::save_png(&map, "out/freeform_test.png");
+    let fill = crate::world::mapgen::operators::flood_fill_bool(&map, (map[0].len() / 2, map.len() / 2));
+    crate::world::mapgen::save_png(&fill, "out/freeform_test_filled.png");
+}
+
+#[cfg(not(feature = "mapgen-test"))]
 fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {

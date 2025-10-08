@@ -18,7 +18,7 @@ pub fn setup_dungeon_scene(
 
     // Create level based on dungeon state
     // Note: each macro cell is 0.5 chunks (16x16 meters)
-    dungeon_state.macro_map = mapgen::freeform(
+    dungeon_state.macro_map = mapgen::roomy(
         world::DUNGEON_SIZE_M / world::METERS_PER_CHUNK * world::MACRO_PX_PER_CHUNK,
         dungeon_state.seed,
     );

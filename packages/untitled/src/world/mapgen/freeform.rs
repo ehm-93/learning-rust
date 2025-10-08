@@ -3,6 +3,10 @@ use rand::rngs::StdRng;
 
 use super::*;
 
+/// Generate a freeform map using random walk and cellular automata
+///
+/// The map will consist of a large central room with random paths leading
+/// outwards radially with some noise added to make it less uniform.
 pub fn freeform(size: usize, seed: u64) -> Vec<Vec<bool>> {
     let mut rng = StdRng::seed_from_u64(seed);
     let width = 3 * size / 4;
@@ -11,7 +15,7 @@ pub fn freeform(size: usize, seed: u64) -> Vec<Vec<bool>> {
     let (cx, cy) = center(&map);
 
     // Spawn room
-    square_fill(&mut map, 8);
+    square_fill(&mut map, 8, (cx, cy));
 
     // Add some random paths
     let mut path_count = (size as i32) / 256;

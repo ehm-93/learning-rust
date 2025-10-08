@@ -114,7 +114,7 @@ impl PlayerBundle {
             dash: Dash::new(),
             grenade_thrower: GrenadeThrower::new(),
             inventory: crate::inventory::Inventory::player_inventory(),
-            chunk_loader: crate::world::chunks::ChunkLoader::new(14),
+            chunk_loader: crate::world::chunks::ChunkLoader::new(16),
             fow_revealer: crate::combat::FowRevealer::new(24),
 
             // Visual components

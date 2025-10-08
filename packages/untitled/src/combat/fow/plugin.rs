@@ -14,6 +14,7 @@ impl Plugin for FowPlugin {
                 load_fow_chunks,
                 unload_fow_chunks,
                 update_fow_chunks,
+                update_fow_chunks_continuous,
                 draw_fow,
             ).run_if(in_state(ChunkingState::Enabled))
         );

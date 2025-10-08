@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use std::time::Duration;
 
 use crate::world::{chunks::{LoadChunk, UnloadChunk, CHUNK_SIZE}, PX_PER_TILE};
 use crate::persistence::ChunkDatabase;
@@ -10,6 +11,9 @@ pub const FOW_Z: f32 = 10.0;
 
 const CHUNK_SIZE_TILES: usize = CHUNK_SIZE as usize;
 const CHUNK_SIZE_PX: usize = CHUNK_SIZE as usize * PX_PER_TILE;
+
+// Frame budget: maximum time to spend updating FOW per frame
+const FOW_UPDATE_FRAME_BUDGET: Duration = Duration::from_micros(500);
 
 /// Load FowChunk components for newly loaded chunks
 pub fn load_fow_chunks(
@@ -120,6 +124,66 @@ fn create_vision_stamp(radius: usize) -> Vec<Vec<u8>> {
     stamp
 }
 
+/// Apply a revealer's vision to all affected chunks
+fn apply_revealer_vision(
+    chunks: &mut std::collections::HashMap<IVec2, bevy::ecs::change_detection::Mut<FowChunk>>,
+    transform: &Transform,
+    revealer: &FowRevealer,
+) {
+    // Convert revealer position to tile coordinates
+    let revealer_tile_x = (transform.translation.x / PX_PER_TILE as f32).round() as i32;
+    let revealer_tile_y = (transform.translation.y / PX_PER_TILE as f32).round() as i32;
+    let radius_tiles = revealer.radius as i32;
+
+    // Pre-calculate the vision gradient stamp
+    let vision_stamp = create_vision_stamp(revealer.radius);
+    let stamp_radius = revealer.radius as i32;
+
+    // Calculate the range of chunks that might be affected
+    let min_chunk_x = ((revealer_tile_x - radius_tiles) as f32 / CHUNK_SIZE_TILES as f32).floor() as i32;
+    let max_chunk_x = ((revealer_tile_x + radius_tiles) as f32 / CHUNK_SIZE_TILES as f32).floor() as i32;
+    let min_chunk_y = ((revealer_tile_y - radius_tiles) as f32 / CHUNK_SIZE_TILES as f32).floor() as i32;
+    let max_chunk_y = ((revealer_tile_y + radius_tiles) as f32 / CHUNK_SIZE_TILES as f32).floor() as i32;
+
+    // Iterate through all potentially affected chunks
+    for chunk_y in min_chunk_y..=max_chunk_y {
+        for chunk_x in min_chunk_x..=max_chunk_x {
+            let chunk_pos = IVec2::new(chunk_x, chunk_y);
+
+            if let Some(chunk) = chunks.get_mut(&chunk_pos) {
+                // Calculate the tile coordinates relative to this chunk
+                let chunk_offset_x = chunk_x * CHUNK_SIZE_TILES as i32;
+                let chunk_offset_y = chunk_y * CHUNK_SIZE_TILES as i32;
+
+                // Calculate the range of tiles within this chunk to check
+                let start_x = (revealer_tile_x - stamp_radius - chunk_offset_x).max(0);
+                let end_x = (revealer_tile_x + stamp_radius - chunk_offset_x).min(CHUNK_SIZE_TILES as i32 - 1);
+                let start_y = (revealer_tile_y - stamp_radius - chunk_offset_y).max(0);
+                let end_y = (revealer_tile_y + stamp_radius - chunk_offset_y).min(CHUNK_SIZE_TILES as i32 - 1);
+
+                // Apply the vision stamp to the chunk
+                for local_y in start_y..=end_y {
+                    for local_x in start_x..=end_x {
+                        let world_tile_x = chunk_offset_x + local_x;
+                        let world_tile_y = chunk_offset_y + local_y;
+
+                        // Calculate position in the vision stamp
+                        let stamp_x = (world_tile_x - revealer_tile_x + stamp_radius) as usize;
+                        let stamp_y = (world_tile_y - revealer_tile_y + stamp_radius) as usize;
+
+                        // Get stamp visibility
+                        let stamp_visibility = vision_stamp[stamp_y][stamp_x];
+
+                        // Apply stamp: keep maximum visibility (once explored, stays explored)
+                        let current_visibility = chunk.vision[local_y as usize][local_x as usize];
+                        chunk.vision[local_y as usize][local_x as usize] = current_visibility.max(stamp_visibility);
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Update FowChunk vision based on FowRevealer positions
 /// Only runs when revealers move (Changed<Transform> filter)
 pub fn update_fow_chunks(
@@ -132,59 +196,51 @@ pub fn update_fow_chunks(
         .collect::<std::collections::HashMap<_, _>>();
 
     for (transform, revealer) in revealers_query.iter() {
-        // Convert revealer position to tile coordinates
-        let revealer_tile_x = (transform.translation.x / PX_PER_TILE as f32).round() as i32;
-        let revealer_tile_y = (transform.translation.y / PX_PER_TILE as f32).round() as i32;
-        let radius_tiles = revealer.radius as i32;
-
-        // Pre-calculate the vision gradient stamp
-        let vision_stamp = create_vision_stamp(revealer.radius);
-        let stamp_radius = revealer.radius as i32;
-
-        // Calculate the range of chunks that might be affected
-        let min_chunk_x = ((revealer_tile_x - radius_tiles) as f32 / CHUNK_SIZE_TILES as f32).floor() as i32;
-        let max_chunk_x = ((revealer_tile_x + radius_tiles) as f32 / CHUNK_SIZE_TILES as f32).floor() as i32;
-        let min_chunk_y = ((revealer_tile_y - radius_tiles) as f32 / CHUNK_SIZE_TILES as f32).floor() as i32;
-        let max_chunk_y = ((revealer_tile_y + radius_tiles) as f32 / CHUNK_SIZE_TILES as f32).floor() as i32;
-
-        // Iterate through all potentially affected chunks
-        for chunk_y in min_chunk_y..=max_chunk_y {
-            for chunk_x in min_chunk_x..=max_chunk_x {
-                let chunk_pos = IVec2::new(chunk_x, chunk_y);
-
-                if let Some(chunk) = chunks.get_mut(&chunk_pos) {
-                    // Calculate the tile coordinates relative to this chunk
-                    let chunk_offset_x = chunk_x * CHUNK_SIZE_TILES as i32;
-                    let chunk_offset_y = chunk_y * CHUNK_SIZE_TILES as i32;
-
-                    // Calculate the range of tiles within this chunk to check
-                    let start_x = (revealer_tile_x - stamp_radius - chunk_offset_x).max(0);
-                    let end_x = (revealer_tile_x + stamp_radius - chunk_offset_x).min(CHUNK_SIZE_TILES as i32 - 1);
-                    let start_y = (revealer_tile_y - stamp_radius - chunk_offset_y).max(0);
-                    let end_y = (revealer_tile_y + stamp_radius - chunk_offset_y).min(CHUNK_SIZE_TILES as i32 - 1);
-
-                    // Apply the vision stamp to the chunk
-                    for local_y in start_y..=end_y {
-                        for local_x in start_x..=end_x {
-                            let world_tile_x = chunk_offset_x + local_x;
-                            let world_tile_y = chunk_offset_y + local_y;
-
-                            // Calculate position in the vision stamp
-                            let stamp_x = (world_tile_x - revealer_tile_x + stamp_radius) as usize;
-                            let stamp_y = (world_tile_y - revealer_tile_y + stamp_radius) as usize;
-
-                            // Get stamp visibility
-                            let stamp_visibility = vision_stamp[stamp_y][stamp_x];
-
-                            // Apply stamp: keep maximum visibility (once explored, stays explored)
-                            let current_visibility = chunk.vision[local_y as usize][local_x as usize];
-                            chunk.vision[local_y as usize][local_x as usize] = current_visibility.max(stamp_visibility);
-                        }
-                    }
-                }
-            }
-        }
+        apply_revealer_vision(&mut chunks, transform, revealer);
     }
+}
+
+/// Continuously update FowChunk vision for all revealers with a frame budget
+/// This catches static revealers that don't move but still need to reveal fog of war
+pub fn update_fow_chunks_continuous(
+    mut chunks_query: Query<&mut FowChunk>,
+    revealers_query: Query<(&Transform, &FowRevealer)>,
+    mut next_revealer: Local<usize>,
+) {
+    // index all existing chunks by position
+    let mut chunks = chunks_query.iter_mut()
+        .map(|c| (c.position, c))
+        .collect::<std::collections::HashMap<_, _>>();
+
+    // Collect all revealers into a vec so we can iterate with indices
+    let revealers: Vec<_> = revealers_query.iter().collect();
+    let total_revealers = revealers.len();
+
+    if total_revealers == 0 {
+        return;
+    }
+
+    // Get starting index and track time budget
+    let start_index = *next_revealer;
+    let start_time = std::time::Instant::now();
+    let mut processed_count = 0;
+
+    // Process revealers in round-robin fashion with frame budget
+    for i in 0..total_revealers {
+        // Check frame budget
+        if start_time.elapsed() >= FOW_UPDATE_FRAME_BUDGET && processed_count > 0 {
+            break;
+        }
+
+        let revealer_index = (start_index + i) % total_revealers;
+        let (transform, revealer) = revealers[revealer_index];
+        processed_count += 1;
+
+        apply_revealer_vision(&mut chunks, transform, revealer);
+    }
+
+    // Save next starting index for next frame (wrap around)
+    *next_revealer = (start_index + processed_count) % total_revealers;
 }
 
 /// Draw FowChunk components to the screen

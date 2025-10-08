@@ -65,7 +65,7 @@ impl ChunkLoader {
     pub fn new(radius: i32) -> Self {
         Self {
             radius,
-            unload_radius: radius + 2, // Add buffer to prevent thrashing
+            unload_radius: radius + radius / 4, // Add buffer to prevent thrashing
             preload_radius: None,
         }
     }

@@ -112,6 +112,17 @@ impl TerrainChunks {
     pub fn get_loaded_count(&self) -> usize {
         self.chunks.len()
     }
+
+    /// Iterate over all loaded chunks and their tile data
+    pub fn iter_loaded(&self) -> impl Iterator<Item = (ChunkCoord, &[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize])> {
+        self.chunks.iter().filter_map(|(coord, state)| {
+            if let TerrainChunkState::Loaded { tiles, .. } = state {
+                Some((*coord, tiles))
+            } else {
+                None
+            }
+        })
+    }
 }
 
 /// System that listens for LoadChunk events and starts async terrain generation

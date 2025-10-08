@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use crate::world::{chunks::{LoadChunk, UnloadChunk, CHUNK_SIZE}, PX_PER_TILE};
+use crate::persistence::ChunkDatabase;
 
 use super::*;
 
@@ -15,6 +16,7 @@ pub fn load_fow_chunks(
     mut commands: Commands,
     mut chunks_query: Query<&mut FowChunk>,
     mut load_chunk: EventReader<LoadChunk>,
+    db: Option<Res<ChunkDatabase>>,
 ) {
     // index all existing chunks by position
     let chunks = chunks_query.iter_mut()
@@ -23,8 +25,26 @@ pub fn load_fow_chunks(
 
     for event in load_chunk.read() {
         if !chunks.contains_key(&event.pos) {
-            // create new FowChunk component
-            let fow_chunk = FowChunk::new(event.pos, CHUNK_SIZE_TILES as usize);
+            // Try to load from database first
+            let vision = if let Some(database) = db.as_deref() {
+                if let Ok(Some(loaded_vision)) = database.load_fow_chunk(event.pos) {
+                    info!("Loaded FOW chunk {:?} from database", event.pos);
+                    loaded_vision
+                } else {
+                    // No saved data, create fresh vision grid
+                    vec![vec![0u8; CHUNK_SIZE_TILES]; CHUNK_SIZE_TILES]
+                }
+            } else {
+                // No database, create fresh vision grid
+                vec![vec![0u8; CHUNK_SIZE_TILES]; CHUNK_SIZE_TILES]
+            };
+
+            // Create FowChunk with loaded or fresh vision data
+            let fow_chunk = FowChunk {
+                position: event.pos,
+                vision,
+            };
+
             // spawn entity with FowChunk component and required hierarchy components
             commands.spawn((
                 fow_chunk,
@@ -43,21 +63,29 @@ pub fn unload_fow_chunks(
     mut commands: Commands,
     chunks_query: Query<(Entity, &FowChunk)>,
     mut unload_chunk: EventReader<UnloadChunk>,
+    db: Option<Res<ChunkDatabase>>,
 ) {
     // index all existing chunks by position
     let chunks = chunks_query.iter()
-        .map(|(entity, chunk)| (chunk.position, entity))
+        .map(|(entity, chunk)| (chunk.position, (entity, chunk)))
         .collect::<std::collections::HashMap<_, _>>();
 
     for event in unload_chunk.read() {
-        if let Some(entity) = chunks.get(&event.pos) {
+        if let Some((entity, chunk)) = chunks.get(&event.pos) {
+            // Save FOW data to database before unloading
+            if let Some(database) = db.as_deref() {
+                if let Err(e) = database.save_fow_chunk(event.pos, &chunk.vision) {
+                    error!("Failed to save FOW chunk {:?}: {}", event.pos, e);
+                } else {
+                    info!("Saved FOW chunk {:?} to database", event.pos);
+                }
+            }
+
             // despawn entity with FowChunk component
             commands.entity(*entity).despawn();
         }
     }
 }
-
-
 
 /// Pre-calculate a vision gradient stamp for a given radius
 /// Returns a 2D array where 255 = fully revealed, 0 = fully fogged

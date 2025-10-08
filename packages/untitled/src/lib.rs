@@ -6,6 +6,7 @@ pub mod constants;
 pub mod enemy;
 pub mod events;
 pub mod line_of_sight;
+pub mod persistence;
 pub mod player;
 pub mod resources;
 pub mod sounds;

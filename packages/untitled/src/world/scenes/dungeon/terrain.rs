@@ -13,6 +13,7 @@ use crate::world::tiles::{TileType, TILE_SIZE};
 use crate::world::scenes::dungeon::resources::DungeonState;
 use crate::world::constants::MACRO_PX_PER_CHUNK;
 use crate::world::PX_PER_TILE;
+use crate::persistence::ChunkDatabase;
 
 // === Terrain Generation Constants ===
 
@@ -119,15 +120,16 @@ pub fn handle_chunk_load_events(
     mut load_events: EventReader<LoadChunk>,
     mut preload_events: EventReader<PreloadChunk>,
     dungeon_state: Res<DungeonState>,
+    db: Option<Res<ChunkDatabase>>,
 ) {
     // Process critical load events first (higher priority)
     for event in load_events.read() {
-        handle_single_load_event(&mut terrain_chunks, event.pos, &dungeon_state);
+        handle_single_load_event(&mut terrain_chunks, event.pos, &dungeon_state, db.as_deref());
     }
 
     // Then process preload events (lower priority)
     for event in preload_events.read() {
-        handle_single_load_event(&mut terrain_chunks, event.pos, &dungeon_state);
+        handle_single_load_event(&mut terrain_chunks, event.pos, &dungeon_state, db.as_deref());
     }
 }
 
@@ -136,13 +138,33 @@ fn handle_single_load_event(
     terrain_chunks: &mut TerrainChunks,
     chunk_coord: ChunkCoord,
     dungeon_state: &DungeonState,
+    db: Option<&ChunkDatabase>,
 ) {
     // Check if chunk is already loading or loaded
     if terrain_chunks.chunks.contains_key(&chunk_coord) {
         return; // Already being handled
     }
 
-    // Spawn async task to generate terrain data
+    // Try to load from database first
+    if let Some(database) = db {
+        if let Ok(Some(tiles)) = database.load_terrain_chunk(chunk_coord) {
+            info!("Loaded terrain chunk {:?} from database", chunk_coord);
+            // Spawn the terrain entities immediately with loaded data
+            // Note: This will be handled by a separate system to avoid blocking
+            // For now, we'll still use the async task system but with pre-loaded data
+            let task_pool = AsyncComputeTaskPool::get();
+            let task = task_pool.spawn(async move {
+                ChunkData {
+                    position: chunk_coord,
+                    tiles,
+                }
+            });
+            terrain_chunks.chunks.insert(chunk_coord, TerrainChunkState::Loading { task });
+            return;
+        }
+    }
+
+    // No saved data found, generate new terrain data
     let task_pool = AsyncComputeTaskPool::get();
     let macro_map = dungeon_state.macro_map.clone();
 
@@ -228,6 +250,7 @@ pub fn handle_chunk_unload_events(
     mut commands: Commands,
     mut terrain_chunks: ResMut<TerrainChunks>,
     mut unload_events: EventReader<UnloadChunk>,
+    db: Option<Res<ChunkDatabase>>,
 ) {
     for event in unload_events.read() {
         let chunk_coord = event.pos;
@@ -237,7 +260,16 @@ pub fn handle_chunk_unload_events(
                 TerrainChunkState::Loading { task: _ } => {
                     // Task will be dropped automatically, canceling the async work
                 }
-                TerrainChunkState::Loaded { entity, tiles: _ } => {
+                TerrainChunkState::Loaded { entity, tiles } => {
+                    // Save terrain data to database before unloading
+                    if let Some(database) = db.as_deref() {
+                        if let Err(e) = database.save_terrain_chunk(chunk_coord, &tiles) {
+                            error!("Failed to save terrain chunk {:?}: {}", chunk_coord, e);
+                        } else {
+                            info!("Saved terrain chunk {:?} to database", chunk_coord);
+                        }
+                    }
+
                     // Despawn the terrain entity tree
                     commands.entity(entity).despawn();
                 }

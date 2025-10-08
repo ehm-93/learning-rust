@@ -16,6 +16,7 @@ mod sounds;
 mod line_of_sight;
 mod inventory;
 mod debug;
+mod persistence;
 
 // Import everything we need
 use events::*;
@@ -45,6 +46,7 @@ fn main() {
 
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugins(TilemapPlugin)
+        .add_plugins(persistence::PersistencePlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(InventoryPlugin)
         .add_plugins(WorldPlugin)

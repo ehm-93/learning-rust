@@ -34,7 +34,7 @@ use debug::DebugOverlayPlugin;
 fn main() {
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    let size = 8192;
+    let size = 2048;
     let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let arg = std::env::args().into_iter().nth(1).unwrap_or_default();
     // if first arg is "roomy" then generate a roomy map and save to out/roomy_test.png

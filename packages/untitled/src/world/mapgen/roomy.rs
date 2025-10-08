@@ -12,9 +12,9 @@ const MIN_ROOM_SIZE: usize = 8;
 const MAX_ROOM_SIZE: usize = 24;
 const MIN_CORRIDOR_WIDTH: usize = 2;
 const MAX_CORRIDOR_WIDTH: usize = 4;
-const WALK_BIAS_CHANCE: f64 = 0.15;
-const WALK_LEN_COEFF: f64 = 1.25;
-const WALK_STEER_STRENGTH: f64 = 0.5;
+const WALK_BIAS_CHANCE: f64 = 0.04;
+const WALK_LEN_COEFF: f64 = 1.5;
+const WALK_STEER_STRENGTH: f64 = 0.25;
 const MAX_LOOPS: i32 = 8;
 
 /// Generate a roomy map
@@ -231,8 +231,8 @@ pub fn roomy(size: usize, seed: u64) -> Vec<Vec<bool>> {
     resize(&mut map, size, size);
 
     // Add some noise to make it less uniform
-    simplex::generate_simplex_noise(&mut map, &mut rng, 0.055, 0.85);
-    simplex::generate_simplex_noise(&mut map, &mut rng, 0.1, 0.75);
+    simplex::generate_simplex_noise(&mut map, &mut rng, 0.045, 0.8);
+    simplex::generate_simplex_noise(&mut map, &mut rng, 0.1, 0.7);
 
     // Smoothing
     ca::cellular_automata(&mut map, 5, |_, _| { });

@@ -20,6 +20,7 @@ pub fn load_fow_chunks(
     mut commands: Commands,
     mut chunks_query: Query<&mut FowChunk>,
     mut load_chunk: EventReader<LoadChunk>,
+    dungeon_state: Res<crate::world::scenes::dungeon::resources::DungeonState>,
     db: Option<Res<ChunkDatabase>>,
 ) {
     // index all existing chunks by position
@@ -31,8 +32,8 @@ pub fn load_fow_chunks(
         if !chunks.contains_key(&event.pos) {
             // Try to load from database first
             let vision = if let Some(database) = db.as_deref() {
-                if let Ok(Some(loaded_vision)) = database.load_fow_chunk(event.pos) {
-                    info!("Loaded FOW chunk {:?} from database", event.pos);
+                if let Ok(Some(loaded_vision)) = database.load_fow_chunk(dungeon_state.map_id, event.pos) {
+                    info!("Loaded FOW chunk {:?} from database for map {}", event.pos, dungeon_state.map_id);
                     loaded_vision
                 } else {
                     // No saved data, create fresh vision grid
@@ -67,6 +68,7 @@ pub fn unload_fow_chunks(
     mut commands: Commands,
     chunks_query: Query<(Entity, &FowChunk)>,
     mut unload_chunk: EventReader<UnloadChunk>,
+    dungeon_state: Res<crate::world::scenes::dungeon::resources::DungeonState>,
     db: Option<Res<ChunkDatabase>>,
 ) {
     // index all existing chunks by position
@@ -78,10 +80,10 @@ pub fn unload_fow_chunks(
         if let Some((entity, chunk)) = chunks.get(&event.pos) {
             // Save FOW data to database before unloading
             if let Some(database) = db.as_deref() {
-                if let Err(e) = database.save_fow_chunk(event.pos, &chunk.vision) {
+                if let Err(e) = database.save_fow_chunk(dungeon_state.map_id, event.pos, &chunk.vision) {
                     error!("Failed to save FOW chunk {:?}: {}", event.pos, e);
                 } else {
-                    info!("Saved FOW chunk {:?} to database", event.pos);
+                    info!("Saved FOW chunk {:?} to database for map {}", event.pos, dungeon_state.map_id);
                 }
             }
 

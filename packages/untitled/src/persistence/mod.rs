@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::world::chunks::{ChunkCoord, CHUNK_SIZE};
 use crate::world::tiles::TileType;
+use crate::world::MapId;
 
 /// Resource wrapping a SQLite connection for chunk persistence
 #[derive(Resource, Clone)]
@@ -22,24 +23,26 @@ impl ChunkDatabase {
     pub fn new(db_path: &str) -> SqlResult<Self> {
         let conn = Connection::open(db_path)?;
 
-        // Create terrain chunks table
+        // Create terrain chunks table with map_id
         conn.execute(
             "CREATE TABLE IF NOT EXISTS terrain_chunks (
+                map_id INTEGER NOT NULL,
                 chunk_x INTEGER NOT NULL,
                 chunk_y INTEGER NOT NULL,
                 tiles BLOB NOT NULL,
-                PRIMARY KEY (chunk_x, chunk_y)
+                PRIMARY KEY (map_id, chunk_x, chunk_y)
             )",
             [],
         )?;
 
-        // Create FOW chunks table
+        // Create FOW chunks table with map_id
         conn.execute(
             "CREATE TABLE IF NOT EXISTS fow_chunks (
+                map_id INTEGER NOT NULL,
                 chunk_x INTEGER NOT NULL,
                 chunk_y INTEGER NOT NULL,
                 vision BLOB NOT NULL,
-                PRIMARY KEY (chunk_x, chunk_y)
+                PRIMARY KEY (map_id, chunk_x, chunk_y)
             )",
             [],
         )?;
@@ -52,6 +55,7 @@ impl ChunkDatabase {
     /// Save terrain chunk data to database
     pub fn save_terrain_chunk(
         &self,
+        map_id: MapId,
         chunk_coord: ChunkCoord,
         tiles: &[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
     ) -> SqlResult<()> {
@@ -66,8 +70,8 @@ impl ChunkDatabase {
         }
 
         conn.execute(
-            "INSERT OR REPLACE INTO terrain_chunks (chunk_x, chunk_y, tiles) VALUES (?1, ?2, ?3)",
-            rusqlite::params![chunk_coord.x, chunk_coord.y, &bytes],
+            "INSERT OR REPLACE INTO terrain_chunks (map_id, chunk_x, chunk_y, tiles) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![map_id.to_db_key(), chunk_coord.x, chunk_coord.y, &bytes],
         )?;
 
         Ok(())
@@ -76,16 +80,17 @@ impl ChunkDatabase {
     /// Load terrain chunk data from database
     pub fn load_terrain_chunk(
         &self,
+        map_id: MapId,
         chunk_coord: ChunkCoord,
     ) -> SqlResult<Option<[[TileType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]>> {
         let conn = self.connection.lock().unwrap();
 
         let mut stmt = conn.prepare(
-            "SELECT tiles FROM terrain_chunks WHERE chunk_x = ?1 AND chunk_y = ?2"
+            "SELECT tiles FROM terrain_chunks WHERE map_id = ?1 AND chunk_x = ?2 AND chunk_y = ?3"
         )?;
 
         let result = stmt.query_row(
-            rusqlite::params![chunk_coord.x, chunk_coord.y],
+            rusqlite::params![map_id.to_db_key(), chunk_coord.x, chunk_coord.y],
             |row| {
                 let bytes: Vec<u8> = row.get(0)?;
 
@@ -111,6 +116,7 @@ impl ChunkDatabase {
     /// Save FOW chunk vision data to database
     pub fn save_fow_chunk(
         &self,
+        map_id: MapId,
         chunk_coord: ChunkCoord,
         vision: &Vec<Vec<u8>>,
     ) -> SqlResult<()> {
@@ -123,8 +129,8 @@ impl ChunkDatabase {
         }
 
         conn.execute(
-            "INSERT OR REPLACE INTO fow_chunks (chunk_x, chunk_y, vision) VALUES (?1, ?2, ?3)",
-            rusqlite::params![chunk_coord.x, chunk_coord.y, &bytes],
+            "INSERT OR REPLACE INTO fow_chunks (map_id, chunk_x, chunk_y, vision) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![map_id.to_db_key(), chunk_coord.x, chunk_coord.y, &bytes],
         )?;
 
         Ok(())
@@ -133,16 +139,17 @@ impl ChunkDatabase {
     /// Load FOW chunk vision data from database
     pub fn load_fow_chunk(
         &self,
+        map_id: MapId,
         chunk_coord: ChunkCoord,
     ) -> SqlResult<Option<Vec<Vec<u8>>>> {
         let conn = self.connection.lock().unwrap();
 
         let mut stmt = conn.prepare(
-            "SELECT vision FROM fow_chunks WHERE chunk_x = ?1 AND chunk_y = ?2"
+            "SELECT vision FROM fow_chunks WHERE map_id = ?1 AND chunk_x = ?2 AND chunk_y = ?3"
         )?;
 
         let result = stmt.query_row(
-            rusqlite::params![chunk_coord.x, chunk_coord.y],
+            rusqlite::params![map_id.to_db_key(), chunk_coord.x, chunk_coord.y],
             |row| {
                 let bytes: Vec<u8> = row.get(0)?;
 

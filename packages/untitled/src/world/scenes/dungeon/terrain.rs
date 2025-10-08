@@ -147,8 +147,8 @@ fn handle_single_load_event(
 
     // Try to load from database first
     if let Some(database) = db {
-        if let Ok(Some(tiles)) = database.load_terrain_chunk(chunk_coord) {
-            info!("Loaded terrain chunk {:?} from database", chunk_coord);
+        if let Ok(Some(tiles)) = database.load_terrain_chunk(dungeon_state.map_id, chunk_coord) {
+            info!("Loaded terrain chunk {:?} from database for map {}", chunk_coord, dungeon_state.map_id);
             // Spawn the terrain entities immediately with loaded data
             // Note: This will be handled by a separate system to avoid blocking
             // For now, we'll still use the async task system but with pre-loaded data
@@ -250,6 +250,7 @@ pub fn handle_chunk_unload_events(
     mut commands: Commands,
     mut terrain_chunks: ResMut<TerrainChunks>,
     mut unload_events: EventReader<UnloadChunk>,
+    dungeon_state: Res<DungeonState>,
     db: Option<Res<ChunkDatabase>>,
 ) {
     for event in unload_events.read() {
@@ -263,10 +264,10 @@ pub fn handle_chunk_unload_events(
                 TerrainChunkState::Loaded { entity, tiles } => {
                     // Save terrain data to database before unloading
                     if let Some(database) = db.as_deref() {
-                        if let Err(e) = database.save_terrain_chunk(chunk_coord, &tiles) {
+                        if let Err(e) = database.save_terrain_chunk(dungeon_state.map_id, chunk_coord, &tiles) {
                             error!("Failed to save terrain chunk {:?}: {}", chunk_coord, e);
                         } else {
-                            info!("Saved terrain chunk {:?} to database", chunk_coord);
+                            info!("Saved terrain chunk {:?} to database for map {}", chunk_coord, dungeon_state.map_id);
                         }
                     }
 

@@ -9,6 +9,7 @@ pub mod states;
 pub mod tiles;
 pub mod chunks;
 pub mod mapgen;
+pub mod map_id;
 
 pub use constants::*;
 pub use interaction::{
@@ -16,6 +17,7 @@ pub use interaction::{
 };
 pub use states::WorldState;
 pub use tiles::{WallTile};
+pub use map_id::MapId;
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;

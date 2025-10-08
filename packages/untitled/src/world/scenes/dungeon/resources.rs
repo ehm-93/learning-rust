@@ -1,6 +1,7 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bevy::prelude::*;
+use crate::world::MapId;
 
 /// Resource tracking the current dungeon state and configuration
 #[derive(Resource, Debug, Clone)]
@@ -26,19 +27,26 @@ pub struct DungeonState {
     /// Seed for deterministic generation based on depth
     pub seed: u64,
 
+    /// Unique map identifier for database persistence
+    /// Combines depth and seed to prevent chunk data collisions
+    pub map_id: MapId,
+
     pub macro_map: Vec<Vec<bool>>,
 }
 
 impl Default for DungeonState {
     fn default() -> Self {
+        let depth = 1;
+        let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         Self {
-            depth: 1,
+            depth,
             total_rooms: 3, // Simple dungeon with 3 rooms
             cleared_rooms: 0,
             is_completed: false,
             difficulty_multiplier: 1.0,
             loot_tier: 1,
-            seed: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            seed,
+            map_id: MapId::new(seed),
             macro_map: vec![],
         }
     }
@@ -46,6 +54,7 @@ impl Default for DungeonState {
 
 impl DungeonState {
     pub fn new_for_depth(depth: u32) -> Self {
+        let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         Self {
             depth,
             total_rooms: 3 + (depth / 2), // More rooms as depth increases
@@ -53,7 +62,8 @@ impl DungeonState {
             is_completed: false,
             difficulty_multiplier: 1.0 + (depth as f32 * 0.2), // 20% harder per depth
             loot_tier: 1 + (depth / 3), // Better loot every 3 depths
-            seed: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            seed,
+            map_id: MapId::new(seed),
             macro_map: vec![],
         }
     }

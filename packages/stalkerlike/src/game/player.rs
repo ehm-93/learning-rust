@@ -1,4 +1,7 @@
 use bevy::prelude::*;
+use bevy::window::CursorGrabMode;
+use bevy::window::CursorOptions;
+use bevy::window::PrimaryWindow;
 
 use super::components::*;
 use super::resources::*;
@@ -9,7 +12,8 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<MouseMotion>()
-            .add_systems(OnEnter(GameState::InGame), setup_player)
+            .add_systems(OnEnter(GameState::InGame), (setup_player, cursor_grab))
+            .add_systems(OnExit(GameState::InGame), cursor_release)
             .add_systems(
                 Update,
                 (
@@ -27,6 +31,7 @@ impl Plugin for PlayerPlugin {
 fn setup_player(mut commands: Commands) {
     // Player camera
     commands.spawn((
+        Player,  // Add the Player marker component!
         Camera3d::default(),
         Transform::from_xyz(0.0, 1.7, 0.0),
         PlayerCamera {
@@ -55,6 +60,24 @@ fn setup_player(mut commands: Commands) {
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
     });
+}
+
+fn cursor_grab(
+    mut q_windows: Query<&mut CursorOptions>,
+) {
+    if let Ok(mut cursor_options) = q_windows.single_mut() {
+        // for a game that doesn't use the cursor (like a shooter):
+        // use `Locked` mode to keep the cursor in one place
+        cursor_options.grab_mode = CursorGrabMode::Locked;
+
+        // also hide the cursor
+        cursor_options.visible = false;
+    }
+}
+
+fn cursor_release(mut cursor_options: Single<&mut CursorOptions>) {
+    cursor_options.grab_mode = CursorGrabMode::None;
+    cursor_options.visible = true;
 }
 
 fn player_movement(

@@ -7530,6 +7530,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "winit 0.30.12",
 ]
 
 [[package]]

@@ -38,10 +38,10 @@
 - **Failure Consequences**: Equipment damage causes leaks and power drain
 
 ### Environmental Hazards
-- **Temperature Gradient**: Surface comfortable, deep zones dangerously hot
+- **Temperature Gradient**: Surface comfortable (0-20°C), deep zones dangerously hot (~80°C at 10km, ~140°C at 20km from residual primordial heat)
 - **Oxygen Depletion**: Suit air recycling systems fail over time  
 - **Pressure Changes**: Rapid depth changes cause injury
-- **Equipment Failure**: Heat and pressure stress damage electronics
+- **Equipment Failure**: Heat stresses damage electronics in deep zones
 
 ### The C-7 Horror
 - **Exposure Accumulation**: C-7 builds up in your system over time
@@ -58,7 +58,7 @@
 - **Abandoned Infrastructure**: 90% of colony empty - built for 50,000, now holds 5,000
 - **Major Arterials**: Fast travel between zones, controlled by factions
 - **Service Networks**: Slow, hidden routes for smuggling and exploration
-- **Thermal Layers**: Surface habitable, deep zones increasingly hot and dangerous
+- **Thermal Layers**: Surface habitable (0-20°C), deep zones increasingly hot (~80°C at 10km, ~140°C at 20km)
 
 ### Factions and Politics
 - **Corporate**: Former Old Company executives, control the main settlement

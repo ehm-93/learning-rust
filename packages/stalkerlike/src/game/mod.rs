@@ -38,29 +38,30 @@ impl Plugin for GamePlugin {
             .insert_resource(SavePath::default())
 
             // Startup systems
-            .add_systems(Startup, (setup_world, setup_ui_camera))
+            .add_systems(Startup, setup_world)
 
             // State transitions
-            .add_systems(OnEnter(GameState::InGame), cleanup_ui_camera);
+            .add_systems(OnEnter(GameState::MainMenu), setup_menu_camera)
+            .add_systems(OnExit(GameState::MainMenu), cleanup_menu_camera);
     }
 }
 
 #[derive(Component)]
-struct UiCamera;
+struct MenuCamera;
 
-fn setup_ui_camera(mut commands: Commands) {
-    // Spawn a 2D camera for the UI (main menu, pause menu, etc.)
+fn setup_menu_camera(mut commands: Commands) {
+    // Spawn a 2D camera for the main menu
     commands.spawn((
         Camera2d,
-        UiCamera,
+        MenuCamera,
     ));
 }
 
-fn cleanup_ui_camera(
+fn cleanup_menu_camera(
     mut commands: Commands,
-    query: Query<Entity, With<UiCamera>>,
+    query: Query<Entity, With<MenuCamera>>,
 ) {
-    // Remove the UI camera when entering the game (3D camera will be spawned by player plugin)
+    // Remove the menu camera when leaving main menu
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }
@@ -97,6 +98,7 @@ fn setup_world(
             RigidBody::Dynamic,
             Collider::ball(0.5),
             Restitution::coefficient(0.7),
+            Damping { linear_damping: 0.2, angular_damping: 0.2 },
         ));
     }
 
@@ -110,7 +112,7 @@ fn setup_world(
     // Directional light
     commands.spawn((
         DirectionalLight {
-            illuminance: 10000.0,
+            illuminance: 2000.0,
             shadows_enabled: true,
             ..default()
         },

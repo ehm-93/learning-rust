@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use super::resources::*;
+use super::player;
 
 pub struct UiPlugin;
 
@@ -10,7 +11,13 @@ impl Plugin for UiPlugin {
         app
             .add_systems(EguiPrimaryContextPass, main_menu_ui.run_if(in_state(GameState::MainMenu)))
             .add_systems(EguiPrimaryContextPass, pause_menu_ui.run_if(in_state(GameState::Paused)))
-            .add_systems(Update, handle_pause_input.run_if(in_state(GameState::InGame)));
+            .add_systems(EguiPrimaryContextPass, ingame_ui.run_if(in_state(GameState::InGame)))
+            .add_systems(Update, handle_pause_input.run_if(in_state(GameState::InGame)))
+            .add_systems(Update, handle_resume_input.run_if(in_state(GameState::Paused)))
+            .add_systems(OnTransition {
+                exited: GameState::MainMenu,
+                entered: GameState::InGame,
+            }, player::setup_player);
     }
 }
 
@@ -88,11 +95,29 @@ fn pause_menu_ui(
     Ok(())
 }
 
+fn ingame_ui(
+    mut contexts: EguiContexts,
+) -> Result {
+    // Empty UI during gameplay - just consume the egui pass so bevy_egui doesn't error
+    // We could add HUD elements here later
+    let _ctx = contexts.ctx_mut()?;
+    Ok(())
+}
+
 fn handle_pause_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) {
         next_state.set(GameState::Paused);
+    }
+}
+
+fn handle_resume_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        next_state.set(GameState::InGame);
     }
 }

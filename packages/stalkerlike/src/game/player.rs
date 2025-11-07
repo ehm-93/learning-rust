@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::window::CursorGrabMode;
 use bevy::window::PrimaryWindow;
 use bevy_rapier3d::prelude::*;
+use bevy_egui::PrimaryEguiContext;
 
 use super::components::*;
 use super::resources::*;
@@ -12,7 +13,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<MouseMotion>()
-            .add_systems(OnEnter(GameState::InGame), (setup_player, cursor_grab))
+            .add_systems(OnEnter(GameState::InGame), cursor_grab)
             .add_systems(OnExit(GameState::InGame), cursor_release)
             .add_systems(
                 Update,
@@ -27,11 +28,12 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn setup_player(mut commands: Commands) {
+pub fn setup_player(mut commands: Commands) {
     // Player with physics-based character controller
     commands.spawn((
         Player,
         Camera3d::default(),
+        PrimaryEguiContext, // Allow egui to render to this 3D camera
         Transform::from_xyz(0.0, 1.7, 0.0),
         PlayerCamera {
             sensitivity: 0.002,
@@ -106,11 +108,15 @@ fn player_movement(
         }
 
         let speed = 5.0;
-        velocity.linvel = if direction.length() > 0.0 {
+        let horizontal_velocity = if direction.length() > 0.0 {
             direction.normalize() * speed
         } else {
             Vec3::ZERO
         };
+
+        // Only modify horizontal velocity, preserve vertical (gravity) velocity
+        velocity.linvel.x = horizontal_velocity.x;
+        velocity.linvel.z = horizontal_velocity.z;
     }
 }
 

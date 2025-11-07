@@ -1,0 +1,101 @@
+use bevy::prelude::*;
+use bevy_egui::EguiPlugin;
+
+mod components;
+mod persistence;
+mod player;
+mod resources;
+mod ui;
+
+use persistence::PersistencePlugin;
+use player::PlayerPlugin;
+use resources::*;
+use ui::UiPlugin;
+
+pub struct GamePlugin;
+
+impl Plugin for GamePlugin {
+    fn build(&self, app: &mut App) {
+        app
+            // Bevy default plugins
+            .add_plugins(DefaultPlugins)
+
+            // Third-party plugins
+            .add_plugins(EguiPlugin::default())
+
+            // Game plugins
+            .add_plugins(PlayerPlugin)
+            .add_plugins(UiPlugin)
+            .add_plugins(PersistencePlugin)
+
+            // Game state
+            .init_state::<GameState>()
+
+            // Resources
+            .insert_resource(SavePath::default())
+
+            // Startup systems
+            .add_systems(Startup, (setup_world, setup_ui_camera))
+
+            // State transitions
+            .add_systems(OnEnter(GameState::InGame), cleanup_ui_camera);
+    }
+}
+
+#[derive(Component)]
+struct UiCamera;
+
+fn setup_ui_camera(mut commands: Commands) {
+    // Spawn a 2D camera for the UI (main menu, pause menu, etc.)
+    commands.spawn((
+        Camera2d,
+        UiCamera,
+    ));
+}
+
+fn cleanup_ui_camera(
+    mut commands: Commands,
+    query: Query<Entity, With<UiCamera>>,
+) {
+    // Remove the UI camera when entering the game (3D camera will be spawned by player plugin)
+    for entity in query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn setup_world(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // Ground plane
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.3, 0.3))),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    // Static object (cube)
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(2.0, 2.0, 2.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.8, 0.3, 0.3))),
+        Transform::from_xyz(0.0, 1.0, -5.0),
+    ));
+
+    // Ambient light
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 50.0,
+        affects_lightmapped_meshes: true,
+    });
+
+    // Directional light
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 10000.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
+}

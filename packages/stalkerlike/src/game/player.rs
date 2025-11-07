@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::components::*;
-use crate::resources::*;
+use super::components::*;
+use super::resources::*;
 
 pub struct PlayerPlugin;
 

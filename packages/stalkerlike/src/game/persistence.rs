@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use rusqlite::{Connection, Result};
 
-use crate::components::*;
-use crate::resources::*;
+use super::components::*;
+use super::resources::*;
 
 pub struct PersistencePlugin;
 

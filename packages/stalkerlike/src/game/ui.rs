@@ -1,15 +1,15 @@
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
+use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
-use crate::resources::*;
+use super::resources::*;
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Update, main_menu_ui.run_if(in_state(GameState::MainMenu)))
-            .add_systems(Update, pause_menu_ui.run_if(in_state(GameState::Paused)))
+            .add_systems(EguiPrimaryContextPass, main_menu_ui.run_if(in_state(GameState::MainMenu)))
+            .add_systems(EguiPrimaryContextPass, pause_menu_ui.run_if(in_state(GameState::Paused)))
             .add_systems(Update, handle_pause_input.run_if(in_state(GameState::InGame)));
     }
 }
@@ -17,13 +17,9 @@ impl Plugin for UiPlugin {
 fn main_menu_ui(
     mut contexts: EguiContexts,
     mut next_state: ResMut<NextState<GameState>>,
-) {
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
-
+) -> Result {
     egui::CentralPanel::default()
-        .show(ctx, |ui| {
+        .show(contexts.ctx_mut()?, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(100.0);
                 ui.heading("Stalker-Like Game");
@@ -47,17 +43,14 @@ fn main_menu_ui(
                 }
             });
         });
+    Ok(())
 }
 
 fn pause_menu_ui(
     mut contexts: EguiContexts,
     mut next_state: ResMut<NextState<GameState>>,
-) {
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
-
-    egui::CentralPanel::default().show(ctx, |ui| {
+) -> Result {
+    egui::CentralPanel::default().show(contexts.ctx_mut()?, |ui| {
         ui.vertical_centered(|ui| {
             ui.add_space(100.0);
             ui.heading("Paused");
@@ -92,6 +85,7 @@ fn pause_menu_ui(
             }
         });
     });
+    Ok(())
 }
 
 fn handle_pause_input(

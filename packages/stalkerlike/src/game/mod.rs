@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
+use bevy_rapier3d::prelude::*;
 
 mod components;
 mod persistence;
@@ -22,6 +23,8 @@ impl Plugin for GamePlugin {
 
             // Third-party plugins
             .add_plugins(EguiPlugin::default())
+            .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+            .add_plugins(RapierDebugRenderPlugin::default())
 
             // Game plugins
             .add_plugins(PlayerPlugin)
@@ -68,19 +71,34 @@ fn setup_world(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // Ground plane
+    // Ground plane with physics collider
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0))),
         MeshMaterial3d(materials.add(Color::srgb(0.3, 0.3, 0.3))),
         Transform::from_xyz(0.0, 0.0, 0.0),
+        Collider::cuboid(25.0, 0.1, 25.0),
     ));
 
-    // Static object (cube)
+    // Static object (cube) with physics
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(2.0, 2.0, 2.0))),
         MeshMaterial3d(materials.add(Color::srgb(0.8, 0.3, 0.3))),
         Transform::from_xyz(0.0, 1.0, -5.0),
+        RigidBody::Fixed,
+        Collider::cuboid(1.0, 1.0, 1.0),
     ));
+
+    // Add some dynamic physics objects for testing
+    for i in 0..5 {
+        commands.spawn((
+            Mesh3d(meshes.add(Sphere::new(0.5))),
+            MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
+            Transform::from_xyz(i as f32 * 2.0 - 4.0, 5.0, 0.0),
+            RigidBody::Dynamic,
+            Collider::ball(0.5),
+            Restitution::coefficient(0.7),
+        ));
+    }
 
     // Ambient light
     commands.insert_resource(AmbientLight {

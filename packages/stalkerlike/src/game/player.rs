@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::CursorGrabMode;
-use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
+use bevy_rapier3d::prelude::*;
 
 use super::components::*;
 use super::resources::*;
@@ -29,9 +29,9 @@ impl Plugin for PlayerPlugin {
 }
 
 fn setup_player(mut commands: Commands) {
-    // Player camera
+    // Player with physics-based character controller
     commands.spawn((
-        Player,  // Add the Player marker component!
+        Player,
         Camera3d::default(),
         Transform::from_xyz(0.0, 1.7, 0.0),
         PlayerCamera {
@@ -43,6 +43,11 @@ fn setup_player(mut commands: Commands) {
             speed: 5.0,
             velocity: Vec3::ZERO,
         },
+        RigidBody::Dynamic,
+        Collider::capsule_y(0.5, 0.4),
+        Velocity::default(),
+        LockedAxes::ROTATION_LOCKED, // Prevent player from tipping over
+        GravityScale(0.0), // We'll handle gravity manually for now
     ))
     .with_children(|parent| {
         // Spawn flashlight as child
@@ -63,21 +68,23 @@ fn setup_player(mut commands: Commands) {
 }
 
 fn cursor_grab(
-    mut q_windows: Query<&mut CursorOptions>,
+    mut q_windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    if let Ok(mut cursor_options) = q_windows.single_mut() {
+    if let Ok(mut window) = q_windows.single_mut() {
         // for a game that doesn't use the cursor (like a shooter):
-        // use `Locked` mode to keep the cursor in one place
-        cursor_options.grab_mode = CursorGrabMode::Locked;
-
-        // also hide the cursor
-        cursor_options.visible = false;
+        window.cursor_options.grab_mode = CursorGrabMode::Confined;
+        window.cursor_options.visible = false;
     }
 }
 
-fn cursor_release(mut cursor_options: Single<&mut CursorOptions>) {
-    cursor_options.grab_mode = CursorGrabMode::None;
-    cursor_options.visible = true;
+fn cursor_release(
+    mut q_windows: Query<&mut Window, With<PrimaryWindow>>,
+) {
+    if let Ok(mut window) = q_windows.single_mut() {
+        // Release the cursor when exiting the game
+        window.cursor_options.grab_mode = CursorGrabMode::None;
+        window.cursor_options.visible = true;
+    }
 }
 
 fn player_movement(
@@ -113,16 +120,15 @@ fn player_movement(
 }
 
 fn apply_movement(
-    mut query: Query<(&PlayerMovement, &mut Transform), With<Player>>,
-    time: Res<Time>,
+    mut query: Query<(&PlayerMovement, &mut Velocity), With<Player>>,
 ) {
-    for (movement, mut transform) in query.iter_mut() {
-        transform.translation += movement.velocity * time.delta_secs();
+    for (movement, mut velocity) in query.iter_mut() {
+        velocity.linvel = movement.velocity;
     }
 }
 
 fn camera_look(
-    mut motion_evr: MessageReader<bevy::input::mouse::MouseMotion>,
+    mut motion_evr: EventReader<bevy::input::mouse::MouseMotion>,
     mut mouse_motion: ResMut<MouseMotion>,
     mut query: Query<(&mut PlayerCamera, &mut Transform), With<Player>>,
 ) {

@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = ['packages/*']
-default-members = ["packages/untitled"]
+default-members = ["packages/stalkerlike"]
 
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]

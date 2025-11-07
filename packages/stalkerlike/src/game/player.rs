@@ -18,7 +18,6 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     player_movement,
-                    apply_movement,
                     camera_look,
                     toggle_flashlight,
                     update_flashlight_transform,
@@ -39,15 +38,10 @@ fn setup_player(mut commands: Commands) {
             pitch: 0.0,
             yaw: 0.0,
         },
-        PlayerMovement {
-            speed: 5.0,
-            velocity: Vec3::ZERO,
-        },
         RigidBody::Dynamic,
         Collider::capsule_y(0.5, 0.4),
         Velocity::default(),
         LockedAxes::ROTATION_LOCKED, // Prevent player from tipping over
-        GravityScale(0.0), // We'll handle gravity manually for now
     ))
     .with_children(|parent| {
         // Spawn flashlight as child
@@ -89,9 +83,9 @@ fn cursor_release(
 
 fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut PlayerMovement, &PlayerCamera), With<Player>>,
+    mut query: Query<(&mut Velocity, &PlayerCamera), With<Player>>,
 ) {
-    for (mut movement, camera) in query.iter_mut() {
+    for (mut velocity, camera) in query.iter_mut() {
         let mut direction = Vec3::ZERO;
 
         // Get forward and right vectors from camera yaw
@@ -111,19 +105,12 @@ fn player_movement(
             direction += right;
         }
 
-        movement.velocity = if direction.length() > 0.0 {
-            direction.normalize() * movement.speed
+        let speed = 5.0;
+        velocity.linvel = if direction.length() > 0.0 {
+            direction.normalize() * speed
         } else {
             Vec3::ZERO
         };
-    }
-}
-
-fn apply_movement(
-    mut query: Query<(&PlayerMovement, &mut Velocity), With<Player>>,
-) {
-    for (movement, mut velocity) in query.iter_mut() {
-        velocity.linvel = movement.velocity;
     }
 }
 

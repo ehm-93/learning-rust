@@ -23,22 +23,6 @@ impl Default for PlayerCamera {
     }
 }
 
-/// Movement controller
-#[derive(Component)]
-pub struct PlayerMovement {
-    pub speed: f32,
-    pub velocity: Vec3,
-}
-
-impl Default for PlayerMovement {
-    fn default() -> Self {
-        Self {
-            speed: 5.0,
-            velocity: Vec3::ZERO,
-        }
-    }
-}
-
 /// Player's flashlight
 #[derive(Component)]
 pub struct Flashlight {

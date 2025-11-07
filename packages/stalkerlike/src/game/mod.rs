@@ -78,6 +78,7 @@ fn setup_world(
         MeshMaterial3d(materials.add(Color::srgb(0.3, 0.3, 0.3))),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Collider::cuboid(25.0, 0.1, 25.0),
+        Restitution::coefficient(1.0),
     ));
 
     // Static object (cube) with physics
@@ -94,10 +95,10 @@ fn setup_world(
         commands.spawn((
             Mesh3d(meshes.add(Sphere::new(0.5))),
             MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
-            Transform::from_xyz(i as f32 * 2.0 - 4.0, 5.0, 0.0),
+            Transform::from_xyz(i as f32 * 2.0 - 4.0, i as f32 * 5.0, 0.0),
             RigidBody::Dynamic,
             Collider::ball(0.5),
-            Restitution::coefficient(0.7),
+            Restitution::coefficient(0.85),
             Damping { linear_damping: 0.2, angular_damping: 0.2 },
         ));
     }
@@ -105,14 +106,14 @@ fn setup_world(
     // Ambient light
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
-        brightness: 50.0,
+        brightness: 0.0,
         affects_lightmapped_meshes: true,
     });
 
     // Directional light
     commands.spawn((
         DirectionalLight {
-            illuminance: 2000.0,
+            illuminance: 0.0001,
             shadows_enabled: true,
             ..default()
         },

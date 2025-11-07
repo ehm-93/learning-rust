@@ -41,7 +41,7 @@ pub fn setup_player(mut commands: Commands) {
             yaw: 0.0,
         },
         RigidBody::Dynamic,
-        Collider::capsule_y(0.5, 0.4),
+        Collider::capsule_y(0.5, 0.25),
         Velocity::default(),
         LockedAxes::ROTATION_LOCKED, // Prevent player from tipping over
     ))
@@ -117,6 +117,11 @@ fn player_movement(
         // Only modify horizontal velocity, preserve vertical (gravity) velocity
         velocity.linvel.x = horizontal_velocity.x;
         velocity.linvel.z = horizontal_velocity.z;
+
+        // Jump
+        if keyboard.just_pressed(KeyCode::Space) && velocity.linvel.y.abs() < 0.1 {
+            velocity.linvel.y = 5.0;
+        }
     }
 }
 

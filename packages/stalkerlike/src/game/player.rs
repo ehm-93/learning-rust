@@ -29,37 +29,43 @@ impl Plugin for PlayerPlugin {
 }
 
 pub fn setup_player(mut commands: Commands) {
-    // Player with physics-based character controller
+    // Player physics body at capsule center (1.8m tall human)
     commands.spawn((
         Player,
-        Camera3d::default(),
-        PrimaryEguiContext, // Allow egui to render to this 3D camera
-        Transform::from_xyz(0.0, 1.7, 0.0),
+        Transform::from_xyz(0.0, 0.9, 0.0),  // Capsule center height (half of 1.8m)
         PlayerCamera {
             sensitivity: 0.002,
             pitch: 0.0,
             yaw: 0.0,
         },
         RigidBody::Dynamic,
-        Collider::capsule_y(0.5, 0.25),
+        Collider::capsule_y(0.65, 0.25),  // 1.8m tall (0.65*2 + 0.25*2), 0.5m diameter
         Velocity::default(),
         LockedAxes::ROTATION_LOCKED, // Prevent player from tipping over
     ))
     .with_children(|parent| {
-        // Spawn flashlight as child
+        // Camera at eye height (offset up from capsule center)
         parent.spawn((
-            Flashlight::default(),
-            SpotLight {
-                intensity: 0.0,
-                range: 20.0,
-                radius: 0.5,
-                shadows_enabled: true,
-                outer_angle: 0.8,
-                inner_angle: 0.6,
-                ..default()
-            },
-            Transform::from_xyz(0.0, 0.0, 0.0),
-        ));
+            Camera3d::default(),
+            PrimaryEguiContext,
+            Transform::from_xyz(0.0, 0.75, 0.0),  // Eye height above capsule center (~1.65m total)
+        ))
+        .with_children(|camera_parent| {
+            // Flashlight as child of camera - offset to right and down like holding a flashlight
+            camera_parent.spawn((
+                Flashlight::default(),
+                SpotLight {
+                    intensity: 0.0,
+                    range: 20.0,
+                    radius: 0.50,  // Larger radius = softer shadows
+                    shadows_enabled: true,
+                    outer_angle: 0.3,
+                    inner_angle: 0.2,
+                    ..default()
+                },
+                Transform::from_xyz(0.3, -0.2, 0.0),  // Right and slightly down from camera
+            ));
+        });
     });
 }
 
@@ -128,23 +134,27 @@ fn player_movement(
 fn camera_look(
     mut motion_evr: EventReader<bevy::input::mouse::MouseMotion>,
     mut mouse_motion: ResMut<MouseMotion>,
-    mut query: Query<(&mut PlayerCamera, &mut Transform), With<Player>>,
+    mut player_query: Query<&mut PlayerCamera, With<Player>>,
+    mut camera_query: Query<&mut Transform, (With<Camera3d>, Without<Player>)>,
 ) {
     for ev in motion_evr.read() {
         mouse_motion.delta += ev.delta;
     }
 
-    for (mut camera, mut transform) in query.iter_mut() {
-        camera.yaw -= mouse_motion.delta.x * camera.sensitivity;
-        camera.pitch -= mouse_motion.delta.y * camera.sensitivity;
-        camera.pitch = camera.pitch.clamp(-1.5, 1.5);
+    for mut camera_config in player_query.iter_mut() {
+        camera_config.yaw -= mouse_motion.delta.x * camera_config.sensitivity;
+        camera_config.pitch -= mouse_motion.delta.y * camera_config.sensitivity;
+        camera_config.pitch = camera_config.pitch.clamp(-1.5, 1.5);
 
-        transform.rotation = Quat::from_euler(
-            EulerRot::YXZ,
-            camera.yaw,
-            camera.pitch,
-            0.0,
-        );
+        // Apply rotation to camera entity (child of player)
+        for mut transform in camera_query.iter_mut() {
+            transform.rotation = Quat::from_euler(
+                EulerRot::YXZ,
+                camera_config.yaw,
+                camera_config.pitch,
+                0.0,
+            );
+        }
     }
 
     mouse_motion.delta = Vec2::ZERO;
@@ -157,11 +167,13 @@ fn toggle_flashlight(
     if keyboard.just_pressed(KeyCode::KeyF) {
         for (mut flashlight, mut light) in flashlight_query.iter_mut() {
             flashlight.enabled = !flashlight.enabled;
-            light.intensity = if flashlight.enabled {
+            let new_intensity = if flashlight.enabled {
                 flashlight.intensity
             } else {
                 0.0
             };
+            light.intensity = new_intensity;
+            info!("Flashlight toggled: enabled={}, intensity={}", flashlight.enabled, new_intensity);
         }
     }
 }

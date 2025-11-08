@@ -23,6 +23,7 @@ impl Plugin for PersistencePlugin {
                     handle_load_request,
                     poll_load_task,
                     check_loading_complete,
+                    validate_physics_entities,
                 )
             );
     }
@@ -121,8 +122,11 @@ fn handle_save_game(
             for entity in saveable_query.iter() {
                 let entity_ref = world.entity(entity);
 
+                info!("Saving entity {:?}", entity);
+
                 // Is this the player?
                 if entity_ref.contains::<Player>() {
+                    info!("Saving player entity");
                     let transform = match entity_ref.get::<Transform>() {
                         Some(t) => t,
                         None => {
@@ -178,7 +182,8 @@ fn handle_save_game(
                         }
                     };
 
-                    if !rigid_body.is_dynamic() {
+                    if *rigid_body != RigidBody::Dynamic {
+                        error!("Only dynamic physics objects are saved");
                         continue;
                     }
 
@@ -194,9 +199,8 @@ fn handle_save_game(
                     let velocity = match entity_ref.get::<Velocity>() {
                         Some(v) => v,
                         None => {
-                            error!("Physics entity missing Velocity component");
-                            success = false;
-                            break;
+                            warn!("Physics entity missing Velocity component, using default");
+                            &Velocity::default()
                         }
                     };
 
@@ -452,6 +456,19 @@ fn check_loading_complete(
         if progress.is_complete() && !progress.registered.is_empty() {
             info!("Loading complete! Transitioning to InGame");
             next_state.set(GameState::InGame);
+        }
+    }
+}
+
+/// Validation system to ensure physics entities have required components
+fn validate_physics_entities(
+    mut commands: Commands,
+    query: Query<(Entity, &RigidBody), (With<RigidBody>, Without<Velocity>)>,
+) {
+    for (entity, rigid_body) in query.iter() {
+        if *rigid_body == RigidBody::Dynamic {
+            warn!("Dynamic physics entity {:?} missing Velocity component, adding default", entity);
+            commands.entity(entity).insert(Velocity::default());
         }
     }
 }

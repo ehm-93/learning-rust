@@ -128,7 +128,7 @@ fn player_movement(
 
         // Jump
         if keyboard.just_pressed(KeyCode::Space) && velocity.linvel.y.abs() < 0.1 {
-            velocity.linvel.y = 5.0;
+            velocity.linvel.y = 3.0;
         }
     }
 }

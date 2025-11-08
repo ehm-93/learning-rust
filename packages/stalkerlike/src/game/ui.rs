@@ -9,12 +9,23 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(EguiPrimaryContextPass, main_menu_ui.run_if(in_state(GameState::MainMenu)))
-            .add_systems(EguiPrimaryContextPass, pause_menu_ui.run_if(in_state(GameState::Paused)))
-            .add_systems(EguiPrimaryContextPass, loading_screen_ui.run_if(in_state(GameState::Loading)))
-            .add_systems(EguiPrimaryContextPass, ingame_ui.run_if(in_state(GameState::InGame)))
-            .add_systems(Update, handle_pause_input.run_if(in_state(GameState::InGame)))
-            .add_systems(Update, handle_resume_input.run_if(in_state(GameState::Paused)))
+            // UI systems - run only in specific states
+            .add_systems(EguiPrimaryContextPass,
+                main_menu_ui.run_if(in_state(GameState::MainMenu)))
+            .add_systems(EguiPrimaryContextPass,
+                pause_menu_ui.run_if(in_state(GameState::Paused)))
+            .add_systems(EguiPrimaryContextPass,
+                loading_screen_ui.run_if(in_state(GameState::Loading)))
+            .add_systems(EguiPrimaryContextPass,
+                ingame_ui.run_if(in_state(GameState::InGame)))
+
+            // Input handlers
+            .add_systems(Update,
+                handle_pause_input.run_if(in_state(GameState::InGame)))
+            .add_systems(Update,
+                handle_resume_input.run_if(in_state(GameState::Paused)))
+
+            // State transition handlers
             .add_systems(OnTransition {
                 exited: GameState::NewGame,
                 entered: GameState::InGame,

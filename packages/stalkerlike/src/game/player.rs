@@ -13,8 +13,12 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<MouseMotion>()
+
+            // InGame state transitions
             .add_systems(OnEnter(GameState::InGame), cursor_grab)
             .add_systems(OnExit(GameState::InGame), cursor_release)
+
+            // Player systems - only run during gameplay
             .add_systems(
                 Update,
                 (
@@ -33,6 +37,7 @@ pub fn setup_player(mut commands: Commands) {
     commands.spawn((
         Player,
         Saveable,
+        GameEntity,
         Health::default(),
         Transform::from_xyz(0.0, 0.9, 0.0),  // Capsule center height (half of 1.8m)
         PlayerCamera {

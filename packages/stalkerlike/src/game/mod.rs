@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_egui::EguiPlugin;
+use bevy_egui::{EguiPlugin, PrimaryEguiContext};
 use bevy_rapier3d::prelude::*;
 
 mod components;
@@ -8,7 +8,7 @@ mod player;
 mod resources;
 mod ui;
 
-use components::Saveable;
+use components::{Saveable, GameEntity};
 use persistence::PersistencePlugin;
 use player::PlayerPlugin;
 use resources::*;
@@ -38,13 +38,25 @@ impl Plugin for GamePlugin {
             // Resources
             .insert_resource(SavePath::default())
 
-            // State transitions
-            .add_systems(OnEnter(GameState::NewGame), setup_world)
-            .add_systems(OnEnter(GameState::Loading), setup_static_world)
-            .add_systems(OnEnter(GameState::MainMenu), setup_menu_camera)
+            // MainMenu state
+            .add_systems(OnEnter(GameState::MainMenu), (
+                cleanup_game_scene,
+                setup_menu_camera,
+            ).chain())
             .add_systems(OnExit(GameState::MainMenu), cleanup_menu_camera)
 
-            // Pause/resume physics on state changes
+            // NewGame state
+            .add_systems(OnEnter(GameState::NewGame), setup_world)
+
+            // Loading state
+            .add_systems(OnEnter(GameState::Loading), (
+                setup_static_world,
+                cleanup_game_scene,
+            ))
+
+            // InGame state - handled by PlayerPlugin
+
+            // Paused state
             .add_systems(OnEnter(GameState::Paused), pause_physics)
             .add_systems(OnExit(GameState::Paused), resume_physics);
     }
@@ -68,15 +80,16 @@ fn spawn_static_content(
 ) {
     // Ground plane with physics collider
     commands.spawn((
+        GameEntity,
         Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0))),
         MeshMaterial3d(materials.add(Color::srgb(0.3, 0.3, 0.3))),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Collider::cuboid(25.0, 0.1, 25.0),
-        Restitution::coefficient(1.0),
     ));
 
     // Static object (cube) with physics
     commands.spawn((
+        GameEntity,
         Mesh3d(meshes.add(Cuboid::new(2.0, 2.0, 2.0))),
         MeshMaterial3d(materials.add(Color::srgb(0.8, 0.3, 0.3))),
         Transform::from_xyz(0.0, 1.0, -5.0),
@@ -84,15 +97,9 @@ fn spawn_static_content(
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
 
-    // Ambient light
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.0,
-        affects_lightmapped_meshes: true,
-    });
-
     // Directional light
     commands.spawn((
+        GameEntity,
         DirectionalLight {
             illuminance: 0.0001,
             shadows_enabled: true,
@@ -100,6 +107,13 @@ fn spawn_static_content(
         },
         Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
+
+    // Ambient light (resource, not an entity)
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 0.0,
+        affects_lightmapped_meshes: true,
+    });
 }
 
 /// Spawns dynamic world content for a new game
@@ -115,6 +129,7 @@ fn setup_world(
     // Add some dynamic physics objects for testing
     for i in 0..5 {
         commands.spawn((
+            GameEntity,
             Saveable,
             Mesh3d(meshes.add(Sphere::new(0.5))),
             MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
@@ -125,9 +140,7 @@ fn setup_world(
             Damping { linear_damping: 0.2, angular_damping: 0.2 },
         ));
     }
-}
-
-#[derive(Component)]
+}#[derive(Component)]
 struct MenuCamera;
 
 fn setup_menu_camera(mut commands: Commands) {
@@ -135,6 +148,7 @@ fn setup_menu_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         MenuCamera,
+        PrimaryEguiContext,
     ));
 }
 
@@ -143,6 +157,16 @@ fn cleanup_menu_camera(
     query: Query<Entity, With<MenuCamera>>,
 ) {
     // Remove the menu camera when leaving main menu
+    for entity in query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn cleanup_game_scene(
+    mut commands: Commands,
+    query: Query<Entity, With<GameEntity>>,
+) {
+    // Clean up all entities marked with GameEntity
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }

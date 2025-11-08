@@ -60,3 +60,7 @@ impl Default for Health {
         }
     }
 }
+
+/// Marker component for entities that should be cleaned up when leaving game state
+#[derive(Component)]
+pub struct GameEntity;

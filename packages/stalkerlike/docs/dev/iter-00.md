@@ -57,6 +57,29 @@ This validates core engine + basic game infrastructure patterns.
 
 ---
 
+## GameState State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> MainMenu : App Start
+    
+    MainMenu --> NewGame : "New Game"
+    MainMenu --> Loading : "Load Game"
+    
+    NewGame --> InGame : Auto
+    Loading --> InGame : Load Complete
+    
+    InGame --> Paused : ESC
+    Paused --> InGame : ESC/"Resume"
+    Paused --> Loading : "Load Game"
+    Paused --> MainMenu : "Main Menu"
+    
+    MainMenu --> [*] : "Exit"
+    Paused --> [*] : "Exit"
+```
+
+---
+
 ## Component Architecture
 
 ### Core Components

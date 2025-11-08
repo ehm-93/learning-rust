@@ -15,7 +15,11 @@ impl Plugin for PersistencePlugin {
         app
             .add_event::<SaveGameEvent>()
             .add_event::<LoadGameEvent>()
+
+            // Database initialization
             .add_systems(Startup, init_database)
+
+            // Save/load systems - run continuously to process events
             .add_systems(
                 Update,
                 (
@@ -370,6 +374,7 @@ fn poll_load_task(
                 // Spawn player if loaded
                 if let Some(player_data) = game_state.player {
                     commands.spawn((
+                        GameEntity,
                         Player,
                         Transform::from_translation(player_data.position),
                         PlayerCamera {
@@ -414,6 +419,7 @@ fn poll_load_task(
                 // Spawn physics objects
                 for obj_data in game_state.physics_objects {
                     commands.spawn((
+                        GameEntity,
                         Saveable,
                         Mesh3d(meshes.add(Sphere::new(0.5))),
                         MeshMaterial3d(materials.add(Color::srgb(0.8, 0.2, 0.2))),

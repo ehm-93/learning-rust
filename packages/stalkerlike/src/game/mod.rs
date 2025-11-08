@@ -42,7 +42,11 @@ impl Plugin for GamePlugin {
 
             // State transitions
             .add_systems(OnEnter(GameState::MainMenu), setup_menu_camera)
-            .add_systems(OnExit(GameState::MainMenu), cleanup_menu_camera);
+            .add_systems(OnExit(GameState::MainMenu), cleanup_menu_camera)
+
+            // Pause/resume physics on state changes
+            .add_systems(OnEnter(GameState::Paused), pause_physics)
+            .add_systems(OnExit(GameState::Paused), resume_physics);
     }
 }
 
@@ -119,4 +123,16 @@ fn setup_world(
         },
         Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
+}
+
+fn pause_physics(mut query: Query<&mut RapierConfiguration>) {
+    if let Ok(mut config) = query.single_mut() {
+        config.physics_pipeline_active = false;
+    }
+}
+
+fn resume_physics(mut query: Query<&mut RapierConfiguration>) {
+    if let Ok(mut config) = query.single_mut() {
+        config.physics_pipeline_active = true;
+    }
 }

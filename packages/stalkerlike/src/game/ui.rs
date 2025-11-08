@@ -57,41 +57,45 @@ fn pause_menu_ui(
     mut contexts: EguiContexts,
     mut next_state: ResMut<NextState<GameState>>,
 ) -> Result {
-    egui::CentralPanel::default().show(contexts.ctx_mut()?, |ui| {
-        ui.vertical_centered(|ui| {
-            ui.add_space(100.0);
-            ui.heading("Paused");
-            ui.add_space(50.0);
+    egui::Window::new("Paused")
+        .collapsible(false)
+        .resizable(false)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(contexts.ctx_mut()?, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.add_space(10.0);
 
-            if ui.button("Resume").clicked() {
-                next_state.set(GameState::InGame);
-            }
+                if ui.button("Resume").clicked() {
+                    next_state.set(GameState::InGame);
+                }
 
-            ui.add_space(10.0);
+                ui.add_space(10.0);
 
-            if ui.button("Save Game").clicked() {
-                // TODO: Implement save game
-            }
+                if ui.button("Save Game").clicked() {
+                    // TODO: Implement save game
+                }
 
-            ui.add_space(10.0);
+                ui.add_space(10.0);
 
-            if ui.button("Load Game").clicked() {
-                // TODO: Implement load game
-            }
+                if ui.button("Load Game").clicked() {
+                    // TODO: Implement load game
+                }
 
-            ui.add_space(10.0);
+                ui.add_space(10.0);
 
-            if ui.button("Main Menu").clicked() {
-                next_state.set(GameState::MainMenu);
-            }
+                if ui.button("Main Menu").clicked() {
+                    next_state.set(GameState::MainMenu);
+                }
 
-            ui.add_space(10.0);
+                ui.add_space(10.0);
 
-            if ui.button("Exit").clicked() {
-                std::process::exit(0);
-            }
+                if ui.button("Exit").clicked() {
+                    std::process::exit(0);
+                }
+
+                ui.add_space(10.0);
+            });
         });
-    });
     Ok(())
 }
 

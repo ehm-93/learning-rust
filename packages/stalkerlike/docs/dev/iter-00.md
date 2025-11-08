@@ -13,7 +13,6 @@ Establish basic Bevy project structure and prove we can build a simple, navigabl
   - `bevy_egui` - Immediate mode GUI for menus
   - `bevy-inspector-egui` - Runtime entity/component inspector (debug only)
   - `bevy_screen_diagnostics` - On-screen FPS and performance metrics (debug only)
-  - `bevy_oddio` - Audio engine for sound effects
   - `bevy_tweening` - Animation and interpolation system
   - `rusqlite` - SQLite database for save/load persistence
 - **Plugin Configuration**: Proper initialization and setup for all third-party plugins

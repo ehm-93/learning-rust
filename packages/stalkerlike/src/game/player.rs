@@ -32,6 +32,8 @@ pub fn setup_player(mut commands: Commands) {
     // Player physics body at capsule center (1.8m tall human)
     commands.spawn((
         Player,
+        Saveable,
+        Health::default(),
         Transform::from_xyz(0.0, 0.9, 0.0),  // Capsule center height (half of 1.8m)
         PlayerCamera {
             sensitivity: 0.002,

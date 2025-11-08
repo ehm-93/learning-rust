@@ -5236,6 +5236,7 @@ dependencies = [
  "bevy_rapier3d",
  "bevy_screen_diagnostics",
  "bevy_tweening",
+ "futures-lite",
  "rusqlite",
  "serde",
  "serde_json",

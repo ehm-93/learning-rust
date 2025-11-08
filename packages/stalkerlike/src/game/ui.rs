@@ -11,19 +11,22 @@ impl Plugin for UiPlugin {
         app
             .add_systems(EguiPrimaryContextPass, main_menu_ui.run_if(in_state(GameState::MainMenu)))
             .add_systems(EguiPrimaryContextPass, pause_menu_ui.run_if(in_state(GameState::Paused)))
+            .add_systems(EguiPrimaryContextPass, loading_screen_ui.run_if(in_state(GameState::Loading)))
             .add_systems(EguiPrimaryContextPass, ingame_ui.run_if(in_state(GameState::InGame)))
             .add_systems(Update, handle_pause_input.run_if(in_state(GameState::InGame)))
             .add_systems(Update, handle_resume_input.run_if(in_state(GameState::Paused)))
             .add_systems(OnTransition {
-                exited: GameState::MainMenu,
+                exited: GameState::NewGame,
                 entered: GameState::InGame,
-            }, player::setup_player);
+            }, player::setup_player)
+            .add_systems(OnEnter(GameState::NewGame), transition_to_ingame);
     }
 }
 
 fn main_menu_ui(
     mut contexts: EguiContexts,
     mut next_state: ResMut<NextState<GameState>>,
+    mut load_events: EventWriter<LoadGameEvent>,
 ) -> Result {
     egui::CentralPanel::default()
         .show(contexts.ctx_mut()?, |ui| {
@@ -33,14 +36,14 @@ fn main_menu_ui(
                 ui.add_space(50.0);
 
                 if ui.button("New Game").clicked() {
-                    next_state.set(GameState::InGame);
+                    next_state.set(GameState::NewGame);
                 }
 
                 ui.add_space(10.0);
 
                 if ui.button("Load Game").clicked() {
-                    // TODO: Implement load game
-                    next_state.set(GameState::InGame);
+                    // Emit load event for slot 1 (default)
+                    load_events.write(LoadGameEvent { slot: 1 });
                 }
 
                 ui.add_space(10.0);
@@ -56,6 +59,8 @@ fn main_menu_ui(
 fn pause_menu_ui(
     mut contexts: EguiContexts,
     mut next_state: ResMut<NextState<GameState>>,
+    mut save_events: EventWriter<SaveGameEvent>,
+    mut load_events: EventWriter<LoadGameEvent>,
 ) -> Result {
     egui::Window::new("Paused")
         .collapsible(false)
@@ -72,13 +77,16 @@ fn pause_menu_ui(
                 ui.add_space(10.0);
 
                 if ui.button("Save Game").clicked() {
-                    // TODO: Implement save game
+                    // Emit save event for slot 1 (default)
+                    save_events.write(SaveGameEvent { slot: 1 });
+                    info!("Save game requested");
                 }
 
                 ui.add_space(10.0);
 
                 if ui.button("Load Game").clicked() {
-                    // TODO: Implement load game
+                    // Emit load event for slot 1 (default)
+                    load_events.write(LoadGameEvent { slot: 1 });
                 }
 
                 ui.add_space(10.0);
@@ -108,6 +116,50 @@ fn ingame_ui(
     Ok(())
 }
 
+fn loading_screen_ui(
+    mut contexts: EguiContexts,
+    progress: Option<Res<LoadProgress>>,
+) -> Result {
+    egui::CentralPanel::default()
+        .show(contexts.ctx_mut()?, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.add_space(200.0);
+                ui.heading("Loading...");
+                ui.add_space(50.0);
+
+                if let Some(progress) = progress {
+                    // Progress bar
+                    let progress_value = progress.progress();
+                    ui.add(egui::ProgressBar::new(progress_value)
+                        .text(format!("{:.0}%", progress_value * 100.0))
+                        .desired_width(400.0)
+                    );
+
+                    ui.add_space(20.0);
+
+                    // Show current system being loaded
+                    if let Some(current) = progress.current_system() {
+                        ui.label(format!("Loading: {}", current));
+                    } else if progress.is_complete() {
+                        ui.label("Complete!");
+                    }
+
+                    ui.add_space(20.0);
+
+                    // Show all systems
+                    ui.label(format!(
+                        "Loaded {}/{} systems",
+                        progress.completed.len(),
+                        progress.registered.len()
+                    ));
+                } else {
+                    ui.label("Initializing...");
+                }
+            });
+        });
+    Ok(())
+}
+
 fn handle_pause_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<GameState>>,
@@ -124,4 +176,8 @@ fn handle_resume_input(
     if keyboard.just_pressed(KeyCode::Escape) {
         next_state.set(GameState::InGame);
     }
+}
+
+fn transition_to_ingame(mut next_state: ResMut<NextState<GameState>>) {
+    next_state.set(GameState::InGame);
 }

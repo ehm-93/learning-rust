@@ -199,6 +199,19 @@ entities:
 
 ## System Architecture
 
+### Module Organization (Implemented)
+```
+src/
+├── main.rs              # Entry point with --editor flag handling
+├── editor/
+│   ├── mod.rs          # EditorPlugin - coordinates all editor systems
+│   ├── components.rs   # EditorCamera, EditorEntity
+│   ├── resources.rs    # EditorMouseMotion, (future: GridConfig, EditorState)
+│   └── camera.rs       # Camera movement and mouse look systems
+├── game/               # Game mode (already implemented)
+└── shared/             # Shared components/systems between editor and game (future)
+```
+
 ### World Scale Conventions
 - **1 unit = 1 meter** in world space
 - **Chunk size = 32x32x32 meters** (aligns with streaming system)
@@ -207,9 +220,26 @@ entities:
 
 ### Component Structure
 ```rust
-// Editor-specific components
+// Editor-specific components (implemented in src/editor/components.rs)
 #[derive(Component)]
-struct EditorEntity; // Marks entities as part of editor scene
+struct EditorCamera {
+    sensitivity: f32,
+    pitch: f32,        // Radians
+    yaw: f32,          // Radians
+    velocity: Vec3,    // Smooth movement
+    base_speed: f32,   // 5.0 m/s default
+    mouse_locked: bool,
+}
+
+#[derive(Component)]
+struct EditorEntity;  // Marks entities as part of editor scene
+
+// Future components
+#[derive(Component)]
+struct Selectable;
+
+#[derive(Component)]
+struct Selected;
 
 #[derive(Component)]
 struct ChunkMetadata {
@@ -316,28 +346,25 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 
 ### Week 1: Core Editing + Early Testing
 
-#### 1. Editor camera controller (fly-around)
-- [ ] Create `EditorCamera` component with position, rotation, velocity
-- [ ] Implement WASD movement input handling
-- [ ] Add mouse look with configurable sensitivity
-- [ ] Add Q (down) and E (up) vertical movement
-- [ ] Implement Shift speed multiplier (4x)
-- [ ] Implement Ctrl speed reduction (0.25x)
-- [ ] Add smooth velocity-based movement (not instant)
-- [ ] Add Left Alt toggle for free mouse mode vs locked camera mode
-- [ ] Test camera doesn't clip through geometry
+#### 1. Editor camera controller (fly-around) ✅ COMPLETE
+- [x] Create `EditorCamera` component with velocity and rotation state
+- [x] Implement WASD movement input handling
+- [x] Add mouse look with configurable sensitivity (default 0.002)
+- [x] Add Q (down) and E (up) vertical movement
+- [x] Implement Shift speed multiplier (4x)
+- [x] Implement Ctrl speed reduction (0.25x)
+- [x] Add smooth velocity-based movement with 10.0 smoothing factor
+- [x] Add Left Alt toggle for free mouse mode vs locked camera mode
+- [x] Test camera movement (works smoothly with test scene)
 
-#### 2. Grid display with snapping (both visual grid and snap logic - G key toggle)
-- [ ] Create grid rendering system (lines on XZ plane)
-- [ ] Add configurable grid size (default 0.5m spacing)
-- [ ] Implement grid line shader (fade with distance)
-- [ ] Add G key toggle for snap mode (persistent state)
-- [ ] Implement position snapping (0.5m increments)
-- [ ] Implement rotation snapping (15° increments)
-- [ ] Add visual indicator when snap is enabled (status bar)
-- [ ] Add subtle visual feedback when object snaps to grid
+**Implementation Notes:**
+- EditorCamera is a component attached to the same entity as Camera3d (no duplication)
+- Velocity interpolation provides natural acceleration/deceleration feel
+- Pitch clamped to ±89° to prevent gimbal lock
+- Mouse lock state integrated with window cursor grab mode
+- Y-axis movement always uses world up (not camera-relative) for predictable altitude control
 
-#### 3. Primitive spawning (cube, sphere, plane)
+#### 2. Primitive spawning (cube, sphere, plane)
 - [ ] Create `AssetCatalog` resource with primitive definitions
 - [ ] Implement mesh generation for cube (1x1x1m)
 - [ ] Implement mesh generation for sphere (1m diameter)
@@ -345,34 +372,70 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 - [ ] Implement mesh generation for cylinder (1m × 2m)
 - [ ] Implement mesh generation for capsule (0.5m × 2m)
 - [ ] Add vertex color support to primitive materials
-- [ ] Create asset browser UI panel (EGUI)
-- [ ] Implement "place mode" when asset clicked
-- [ ] Add ghost preview rendering (semi-transparent)
-- [ ] Implement ground-plane intersection for preview position
+- [ ] Create asset browser UI panel (EGUI) - simple list for MVP
+- [ ] Implement "place mode" state when asset clicked
+- [ ] Add ghost preview rendering (semi-transparent material)
+- [ ] Implement ground-plane ray intersection for preview position
 - [ ] Spawn entity with mesh, material, and transform on click
 - [ ] Add ESC to cancel placement mode
 
+**Implementation Notes:**
+- Start with just cube to prove the placement workflow
+- Ghost preview needs its own render layer or distinct material to avoid z-fighting
+- Place mode should disable camera mouse look (mouse unlocked) or require holding a key
+- Ground-plane intersection can use simple Y=0 plane initially
+- Consider using bevy_mod_picking's raycasting utilities for consistency with selection
+
+#### 3. Grid display with snapping (visual reference before placing objects)
+- [ ] Create grid rendering system (lines on XZ plane)
+- [ ] Add configurable grid size (default 0.5m spacing)
+- [ ] Implement grid line shader (fade with distance)
+- [ ] Add G key toggle for snap mode (persistent state resource)
+- [ ] Implement position snapping (0.5m increments)
+- [ ] Implement rotation snapping (15° increments)
+- [ ] Add visual indicator when snap is enabled (status bar text)
+- [ ] Add subtle visual feedback when object snaps to grid (optional)
+
+**Implementation Notes:**
+- Grid should be visible from the start to help with spatial awareness
+- Consider using bevy_infinite_grid crate or custom line rendering
+- Snap state needs to be a resource so it persists and affects all placement/transform operations
+- Grid fade helps maintain visibility at different camera distances
+
 #### 4. Click selection system (single object only)
-- [ ] Implement ray-casting from mouse to world
+- [ ] Implement ray-casting from mouse to world (bevy_mod_picking already in deps)
 - [ ] Add `Selectable` component marker for editor entities
 - [ ] Add `Selected` component for selection state
-- [ ] Implement click-to-select logic (single object)
-- [ ] Add outline shader for selected objects
+- [ ] Implement click-to-select logic (single object, mouse must be unlocked)
+- [ ] Add outline shader/post-process for selected objects
 - [ ] Implement click on empty space to deselect
 - [ ] Add ESC key to deselect all
 - [ ] Ensure selection persists across frames
-- [ ] Add visual feedback on hover (subtle highlight)
+- [ ] Add visual feedback on hover (subtle highlight - optional for MVP)
+
+**Implementation Notes:**
+- bevy_mod_picking is already in dependencies - use it for raycasting
+- Selection only works when mouse is unlocked (Alt to toggle)
+- Start with simple colored outline, defer fancy post-process effects
+- EditorEntity should automatically be Selectable
+- Consider making selection a single-entity resource rather than component for simpler state management
 
 #### 5. Basic inspector panel (read-only transforms)
 - [ ] Create inspector EGUI panel on right side
-- [ ] Display selected entity name
+- [ ] Display selected entity name (or "No selection")
 - [ ] Display transform position (X, Y, Z) read-only
-- [ ] Display transform rotation (X, Y, Z) read-only
+- [ ] Display transform rotation (X, Y, Z) read-only as Euler angles
 - [ ] Display transform scale (X, Y, Z) read-only
-- [ ] Display mesh component info
-- [ ] Display material info
+- [ ] Display mesh component info (primitive type)
+- [ ] Display material info (color)
 - [ ] Show "No selection" message when nothing selected
 - [ ] Update panel in real-time as selection changes
+
+**Implementation Notes:**
+- EGUI already set up, just need to add the panel
+- Keep it simple - just text display, no editing yet (week 2)
+- Update every frame by querying selected entity
+- Consider showing entity ID for debugging purposes
 
 #### 6. **Play mode entry/exit (P key) - critical for iteration loops**
 - [ ] Create `EditorState` enum (Editor, EditorPlayMode)
@@ -617,6 +680,22 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 
 ## Technical Risks & Mitigations
 
+**Risk**: Mouse lock conflicts between camera control and UI interaction
+- **Status**: ✅ RESOLVED - Left Alt toggle provides clean separation
+- **Solution**: `mouse_locked` state on EditorCamera + window cursor grab mode integration
+
+**Risk**: Camera movement feels floaty or unresponsive
+- **Status**: ✅ RESOLVED - Velocity interpolation with 10.0 smoothing factor feels natural
+- **Solution**: `velocity.lerp()` with time.delta provides smooth acceleration without lag
+
+**Risk**: Pitch rotation causes gimbal lock or camera flipping
+- **Status**: ✅ RESOLVED - Pitch clamped to ±89°
+- **Solution**: `pitch.clamp(-FRAC_PI_2 + 0.01, FRAC_PI_2 - 0.01)` prevents singularity
+
+**Risk**: Y-axis movement feels confusing relative to camera orientation
+- **Status**: ✅ RESOLVED - Always use world Y (up/down), not camera relative
+- **Solution**: Separate world-space up vector for Q/E keys
+
 **Risk**: Gizmo interaction feels clunky or imprecise
 - **Mitigation**: Start with translate-only, iterate on feel before adding rotate/scale
 
@@ -640,6 +719,15 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 
 **Risk**: Editor ↔ Game mode transition causes state corruption
 - **Mitigation**: Clear separation of editor vs game entities, snapshot before transition
+
+## Technical Decisions Log
+
+### Camera Controller (Week 1)
+1. **EditorCamera as augmentation component**: Attach to same entity as Camera3d rather than replacing it - avoids duplication and leverages Bevy's built-in camera features
+2. **Separate mouse lock state from cursor grab**: Easier to reason about when state lives on component vs system-level resource
+3. **World-space vertical movement**: Q/E always move on world Y-axis, not camera-relative, for predictable altitude control
+4. **10.0 smoothing factor**: Tested multiple values; this provides good balance between responsiveness and smoothness
+5. **Bevy 0.16 API**: Using `single_mut()` instead of deprecated `get_single_mut()`
 
 ## References
 - Blender's transform gizmo system (industry standard UX)

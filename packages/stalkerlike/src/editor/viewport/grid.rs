@@ -47,8 +47,11 @@ pub fn setup_grid(
 
     let num_lines = (config.size / config.spacing) as i32;
 
-    // Lines parallel to X-axis
+    // Lines parallel to X-axis (skip the origin line, we'll draw it separately)
     for i in -num_lines..=num_lines {
+        if i == 0 {
+            continue; // Skip origin, will be drawn as green axis line
+        }
         let z = i as f32 * config.spacing;
         let mesh = create_line_mesh(
             Vec3::new(-config.size, 0.01, z),
@@ -63,8 +66,11 @@ pub fn setup_grid(
         ));
     }
 
-    // Lines parallel to Z-axis
+    // Lines parallel to Z-axis (skip the origin line, we'll draw it separately)
     for i in -num_lines..=num_lines {
+        if i == 0 {
+            continue; // Skip origin, will be drawn as red axis line
+        }
         let x = i as f32 * config.spacing;
         let mesh = create_line_mesh(
             Vec3::new(x, 0.01, -config.size),
@@ -78,6 +84,40 @@ pub fn setup_grid(
             Transform::IDENTITY,
         ));
     }
+
+    // X-axis origin line (red) - runs along X direction
+    let x_axis_material = grid_materials.add(GridMaterial {
+        color: LinearRgba::new(1.0, 0.0, 0.0, 0.8), // Bright red
+        fade_start: 10.0,
+        fade_end: 50.0,
+    });
+    let x_axis_mesh = create_line_mesh(
+        Vec3::new(-config.size, 0.02, 0.0), // Slightly higher to be visible above grid
+        Vec3::new(config.size, 0.02, 0.0),
+    );
+    commands.spawn((
+        GridEntity,
+        Mesh3d(meshes.add(x_axis_mesh)),
+        MeshMaterial3d(x_axis_material),
+        Transform::IDENTITY,
+    ));
+
+    // Z-axis origin line (green) - runs along Z direction
+    let z_axis_material = grid_materials.add(GridMaterial {
+        color: LinearRgba::new(0.0, 1.0, 0.0, 0.8), // Bright green
+        fade_start: 10.0,
+        fade_end: 50.0,
+    });
+    let z_axis_mesh = create_line_mesh(
+        Vec3::new(0.0, 0.02, -config.size), // Slightly higher to be visible above grid
+        Vec3::new(0.0, 0.02, config.size),
+    );
+    commands.spawn((
+        GridEntity,
+        Mesh3d(meshes.add(z_axis_mesh)),
+        MeshMaterial3d(z_axis_material),
+        Transform::IDENTITY,
+    ));
 }
 
 /// Create a line mesh between two points

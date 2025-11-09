@@ -41,7 +41,7 @@ use objects::{
     selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected},
 };
 use viewport::{
-    camera::{setup_editor_camera, setup_test_scene, toggle_mouse_lock, camera_look, camera_movement, lock_cursor_on_start},
+    camera::{setup_editor_camera, toggle_mouse_lock, camera_look, camera_movement, lock_cursor_on_start},
     grid::{GridConfig, setup_grid, toggle_snap},
 };
 use ui::{
@@ -80,7 +80,6 @@ impl Plugin for EditorPlugin {
             // Startup systems
             .add_systems(Startup, (
                 setup_editor_camera,
-                setup_test_scene,
                 setup_grid,
                 lock_cursor_on_start,
             ))

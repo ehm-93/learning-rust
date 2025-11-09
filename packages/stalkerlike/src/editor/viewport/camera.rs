@@ -46,60 +46,6 @@ pub fn setup_editor_camera(mut commands: Commands) {
     ));
 }
 
-/// Setup a simple test scene
-pub fn setup_test_scene(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    // Ground plane (not pickable - it's a reference plane)
-    commands.spawn((
-        EditorEntity,
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(20.0, 20.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.5, 0.3))),
-        Transform::from_xyz(0.0, 0.0, 0.0),
-        Pickable::IGNORE, // Don't select the ground
-    ));
-
-    // Some test cubes (pickable)
-    for i in -2..3 {
-        for j in -2..3 {
-            if i == 0 && j == 0 {
-                continue; // Skip center
-            }
-            commands.spawn((
-                EditorEntity,
-                Mesh3d(meshes.add(Cuboid::new(1.0, 2.0, 1.0))),
-                MeshMaterial3d(materials.add(Color::srgb(
-                    0.7 + i as f32 * 0.1,
-                    0.5,
-                    0.7 + j as f32 * 0.1,
-                ))),
-                Transform::from_xyz(i as f32 * 3.0, 1.0, j as f32 * 3.0),
-                Pickable::default(), // Make it pickable
-            ));
-        }
-    }
-
-    // Directional light
-    commands.spawn((
-        EditorEntity,
-        DirectionalLight {
-            illuminance: 5000.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
-
-    // Ambient light
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 300.0,
-        ..default()
-    });
-}
-
 /// Toggle mouse lock mode with Left Alt or temporarily lock with Middle Mouse Button
 pub fn toggle_mouse_lock(
     keyboard: Res<ButtonInput<KeyCode>>,

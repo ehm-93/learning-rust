@@ -66,34 +66,42 @@ pub fn setup_test_scene(
     });
 }
 
-/// Toggle mouse lock mode with Left Alt
+/// Toggle mouse lock mode with Left Alt or temporarily lock with Middle Mouse Button
 pub fn toggle_mouse_lock(
     keyboard: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
     mut camera_query: Query<&mut EditorCamera>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
+    // Toggle lock state with Alt key
     if keyboard.just_pressed(KeyCode::AltLeft) {
         for mut camera in camera_query.iter_mut() {
             camera.mouse_locked = !camera.mouse_locked;
+        }
+    }
 
-            // Update cursor state
-            if let Ok(mut window) = windows.single_mut() {
-                if camera.mouse_locked {
-                    window.cursor_options.grab_mode = CursorGrabMode::Confined;
-                    window.cursor_options.visible = false;
-                } else {
-                    window.cursor_options.grab_mode = CursorGrabMode::None;
-                    window.cursor_options.visible = true;
-                }
+    // Update cursor state based on permanent lock OR middle mouse button
+    for camera in camera_query.iter() {
+        let middle_mouse_held = mouse.pressed(MouseButton::Middle);
+        let should_lock = camera.mouse_locked || middle_mouse_held;
+
+        if let Ok(mut window) = windows.single_mut() {
+            if should_lock {
+                window.cursor_options.grab_mode = CursorGrabMode::Confined;
+                window.cursor_options.visible = false;
+            } else {
+                window.cursor_options.grab_mode = CursorGrabMode::None;
+                window.cursor_options.visible = true;
             }
         }
     }
 }
 
-/// Handle mouse look when mouse is locked
+/// Handle mouse look when mouse is locked or middle mouse button is held
 pub fn camera_look(
     mut motion_evr: EventReader<bevy::input::mouse::MouseMotion>,
     mut mouse_motion: ResMut<EditorMouseMotion>,
+    mouse: Res<ButtonInput<MouseButton>>,
     mut camera_query: Query<(&mut EditorCamera, &mut Transform)>,
 ) {
     // Accumulate mouse motion
@@ -102,8 +110,9 @@ pub fn camera_look(
     }
 
     for (mut camera, mut transform) in camera_query.iter_mut() {
-        // Only apply mouse look if mouse is locked
-        if !camera.mouse_locked {
+        // Apply mouse look if mouse is locked OR middle mouse button is held
+        let middle_mouse_held = mouse.pressed(MouseButton::Middle);
+        if !camera.mouse_locked && !middle_mouse_held {
             mouse_motion.delta = Vec2::ZERO;
             continue;
         }

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use super::components::{EditorCamera, EditorEntity};
+use super::grid::{snap_to_grid, GridConfig};
 use super::primitives::{AssetCatalog, PrimitiveDefinition};
 
 /// Resource tracking the current placement state
@@ -57,6 +58,7 @@ pub fn update_preview_position(
     windows: Query<&Window>,
     mut preview_query: Query<&mut Transform, With<PreviewEntity>>,
     placement_state: Res<PlacementState>,
+    grid_config: Res<GridConfig>,
 ) {
     if !placement_state.active {
         return;
@@ -81,7 +83,12 @@ pub fn update_preview_position(
 
     // Intersect with ground plane (Y=0)
     if let Some(distance) = ray_plane_intersection(ray.origin, ray.direction.as_vec3(), Vec3::ZERO, Vec3::Y) {
-        let point = ray.origin + ray.direction.as_vec3() * distance;
+        let mut point = ray.origin + ray.direction.as_vec3() * distance;
+
+        // Apply grid snapping if enabled
+        if grid_config.snap_enabled {
+            point = snap_to_grid(point, grid_config.spacing);
+        }
 
         // Update preview position
         for mut transform in preview_query.iter_mut() {

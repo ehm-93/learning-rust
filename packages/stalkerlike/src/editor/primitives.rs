@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::render::mesh::VertexAttributeValues;
 
 /// Catalog of primitive meshes available in the editor
 #[derive(Resource)]
@@ -64,7 +65,7 @@ pub enum PrimitiveType {
 
 impl PrimitiveType {
     pub fn create_mesh(&self, size: Vec3) -> Mesh {
-        match self {
+        let mut mesh = match self {
             PrimitiveType::Cube => Cuboid::new(size.x, size.y, size.z).into(),
             PrimitiveType::Sphere => {
                 // Use radius (half of diameter)
@@ -85,6 +86,26 @@ impl PrimitiveType {
                 let half_height = (size.y / 2.0) - radius;
                 Capsule3d::new(radius, half_height.max(0.001)).into()
             }
-        }
+        };
+
+        // Add vertex colors (white by default, can be modified per-vertex later)
+        Self::add_vertex_colors(&mut mesh);
+        mesh
+    }
+
+    /// Add vertex color attribute to a mesh
+    fn add_vertex_colors(mesh: &mut Mesh) {
+        // Get the number of vertices
+        let vertex_count = if let Some(VertexAttributeValues::Float32x3(positions)) =
+            mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+        {
+            positions.len()
+        } else {
+            return; // No positions, can't add colors
+        };
+
+        // Create white vertex colors for all vertices
+        let colors: Vec<[f32; 4]> = vec![[1.0, 1.0, 1.0, 1.0]; vertex_count];
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
     }
 }

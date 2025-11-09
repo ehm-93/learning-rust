@@ -364,43 +364,49 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 - Mouse lock state integrated with window cursor grab mode
 - Y-axis movement always uses world up (not camera-relative) for predictable altitude control
 
-#### 2. Primitive spawning (cube, sphere, plane)
+#### 2. Primitive spawning (cube, sphere, plane) ✅ COMPLETE
 - [x] Create `AssetCatalog` resource with primitive definitions
 - [x] Implement mesh generation for cube (1x1x1m)
 - [x] Implement mesh generation for sphere (1m diameter)
 - [x] Implement mesh generation for plane (10x10m)
 - [x] Implement mesh generation for cylinder (1m × 2m)
 - [x] Implement mesh generation for capsule (0.5m × 2m)
-- [ ] Add vertex color support to primitive materials
-- [ ] Create asset browser UI panel (EGUI) - simple list for MVP
-- [ ] Implement "place mode" state when asset clicked
-- [ ] Add ghost preview rendering (semi-transparent material)
-- [ ] Implement ground-plane ray intersection for preview position
-- [ ] Spawn entity with mesh, material, and transform on click
-- [ ] Add ESC to cancel placement mode
+- [x] Add vertex color support to primitive materials
+- [x] Create asset browser UI panel (EGUI) - simple list for MVP
+- [x] Implement "place mode" state when asset clicked
+- [x] Add ghost preview rendering (semi-transparent material)
+- [x] Implement ground-plane ray intersection for preview position
+- [x] Spawn entity with mesh, material, and transform on click
+- [x] Add ESC to cancel placement mode
 
 **Implementation Notes:**
-- Start with just cube to prove the placement workflow
-- Ghost preview needs its own render layer or distinct material to avoid z-fighting
-- Place mode should disable camera mouse look (mouse unlocked) or require holding a key
-- Ground-plane intersection can use simple Y=0 plane initially
-- Consider using bevy_mod_picking's raycasting utilities for consistency with selection
+- Placement system fully functional with PlacementState resource tracking active mode
+- Ghost preview uses semi-transparent material (alpha 0.5) with AlphaMode::Blend
+- Ground-plane intersection uses simple ray-plane math at Y=0
+- UI shows "Placement Mode" indicator with instructions when active
+- Multiple placements allowed - user must press ESC to exit mode
+- Mouse must be unlocked (Alt toggle) for placement to work
+- Preview entity cleaned up when mode cancelled or new placement started
 
 #### 3. Grid display with snapping (visual reference before placing objects)
-- [ ] Create grid rendering system (lines on XZ plane)
-- [ ] Add configurable grid size (default 0.5m spacing)
+- [x] Create grid rendering system (lines on XZ plane)
+- [x] Add configurable grid size (default 0.5m spacing)
 - [ ] Implement grid line shader (fade with distance)
-- [ ] Add G key toggle for snap mode (persistent state resource)
-- [ ] Implement position snapping (0.5m increments)
-- [ ] Implement rotation snapping (15° increments)
+- [x] Add G key toggle for snap mode (persistent state resource)
+- [x] Implement position snapping (0.5m increments)
+- [x] Implement rotation snapping (15° increments)
 - [ ] Add visual indicator when snap is enabled (status bar text)
 - [ ] Add subtle visual feedback when object snaps to grid (optional)
 
 **Implementation Notes:**
-- Grid should be visible from the start to help with spatial awareness
-- Consider using bevy_infinite_grid crate or custom line rendering
-- Snap state needs to be a resource so it persists and affects all placement/transform operations
-- Grid fade helps maintain visibility at different camera distances
+- Grid uses LineList primitive topology for efficient rendering
+- Grid lines rendered at Y=0.01 to avoid z-fighting with ground plane
+- GridConfig resource stores visibility, snap state, spacing (0.5m), and size (50m)
+- snap_to_grid() and snap_rotation() helper functions for reuse across systems
+- Grid integrated into placement system - preview snaps when grid_config.snap_enabled
+- Custom line mesh generation avoids need for external dependencies
+- TODO: Distance-based fade shader for better visibility at various camera distances
+- TODO: Status bar indicator for snap state (currently only console log)
 
 #### 4. Click selection system (single object only)
 - [ ] Implement ray-casting from mouse to world (bevy_mod_picking already in deps)
@@ -728,6 +734,21 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 3. **World-space vertical movement**: Q/E always move on world Y-axis, not camera-relative, for predictable altitude control
 4. **10.0 smoothing factor**: Tested multiple values; this provides good balance between responsiveness and smoothness
 5. **Bevy 0.16 API**: Using `single_mut()` instead of deprecated `get_single_mut()`
+6. **Middle mouse button temporary lock**: Holding MMB temporarily re-locks cursor for camera control even when unlocked - provides Blender-like workflow
+
+### Primitive Spawning (Week 1)
+1. **All 5 primitives implemented upfront**: Cube, sphere, plane, cylinder, capsule - minimal extra work to do all at once
+2. **Vertex colors on all meshes**: Added to support low-poly art style, defaults to white (can be painted per-vertex later)
+3. **Placement state as resource**: Simpler than per-entity component, tracks single active placement mode
+4. **Continuous placement mode**: User can place multiple objects without re-clicking asset - more efficient workflow
+5. **Semi-transparent preview**: Alpha 0.5 with AlphaMode::Blend gives clear visual feedback without obscuring scene
+
+### Grid System (Week 1)
+1. **Custom line rendering**: Avoided external dependencies, simple LineList topology with manual mesh generation
+2. **Grid always visible by default**: Helps spatial awareness from first run
+3. **Snap as toggle not hold**: G key toggles persistent snap state - less fatiguing than holding a key
+4. **0.5m spacing**: Finer than typical 1m grids, better for detailed level design at colony scale
+5. **Grid at Y=0.01**: Slight offset prevents z-fighting with ground plane entities
 
 ## References
 - Blender's transform gizmo system (industry standard UX)

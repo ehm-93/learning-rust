@@ -3,6 +3,7 @@ use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 mod camera;
 mod components;
+mod grid;
 mod placement;
 mod primitives;
 mod resources;
@@ -10,6 +11,7 @@ mod selection;
 mod ui;
 
 use camera::*;
+use grid::*;
 use placement::*;
 use primitives::AssetCatalog;
 use resources::EditorMouseMotion;
@@ -32,11 +34,13 @@ impl Plugin for EditorPlugin {
             .init_resource::<AssetCatalog>()
             .init_resource::<PlacementState>()
             .init_resource::<SelectedEntity>()
+            .init_resource::<GridConfig>()
 
             // Startup systems
             .add_systems(Startup, (
                 setup_editor_camera,
                 setup_test_scene,
+                setup_grid,
                 lock_cursor_on_start,
             ))
 
@@ -46,6 +50,8 @@ impl Plugin for EditorPlugin {
                 camera_look,
                 camera_movement,
             ))
+            // Update systems - grid
+            .add_systems(Update, toggle_snap)
             // Update systems - placement
             .add_systems(Update, (
                 update_preview_position,

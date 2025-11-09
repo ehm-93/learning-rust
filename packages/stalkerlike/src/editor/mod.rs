@@ -1,12 +1,20 @@
 use bevy::prelude::*;
-use bevy_egui::EguiPlugin;
+use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 mod camera;
 mod components;
+mod placement;
+mod primitives;
 mod resources;
+mod selection;
+mod ui;
 
 use camera::*;
+use placement::*;
+use primitives::AssetCatalog;
 use resources::EditorMouseMotion;
+use selection::*;
+use ui::*;
 
 pub struct EditorPlugin;
 
@@ -21,6 +29,9 @@ impl Plugin for EditorPlugin {
 
             // Resources
             .init_resource::<EditorMouseMotion>()
+            .init_resource::<AssetCatalog>()
+            .init_resource::<PlacementState>()
+            .init_resource::<SelectedEntity>()
 
             // Startup systems
             .add_systems(Startup, (
@@ -29,11 +40,28 @@ impl Plugin for EditorPlugin {
                 lock_cursor_on_start,
             ))
 
-            // Update systems
+            // Update systems - camera
             .add_systems(Update, (
                 toggle_mouse_lock,
                 camera_look,
                 camera_movement,
+            ))
+            // Update systems - placement
+            .add_systems(Update, (
+                update_preview_position,
+                place_object,
+            ))
+            // Update systems - selection
+            .add_systems(Update, (
+                handle_selection,
+                handle_deselection,
+                highlight_selected,
+                remove_outline_from_deselected,
+            ))
+            // Update systems - UI (must run in EGUI pass)
+            .add_systems(EguiPrimaryContextPass, (
+                asset_browser_ui,
+                inspector_ui,
             ));
     }
 }

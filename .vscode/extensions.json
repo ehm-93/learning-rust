@@ -6,6 +6,8 @@
     "vadimcn.vscode-lldb",
     "usernamehw.errorlens",
     "bierner.markdown-mermaid",
-    "yzhang.markdown-all-in-one"
+    "yzhang.markdown-all-in-one",
+    "PolyMeilex.wgsl",
+    "streetsidesoftware.code-spell-checker"
   ]
 }

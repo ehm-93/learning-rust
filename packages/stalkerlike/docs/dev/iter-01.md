@@ -3,7 +3,7 @@
 ## Context
 With Iteration 0 complete (game mode with save/load, player controller, basic 3D scene) we now need a minimal viable editor that can create and manipulate 3D scenes. This iteration focuses on the essential tools needed to hand-craft level geometry and props.
 
-This editor will create **narrative chunks** - hand-authored setpieces that define the critical path and major encounters. These will later integrate with the procedural generation system (see `uncommitted/procedural_generation.md`) which fills in the connective tissue between your hand-crafted content.
+This editor will create **narrative chunks** - hand-authored set pieces that define the critical path and major encounters. These will later integrate with the procedural generation system (see `uncommitted/procedural_generation.md`) which fills in the connective tissue between your hand-crafted content.
 
 ## End State Goal
 A functional level editor with basic transform tools, asset placement, and scene persistence. You should be able to build a simple multi-room environment (ideally within a 32x32x32m chunk), save it to YAML, and play through it in game mode. 
@@ -486,7 +486,7 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 - Clean separation between read and write - no accidental modifications yet
 
 #### 6. **Play mode entry/exit (P key) - critical for iteration loops**
-Defered, will revisit with a better defined game mode. Current solution is a placeholder that cannot be dropped into the editor.
+Deferred, will revisit with a better defined game mode. Current solution is a placeholder that cannot be dropped into the editor.
 
 - [ ] Create `EditorState` enum (Editor, EditorPlayMode)
 - [ ] Add P key binding to enter play mode

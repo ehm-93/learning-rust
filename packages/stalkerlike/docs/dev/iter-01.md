@@ -388,10 +388,10 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 - Mouse must be unlocked (Alt toggle) for placement to work
 - Preview entity cleaned up when mode cancelled or new placement started
 
-#### 3. Grid display with snapping (visual reference before placing objects)
+#### 3. Grid display with snapping (visual reference before placing objects) ✅ COMPLETE
 - [x] Create grid rendering system (lines on XZ plane)
 - [x] Add configurable grid size (default 0.5m spacing)
-- [ ] Implement grid line shader (fade with distance)
+- [x] Implement grid line shader (fade with distance)
 - [x] Add G key toggle for snap mode (persistent state resource)
 - [x] Implement position snapping (0.5m increments)
 - [x] Implement rotation snapping (15° increments)
@@ -404,8 +404,11 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 - GridConfig resource stores visibility, snap state, spacing (0.5m), and size (50m)
 - snap_to_grid() and snap_rotation() helper functions for reuse across systems
 - Grid integrated into placement system - preview snaps when grid_config.snap_enabled
-- Custom line mesh generation avoids need for external dependencies
-- TODO: Distance-based fade shader for better visibility at various camera distances
+- Custom GridMaterial with WGSL fragment shader for distance-based fading:
+  - Fades from full opacity at 10m to fully transparent at 50m
+  - Uses smoothstep for smooth transition
+  - Requires View binding for camera position
+  - Registered via MaterialPlugin in EditorPlugin
 - TODO: Status bar indicator for snap state (currently only console log)
 
 #### 4. Click selection system (single object only)
@@ -749,6 +752,11 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 3. **Snap as toggle not hold**: G key toggles persistent snap state - less fatiguing than holding a key
 4. **0.5m spacing**: Finer than typical 1m grids, better for detailed level design at colony scale
 5. **Grid at Y=0.01**: Slight offset prevents z-fighting with ground plane entities
+6. **Custom WGSL shader for distance fade**: Learned Bevy's material system and shader pipeline:
+   - AsBindGroup derives automatic uniform binding for material properties
+   - Fragment shader imports View for camera position
+   - smoothstep provides smooth fade from 10m to 50m
+   - MaterialPlugin registers custom material with render pipeline
 
 ## References
 - Blender's transform gizmo system (industry standard UX)

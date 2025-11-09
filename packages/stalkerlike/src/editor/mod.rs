@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::pbr::MaterialPlugin;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 mod camera;
@@ -28,6 +29,9 @@ impl Plugin for EditorPlugin {
 
             // Third-party plugins
             .add_plugins(EguiPlugin::default())
+
+            // Custom material for grid
+            .add_plugins(MaterialPlugin::<GridMaterial>::default())
 
             // Resources
             .init_resource::<EditorMouseMotion>()

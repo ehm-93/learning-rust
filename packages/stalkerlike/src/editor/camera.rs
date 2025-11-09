@@ -208,13 +208,3 @@ pub fn lock_cursor_on_start(
         window.cursor_options.visible = false;
     }
 }
-
-/// Release cursor when editor exits
-pub fn release_cursor_on_exit(
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
-) {
-    if let Ok(mut window) = windows.single_mut() {
-        window.cursor_options.grab_mode = CursorGrabMode::None;
-        window.cursor_options.visible = true;
-    }
-}

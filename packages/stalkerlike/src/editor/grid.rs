@@ -1,4 +1,26 @@
 use bevy::prelude::*;
+use bevy::render::render_resource::{AsBindGroup, ShaderRef};
+
+/// Custom material for grid lines with distance-based fade
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+pub struct GridMaterial {
+    #[uniform(0)]
+    pub color: LinearRgba,
+    #[uniform(0)]
+    pub fade_start: f32,
+    #[uniform(0)]
+    pub fade_end: f32,
+}
+
+impl Material for GridMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/grid.wgsl".into()
+    }
+
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Blend
+    }
+}
 
 /// Grid configuration resource
 #[derive(Resource)]
@@ -28,20 +50,19 @@ pub struct GridEntity;
 pub fn setup_grid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut grid_materials: ResMut<Assets<GridMaterial>>,
     config: Res<GridConfig>,
 ) {
     if !config.visible {
         return;
     }
 
-    // Create grid lines
-    let grid_color = Color::srgba(0.3, 0.3, 0.3, 0.5);
-    let material = materials.add(StandardMaterial {
-        base_color: grid_color,
-        unlit: true,
-        alpha_mode: AlphaMode::Blend,
-        ..default()
+    // Create custom grid material with distance fade
+    let grid_color = LinearRgba::new(0.3, 0.3, 0.3, 0.5);
+    let material = grid_materials.add(GridMaterial {
+        color: grid_color,
+        fade_start: 10.0,  // Start fading at 10 meters
+        fade_end: 50.0,    // Fully faded at 50 meters
     });
 
     let num_lines = (config.size / config.spacing) as i32;

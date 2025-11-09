@@ -315,35 +315,289 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 ## Implementation Priority
 
 ### Week 1: Core Editing + Early Testing
-1. Editor camera controller (fly-around)
-2. Grid display with snapping (both visual grid and snap logic - G key toggle)
-3. Primitive spawning (cube, sphere, plane)
-4. Click selection system (single object only)
-5. Basic inspector panel (read-only transforms)
-6. **Play mode entry/exit (P key) - critical for iteration loops**
+
+#### 1. Editor camera controller (fly-around)
+- [ ] Create `EditorCamera` component with position, rotation, velocity
+- [ ] Implement WASD movement input handling
+- [ ] Add mouse look with configurable sensitivity
+- [ ] Add Q (down) and E (up) vertical movement
+- [ ] Implement Shift speed multiplier (4x)
+- [ ] Implement Ctrl speed reduction (0.25x)
+- [ ] Add smooth velocity-based movement (not instant)
+- [ ] Add Left Alt toggle for free mouse mode vs locked camera mode
+- [ ] Test camera doesn't clip through geometry
+
+#### 2. Grid display with snapping (both visual grid and snap logic - G key toggle)
+- [ ] Create grid rendering system (lines on XZ plane)
+- [ ] Add configurable grid size (default 0.5m spacing)
+- [ ] Implement grid line shader (fade with distance)
+- [ ] Add G key toggle for snap mode (persistent state)
+- [ ] Implement position snapping (0.5m increments)
+- [ ] Implement rotation snapping (15° increments)
+- [ ] Add visual indicator when snap is enabled (status bar)
+- [ ] Add subtle visual feedback when object snaps to grid
+
+#### 3. Primitive spawning (cube, sphere, plane)
+- [ ] Create `AssetCatalog` resource with primitive definitions
+- [ ] Implement mesh generation for cube (1x1x1m)
+- [ ] Implement mesh generation for sphere (1m diameter)
+- [ ] Implement mesh generation for plane (10x10m)
+- [ ] Implement mesh generation for cylinder (1m × 2m)
+- [ ] Implement mesh generation for capsule (0.5m × 2m)
+- [ ] Add vertex color support to primitive materials
+- [ ] Create asset browser UI panel (EGUI)
+- [ ] Implement "place mode" when asset clicked
+- [ ] Add ghost preview rendering (semi-transparent)
+- [ ] Implement ground-plane intersection for preview position
+- [ ] Spawn entity with mesh, material, and transform on click
+- [ ] Add ESC to cancel placement mode
+
+#### 4. Click selection system (single object only)
+- [ ] Implement ray-casting from mouse to world
+- [ ] Add `Selectable` component marker for editor entities
+- [ ] Add `Selected` component for selection state
+- [ ] Implement click-to-select logic (single object)
+- [ ] Add outline shader for selected objects
+- [ ] Implement click on empty space to deselect
+- [ ] Add ESC key to deselect all
+- [ ] Ensure selection persists across frames
+- [ ] Add visual feedback on hover (subtle highlight)
+
+#### 5. Basic inspector panel (read-only transforms)
+- [ ] Create inspector EGUI panel on right side
+- [ ] Display selected entity name
+- [ ] Display transform position (X, Y, Z) read-only
+- [ ] Display transform rotation (X, Y, Z) read-only
+- [ ] Display transform scale (X, Y, Z) read-only
+- [ ] Display mesh component info
+- [ ] Display material info
+- [ ] Show "No selection" message when nothing selected
+- [ ] Update panel in real-time as selection changes
+
+#### 6. **Play mode entry/exit (P key) - critical for iteration loops**
+- [ ] Create `EditorState` enum (Editor, EditorPlayMode)
+- [ ] Add P key binding to enter play mode
+- [ ] Serialize current scene state before entering play mode
+- [ ] Spawn player entity at origin (or spawn point if exists)
+- [ ] Hide all editor UI (panels, gizmos, grid)
+- [ ] Enable game systems (physics, player controller, etc.)
+- [ ] Add ESC key binding to exit play mode
+- [ ] Restore editor state on exit (camera position, selection)
+- [ ] Deserialize scene state to revert changes
+- [ ] Add visual indicator in UI showing current mode
+
+---
 
 ### Week 2: Transform Tools
-7. Translate gizmo with drag interaction (respects grid snapping)
-8. Rotate gizmo with drag interaction (15° snap when enabled)
-9. Scale gizmo with drag interaction
-10. Inspector with editable numeric fields
-11. Chunk boundary visualization (B key toggle)
+
+#### 7. Translate gizmo with drag interaction (respects grid snapping)
+- [ ] Create gizmo rendering system (always on top)
+- [ ] Render X-axis arrow (red) at selected object position
+- [ ] Render Y-axis arrow (green) at selected object position
+- [ ] Render Z-axis arrow (blue) at selected object position
+- [ ] Implement ray-cast intersection with gizmo handles
+- [ ] Add hover highlighting for gizmo handles
+- [ ] Implement click-and-drag logic for handles
+- [ ] Constrain movement to selected axis only
+- [ ] Apply grid snapping during drag (if enabled)
+- [ ] Update object transform in real-time during drag
+- [ ] Release on mouse-up to finalize transform
+- [ ] Add visual feedback showing drag axis constraint
+
+#### 8. Rotate gizmo with drag interaction (15° snap when enabled)
+- [ ] Switch gizmo to rotation mode with F key
+- [ ] Render X-axis rotation arc (red circle around X)
+- [ ] Render Y-axis rotation arc (green circle around Y)
+- [ ] Render Z-axis rotation arc (blue circle around Z)
+- [ ] Implement arc handle intersection testing
+- [ ] Add hover highlighting for rotation handles
+- [ ] Implement circular drag logic (convert mouse delta to angle)
+- [ ] Constrain rotation to selected axis only
+- [ ] Apply 15° snapping during drag (if grid snap enabled)
+- [ ] Update object rotation in real-time during drag
+- [ ] Display angle value during rotation (transient UI)
+
+#### 9. Scale gizmo with drag interaction
+- [ ] Switch gizmo to scale mode with F key
+- [ ] Render X-axis scale handle (red cube)
+- [ ] Render Y-axis scale handle (green cube)
+- [ ] Render Z-axis scale handle (blue cube)
+- [ ] Add center handle for uniform scaling (white/gray)
+- [ ] Implement handle intersection testing
+- [ ] Add hover highlighting for scale handles
+- [ ] Implement drag-to-scale logic (mouse delta → scale factor)
+- [ ] Constrain scaling to selected axis (or uniform for center)
+- [ ] Update object scale in real-time during drag
+- [ ] Prevent negative or zero scale values
+- [ ] Add Shift+F to cycle gizmo modes in reverse
+
+#### 10. Inspector with editable numeric fields
+- [ ] Convert transform fields from read-only to editable
+- [ ] Add text input for position X, Y, Z
+- [ ] Add text input for rotation X, Y, Z (Euler angles)
+- [ ] Add text input for scale X, Y, Z
+- [ ] Validate numeric input (reject non-numbers)
+- [ ] Apply changes on Enter key or focus loss
+- [ ] Add increment/decrement buttons (+/- steppers)
+- [ ] Support precision to 3 decimal places
+- [ ] Update viewport in real-time as values change
+
+#### 11. Chunk boundary visualization (B key toggle)
+- [ ] Create chunk bounds rendering system
+- [ ] Render wireframe box for current chunk (32x32x32m)
+- [ ] Use distinct color (e.g., cyan/magenta) for chunk bounds
+- [ ] Add B key toggle for visibility
+- [ ] Display chunk position label (world coordinates)
+- [ ] Show chunk size in meters
+- [ ] Optionally render adjacent chunk outlines (faded)
+- [ ] Add status bar indicator when chunk viz is enabled
+
+---
 
 ### Week 3: Scene Management + Multi-Object
-12. Scene serialization to YAML (save)
-13. Scene deserialization from YAML (load)
-14. Chunk metadata in scene files (position, bounds, faction)
-15. Group/ungroup operations (Ctrl+G / Ctrl+Shift+G)
-16. Multi-select (Ctrl+click) and box select (now that grouping exists)
-17. Duplicate/delete operations (with defined +1m X-axis offset)
-18. Hierarchy panel
+
+#### 12. Scene serialization to YAML (save)
+- [ ] Create `SceneData` serializable struct (serde)
+- [ ] Add chunk metadata fields (id, position, bounds, faction)
+- [ ] Implement entity serialization (name, transform, components)
+- [ ] Serialize mesh references (not embedded geometry)
+- [ ] Serialize material references
+- [ ] Add editor metadata (camera position, last modified)
+- [ ] Implement Ctrl+S keybinding for save
+- [ ] Show file picker dialog if no current file
+- [ ] Write YAML to file using `serde_yaml`
+- [ ] Add error handling for file write failures
+- [ ] Clear scene dirty flag after successful save
+- [ ] Show confirmation message on successful save
+
+#### 13. Scene deserialization from YAML (load)
+- [ ] Implement Ctrl+O keybinding for open
+- [ ] Show file picker dialog (filter for .yaml)
+- [ ] Prompt to save if current scene is dirty
+- [ ] Read YAML file using `serde_yaml`
+- [ ] Validate scene format and version
+- [ ] Clear existing scene entities
+- [ ] Deserialize chunk metadata
+- [ ] Spawn entities from scene data
+- [ ] Restore transforms, meshes, materials
+- [ ] Restore editor camera position if saved
+- [ ] Add error handling for malformed YAML
+- [ ] Show confirmation message on successful load
+
+#### 14. Chunk metadata in scene files (position, bounds, faction)
+- [ ] Create `ChunkMetadata` component
+- [ ] Add chunk ID field (string, e.g., "mining_shaft_7")
+- [ ] Add world position field (Vec3, Y = depth)
+- [ ] Add bounds field (Vec3, default [32, 32, 32])
+- [ ] Add optional faction field (string)
+- [ ] Display chunk metadata in inspector (separate section)
+- [ ] Make chunk metadata editable in inspector
+- [ ] Include chunk metadata in YAML serialization
+- [ ] Restore chunk metadata on scene load
+
+#### 15. Group/ungroup operations (Ctrl+G / Ctrl+Shift+G)
+- [ ] Add Ctrl+G keybinding for group
+- [ ] Create parent entity when grouping selected objects
+- [ ] Move selected entities to be children of parent
+- [ ] Update transform hierarchy (local → world conversion)
+- [ ] Name parent entity "Group" with auto-incrementing number
+- [ ] Add Ctrl+Shift+G keybinding for ungroup
+- [ ] Flatten hierarchy level (promote children to root)
+- [ ] Convert local transforms to world transforms on ungroup
+- [ ] Delete empty parent entity after ungroup
+- [ ] Update hierarchy panel to reflect changes
+
+#### 16. Multi-select (Ctrl+click) and box select (now that grouping exists)
+- [ ] Add `SelectionSet` resource to track multiple selected entities
+- [ ] Implement Ctrl+click to add/remove from selection
+- [ ] Highlight all selected objects with outline
+- [ ] Update gizmo to show at center of selection bounds
+- [ ] Implement box select drag (click-drag in empty space)
+- [ ] Render selection box rectangle during drag
+- [ ] Select all objects intersecting box on release
+- [ ] Transform gizmo applies to all selected objects
+- [ ] Inspector shows multi-select summary (count, bounds)
+- [ ] Duplicate/delete operations work on selection set
+
+#### 17. Duplicate/delete operations (with defined +1m X-axis offset)
+- [ ] Add Ctrl+D keybinding for duplicate
+- [ ] Clone all components of selected entities
+- [ ] Offset duplicates by +1m on X-axis (or dominant horizontal)
+- [ ] Maintain parent-child relationships in duplicates
+- [ ] Auto-select duplicated objects after creation
+- [ ] Add Del keybinding for delete
+- [ ] Remove selected entities from scene
+- [ ] Clean up orphaned children on parent delete
+- [ ] Show confirmation dialog for delete if preferred
+- [ ] Clear selection after delete
+
+#### 18. Hierarchy panel
+- [ ] Create hierarchy EGUI panel on left side
+- [ ] Display tree view of all scene entities
+- [ ] Show parent-child relationships with indentation
+- [ ] Add expand/collapse arrows for parent entities
+- [ ] Display entity name (editable inline)
+- [ ] Add show/hide toggle button per entity
+- [ ] Add lock/unlock toggle button per entity
+- [ ] Implement click-to-select in hierarchy
+- [ ] Sync selection between hierarchy and viewport
+- [ ] Add drag-and-drop to reparent entities (optional)
+
+---
 
 ### Week 4: Polish & Stability
-19. Player spawn point designation
-20. Scene dirty flag and auto-save (every 5 minutes)
-21. Polish gizmo visuals and interactions
-22. Bug fixes and edge cases
-23. Keyboard shortcut refinements
+
+#### 19. Player spawn point designation
+- [ ] Create `PlayerSpawnPoint` component marker
+- [ ] Add "Set as Spawn Point" button in inspector
+- [ ] Render spawn point icon in viewport (distinct gizmo)
+- [ ] Ensure only one spawn point exists (remove others)
+- [ ] Save spawn point to YAML scene file
+- [ ] Use spawn point position when entering play mode
+- [ ] Fall back to origin if no spawn point exists
+- [ ] Show spawn point rotation as forward direction arrow
+
+#### 20. Scene dirty flag and auto-save (every 5 minutes)
+- [ ] Add `SceneDirty` resource (bool flag)
+- [ ] Set dirty flag on any scene modification
+- [ ] Show asterisk in title bar when dirty
+- [ ] Implement Ctrl+N keybinding for new scene
+- [ ] Prompt to save dirty scene on new/open/exit
+- [ ] Implement auto-save timer (5 minutes)
+- [ ] Save to temp file on auto-save (e.g., `.autosave`)
+- [ ] Show notification on auto-save
+- [ ] Recover from auto-save on crash/reload
+- [ ] Clear dirty flag after save
+
+#### 21. Polish gizmo visuals and interactions
+- [ ] Smooth out gizmo handle highlighting
+- [ ] Add subtle animation to gizmo on selection
+- [ ] Improve handle size scaling based on camera distance
+- [ ] Add anti-aliasing to gizmo lines
+- [ ] Polish color scheme for accessibility
+- [ ] Add haptic feedback cues (visual pulse on snap)
+- [ ] Ensure gizmo renders on top of all geometry
+- [ ] Add fade-in/fade-out transitions
+
+#### 22. Bug fixes and edge cases
+- [ ] Test scene load with missing assets
+- [ ] Test save/load with complex hierarchies
+- [ ] Test multi-select with grouped objects
+- [ ] Test gizmo interaction at extreme scales
+- [ ] Test camera collision with scene bounds
+- [ ] Test play mode with no spawn point
+- [ ] Test rapid mode switching (editor ↔ play)
+- [ ] Test grid snapping at chunk boundaries
+- [ ] Fix any reported crashes or data loss
+
+#### 23. Keyboard shortcut refinements
+- [ ] Add shortcut reference panel (accessible via F1 or ?)
+- [ ] Document all keybindings in UI
+- [ ] Ensure no conflicting keybindings
+- [ ] Add customizable keybinding config (optional)
+- [ ] Test shortcuts on different keyboard layouts
+- [ ] Add visual feedback when shortcut is pressed
+- [ ] Consider adding toolbar buttons for key actions
 
 ---
 

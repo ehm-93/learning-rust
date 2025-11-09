@@ -4,8 +4,10 @@
 //! - Primitive definitions and catalog (what objects can be created)
 //! - Object placement system (creating new objects)
 //! - Object selection system (picking and highlighting)
-//! - Future: Transform manipulation (gizmos), duplication, deletion
+//! - Transform manipulation (gizmos)
+//! - Future: duplication, deletion
 
+pub mod gizmo;
 pub mod placement;
 pub mod primitives;
 pub mod selection;

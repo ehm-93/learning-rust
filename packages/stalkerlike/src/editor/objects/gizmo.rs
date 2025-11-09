@@ -1,0 +1,349 @@
+use bevy::prelude::*;
+use bevy::picking::events::{Pointer, Click, Drag};
+
+use crate::editor::objects::selection::{SelectedEntity, Selected};
+use crate::editor::viewport::grid::GridConfig;
+
+/// Transform mode for the gizmo
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TransformMode {
+    #[default]
+    Translate,
+    Rotate,
+    Scale,
+}
+
+/// Resource tracking current transform mode and drag state
+#[derive(Resource)]
+pub struct GizmoState {
+    pub mode: TransformMode,
+    pub dragging: bool,
+    pub drag_axis: Option<GizmoAxis>,
+    pub drag_start_pos: Vec3,
+    pub drag_start_value: Vec3, // Position, rotation, or scale at drag start
+}
+
+impl Default for GizmoState {
+    fn default() -> Self {
+        Self {
+            mode: TransformMode::Translate,
+            dragging: false,
+            drag_axis: None,
+            drag_start_pos: Vec3::ZERO,
+            drag_start_value: Vec3::ZERO,
+        }
+    }
+}
+
+/// Axis identifier for gizmo handles
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
+pub enum GizmoAxis {
+    X,
+    Y,
+    Z,
+}
+
+/// Marker component for gizmo entities
+#[derive(Component)]
+pub struct GizmoHandle;
+
+/// Marker component for the gizmo root entity
+#[derive(Component)]
+pub struct GizmoRoot;
+
+/// Spawn gizmo handles at the selected object's position
+pub fn spawn_gizmo(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    selected: Res<SelectedEntity>,
+    selected_query: Query<&Transform, With<Selected>>,
+    gizmo_query: Query<Entity, With<GizmoRoot>>,
+) {
+    // Remove existing gizmo if any
+    for entity in gizmo_query.iter() {
+        commands.entity(entity).despawn();
+    }
+
+    // Only spawn if something is selected
+    let Some(selected_entity) = selected.entity else {
+        return;
+    };
+
+    let Ok(transform) = selected_query.get(selected_entity) else {
+        return;
+    };
+
+    let position = transform.translation;
+    let handle_size = 0.1; // 10cm sphere handles
+    let handle_offset = 1.5; // 1.5m from center
+
+    // Create root entity for gizmo (at selected object's position)
+    let root = commands.spawn((
+        GizmoRoot,
+        Transform::from_translation(position),
+        GlobalTransform::default(),
+        Visibility::default(),
+        InheritedVisibility::default(),
+        ViewVisibility::default(),
+    )).id();
+
+    // Spawn handle meshes
+    let sphere_mesh = meshes.add(Sphere::new(handle_size));
+
+    // X-axis handle (red)
+    let x_handle = commands.spawn((
+        GizmoHandle,
+        GizmoAxis::X,
+        Mesh3d(sphere_mesh.clone()),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(1.0, 0.0, 0.0),
+            emissive: LinearRgba::rgb(0.5, 0.0, 0.0),
+            ..default()
+        })),
+        Transform::from_xyz(handle_offset, 0.0, 0.0),
+        GlobalTransform::default(),
+        Visibility::default(),
+        InheritedVisibility::default(),
+        ViewVisibility::default(),
+        Pickable::default(), // Make it selectable
+    )).id();
+
+    // Y-axis handle (blue)
+    let y_handle = commands.spawn((
+        GizmoHandle,
+        GizmoAxis::Y,
+        Mesh3d(sphere_mesh.clone()),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.0, 0.0, 1.0),
+            emissive: LinearRgba::rgb(0.0, 0.0, 0.5),
+            ..default()
+        })),
+        Transform::from_xyz(0.0, handle_offset, 0.0),
+        GlobalTransform::default(),
+        Visibility::default(),
+        InheritedVisibility::default(),
+        ViewVisibility::default(),
+        Pickable::default(),
+    )).id();
+
+    // Z-axis handle (green)
+    let z_handle = commands.spawn((
+        GizmoHandle,
+        GizmoAxis::Z,
+        Mesh3d(sphere_mesh.clone()),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.0, 1.0, 0.0),
+            emissive: LinearRgba::rgb(0.0, 0.5, 0.0),
+            ..default()
+        })),
+        Transform::from_xyz(0.0, 0.0, handle_offset),
+        GlobalTransform::default(),
+        Visibility::default(),
+        InheritedVisibility::default(),
+        ViewVisibility::default(),
+        Pickable::default(),
+    )).id();
+
+    // Parent handles to root
+    commands.entity(root).add_children(&[x_handle, y_handle, z_handle]);
+
+    info!("Spawned gizmo at position: {:?}", position);
+}
+
+/// Update gizmo position to follow selected object
+pub fn update_gizmo_position(
+    selected: Res<SelectedEntity>,
+    selected_query: Query<&Transform, With<Selected>>,
+    mut gizmo_query: Query<&mut Transform, (With<GizmoRoot>, Without<Selected>)>,
+) {
+    let Some(selected_entity) = selected.entity else {
+        return;
+    };
+
+    let Ok(selected_transform) = selected_query.get(selected_entity) else {
+        return;
+    };
+
+    for mut gizmo_transform in gizmo_query.iter_mut() {
+        gizmo_transform.translation = selected_transform.translation;
+    }
+}
+
+/// Handle starting drag on gizmo handle
+pub fn start_gizmo_drag(
+    trigger: Trigger<Pointer<Click>>,
+    mut gizmo_state: ResMut<GizmoState>,
+    handle_query: Query<&GizmoAxis, With<GizmoHandle>>,
+    selected: Res<SelectedEntity>,
+    selected_query: Query<&Transform, With<Selected>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+) {
+    // Only start drag on left mouse button
+    if !mouse.pressed(MouseButton::Left) {
+        return;
+    }
+
+    let handle_entity = trigger.target();
+
+    // Check if we clicked a gizmo handle
+    if let Ok(axis) = handle_query.get(handle_entity) {
+        // Get selected object's current transform
+        if let Some(selected_entity) = selected.entity {
+            if let Ok(transform) = selected_query.get(selected_entity) {
+                gizmo_state.dragging = true;
+                gizmo_state.drag_axis = Some(*axis);
+                gizmo_state.drag_start_pos = transform.translation;
+
+                // Store initial value based on mode
+                gizmo_state.drag_start_value = match gizmo_state.mode {
+                    TransformMode::Translate => transform.translation,
+                    TransformMode::Rotate => transform.rotation.to_euler(EulerRot::XYZ).into(),
+                    TransformMode::Scale => transform.scale,
+                };
+
+                info!("Started dragging {:?} axis in {:?} mode", axis, gizmo_state.mode);
+            }
+        }
+    }
+}
+
+/// Handle drag movement on gizmo handle
+pub fn update_gizmo_drag(
+    trigger: Trigger<Pointer<Drag>>,
+    gizmo_state: Res<GizmoState>,
+    selected: Res<SelectedEntity>,
+    mut selected_query: Query<&mut Transform, With<Selected>>,
+    grid_config: Res<GridConfig>,
+    camera_query: Query<(&Camera, &GlobalTransform)>,
+) {
+    if !gizmo_state.dragging {
+        return;
+    }
+
+    let Some(axis) = gizmo_state.drag_axis else {
+        return;
+    };
+
+    let Some(selected_entity) = selected.entity else {
+        return;
+    };
+
+    let Ok(mut transform) = selected_query.get_mut(selected_entity) else {
+        return;
+    };
+
+    // Get camera for calculating drag delta in world space
+    let Ok((_camera, camera_transform)) = camera_query.single() else {
+        return;
+    };
+
+    // Get drag delta from pointer event
+    let event = trigger.event();
+    let delta = event.delta;
+
+    // Calculate drag scale based on distance from camera (farther = larger movements)
+    let distance = (camera_transform.translation() - transform.translation).length();
+    let drag_scale = distance * 0.002; // Tune this value for feel
+
+    // Apply drag based on current mode and axis
+    match gizmo_state.mode {
+        TransformMode::Translate => {
+            let mut movement = Vec3::ZERO;
+            match axis {
+                GizmoAxis::X => movement.x = delta.x * drag_scale,
+                GizmoAxis::Y => movement.y = -delta.y * drag_scale, // Invert Y for intuitive up/down
+                GizmoAxis::Z => movement.z = -delta.y * drag_scale, // Use vertical drag for Z
+            }
+
+            // Apply movement
+            transform.translation += movement;
+
+            // Apply grid snapping if enabled
+            if grid_config.snap_enabled {
+                let spacing = grid_config.spacing;
+                match axis {
+                    GizmoAxis::X => transform.translation.x = (transform.translation.x / spacing).round() * spacing,
+                    GizmoAxis::Y => transform.translation.y = (transform.translation.y / spacing).round() * spacing,
+                    GizmoAxis::Z => transform.translation.z = (transform.translation.z / spacing).round() * spacing,
+                }
+            }
+        }
+        TransformMode::Rotate => {
+            // Rotation: use drag distance as angle delta
+            let rotation_speed = 0.02; // Radians per pixel
+            let angle_delta = delta.length() * rotation_speed * if delta.x + delta.y < 0.0 { -1.0 } else { 1.0 };
+
+            let mut euler = transform.rotation.to_euler(EulerRot::XYZ);
+            match axis {
+                GizmoAxis::X => euler.0 += angle_delta,
+                GizmoAxis::Y => euler.1 += angle_delta,
+                GizmoAxis::Z => euler.2 += angle_delta,
+            }
+
+            // Apply rotation snapping if enabled (15 degrees)
+            if grid_config.snap_enabled {
+                let snap_angle = 15.0_f32.to_radians();
+                match axis {
+                    GizmoAxis::X => euler.0 = (euler.0 / snap_angle).round() * snap_angle,
+                    GizmoAxis::Y => euler.1 = (euler.1 / snap_angle).round() * snap_angle,
+                    GizmoAxis::Z => euler.2 = (euler.2 / snap_angle).round() * snap_angle,
+                }
+            }
+
+            transform.rotation = Quat::from_euler(EulerRot::XYZ, euler.0, euler.1, euler.2);
+        }
+        TransformMode::Scale => {
+            // Scale: vertical drag increases/decreases scale
+            let scale_speed = 0.01;
+            let scale_delta = -delta.y * scale_speed;
+
+            match axis {
+                GizmoAxis::X => transform.scale.x = (transform.scale.x + scale_delta).max(0.01),
+                GizmoAxis::Y => transform.scale.y = (transform.scale.y + scale_delta).max(0.01),
+                GizmoAxis::Z => transform.scale.z = (transform.scale.z + scale_delta).max(0.01),
+            }
+        }
+    }
+}
+
+/// Handle ending drag on gizmo handle
+pub fn end_gizmo_drag(
+    mut gizmo_state: ResMut<GizmoState>,
+    mouse: Res<ButtonInput<MouseButton>>,
+) {
+    // End drag when left mouse button is released
+    if gizmo_state.dragging && mouse.just_released(MouseButton::Left) {
+        info!("Ended dragging {:?} axis", gizmo_state.drag_axis);
+        gizmo_state.dragging = false;
+        gizmo_state.drag_axis = None;
+    }
+}
+
+/// Toggle transform mode with F key (forward) and Shift+F (backward)
+pub fn toggle_transform_mode(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut gizmo_state: ResMut<GizmoState>,
+) {
+    let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
+
+    if keyboard.just_pressed(KeyCode::KeyF) {
+        gizmo_state.mode = if shift {
+            // Shift+F: cycle backward
+            match gizmo_state.mode {
+                TransformMode::Translate => TransformMode::Scale,
+                TransformMode::Rotate => TransformMode::Translate,
+                TransformMode::Scale => TransformMode::Rotate,
+            }
+        } else {
+            // F: cycle forward
+            match gizmo_state.mode {
+                TransformMode::Translate => TransformMode::Rotate,
+                TransformMode::Rotate => TransformMode::Scale,
+                TransformMode::Scale => TransformMode::Translate,
+            }
+        };
+
+        info!("Transform mode: {:?}", gizmo_state.mode);
+    }
+}

@@ -38,11 +38,28 @@ impl Default for EditorCamera {
 
 /// Setup the editor camera when entering editor mode
 pub fn setup_editor_camera(mut commands: Commands) {
-    // Spawn editor camera at a good starting position
+    // Spawn editor camera at an isometric view of the origin
+    // Position: 45° horizontally, elevated for classic isometric angle
+    let distance = 15.0;
+    let yaw = -std::f32::consts::FRAC_PI_4; // -45 degrees (southwest direction)
+    let pitch = -35.264_f32.to_radians(); // Looking down at isometric angle
+
+    let x = distance * pitch.cos() * yaw.sin();
+    let y = distance * (-pitch).sin();
+    let z = distance * pitch.cos() * yaw.cos();
+
+    let transform = Transform::from_xyz(x, y, z)
+        .looking_at(Vec3::ZERO, Vec3::Y);
+
+    let mut camera = EditorCamera::default();
+    camera.yaw = yaw;
+    camera.pitch = pitch;
+    camera.mouse_locked = false; // Start with mouse unlocked for UI interaction
+
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
-        EditorCamera::default(),
+        transform,
+        camera,
     ));
 }
 
@@ -179,12 +196,12 @@ pub fn camera_movement(
     }
 }
 
-/// Lock cursor when editor starts
+/// Unlock cursor when editor starts (for UI interaction)
 pub fn lock_cursor_on_start(
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     if let Ok(mut window) = windows.single_mut() {
-        window.cursor_options.grab_mode = CursorGrabMode::Confined;
-        window.cursor_options.visible = false;
+        window.cursor_options.grab_mode = CursorGrabMode::None;
+        window.cursor_options.visible = true;
     }
 }

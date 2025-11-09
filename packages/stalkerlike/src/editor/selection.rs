@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
+use bevy::picking::events::{Pointer, Click};
 
-use super::components::{EditorCamera, EditorEntity};
+use super::components::EditorEntity;
 use super::placement::PlacementState;
 
 /// Resource tracking the currently selected entity
@@ -14,74 +14,25 @@ pub struct SelectedEntity {
 #[derive(Component)]
 pub struct Selected;
 
-/// Handle entity selection via raycasting
+/// Handle entity selection via picking Click events
 pub fn handle_selection(
-    mouse_input: Res<ButtonInput<MouseButton>>,
-    camera_query: Query<(&Camera, &GlobalTransform, &EditorCamera)>,
-    windows: Query<&Window, With<PrimaryWindow>>,
+    trigger: Trigger<Pointer<Click>>,
     mut selected: ResMut<SelectedEntity>,
     mut commands: Commands,
-    entity_query: Query<(Entity, &GlobalTransform, &ViewVisibility), With<EditorEntity>>,
     selected_query: Query<Entity, With<Selected>>,
     placement_state: Res<PlacementState>,
-    meshes: Res<Assets<Mesh>>,
-    mesh_query: Query<&Mesh3d>,
+    editor_query: Query<(), With<EditorEntity>>,
 ) {
-    // Only select when mouse is unlocked and not in placement mode
-    let Ok((camera, camera_transform, editor_camera)) = camera_query.get_single() else {
-        return;
-    };
-
-    if editor_camera.mouse_locked || placement_state.active {
+    // Don't select if in placement mode
+    if placement_state.active {
         return;
     }
 
-    if !mouse_input.just_pressed(MouseButton::Left) {
+    let clicked_entity = trigger.target();
+
+    // Only select EditorEntity objects
+    if editor_query.get(clicked_entity).is_err() {
         return;
-    }
-
-    let Ok(window) = windows.get_single() else {
-        return;
-    };
-
-    let Some(cursor_position) = window.cursor_position() else {
-        return;
-    };
-
-    // Cast ray from camera through cursor
-    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
-        return;
-    };
-
-    // Find closest entity hit by ray
-    let mut closest_hit: Option<(Entity, f32)> = None;
-
-    for (entity, transform, visibility) in entity_query.iter() {
-        if !visibility.get() {
-            continue;
-        }
-
-        // Simple sphere-based intersection test (approximation)
-        let entity_pos = transform.translation();
-        let to_entity = entity_pos - ray.origin;
-        let projection = to_entity.dot(*ray.direction);
-
-        if projection < 0.0 {
-            continue; // Behind camera
-        }
-
-        let closest_point = ray.origin + *ray.direction * projection;
-        let distance_to_ray = (entity_pos - closest_point).length();
-
-        // Use a generous radius for selection (1.0 units)
-        let selection_radius = 1.0;
-
-        if distance_to_ray < selection_radius {
-            let distance = projection;
-            if closest_hit.is_none() || distance < closest_hit.unwrap().1 {
-                closest_hit = Some((entity, distance));
-            }
-        }
     }
 
     // Clear previous selection
@@ -89,19 +40,13 @@ pub fn handle_selection(
         commands.entity(entity).remove::<Selected>();
     }
 
-    // Select the clicked entity if any
-    if let Some((entity, _)) = closest_hit {
-        selected.entity = Some(entity);
-        commands.entity(entity).insert(Selected);
-        info!("Selected entity: {:?}", entity);
-    } else {
-        // Clicked on empty space - deselect
-        selected.entity = None;
-        info!("Deselected");
-    }
+    // Select the clicked entity
+    selected.entity = Some(clicked_entity);
+    commands.entity(clicked_entity).insert(Selected);
+    info!("Selected entity: {:?}", clicked_entity);
 }
 
-/// Handle deselection (ESC key)
+/// Handle deselection (ESC key or click on empty space)
 pub fn handle_deselection(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut selected: ResMut<SelectedEntity>,

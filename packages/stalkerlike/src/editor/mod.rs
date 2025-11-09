@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::pbr::MaterialPlugin;
+use bevy::picking::mesh_picking::MeshPickingPlugin;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 mod camera;
@@ -30,6 +31,9 @@ impl Plugin for EditorPlugin {
             // Third-party plugins
             .add_plugins(EguiPlugin::default())
 
+            // Picking plugin (mesh raycasting backend)
+            .add_plugins(MeshPickingPlugin)
+
             // Custom material for grid
             .add_plugins(MaterialPlugin::<GridMaterial>::default())
 
@@ -39,6 +43,9 @@ impl Plugin for EditorPlugin {
             .init_resource::<PlacementState>()
             .init_resource::<SelectedEntity>()
             .init_resource::<GridConfig>()
+
+            // Observers for picking events
+            .add_observer(handle_selection)
 
             // Startup systems
             .add_systems(Startup, (
@@ -63,7 +70,6 @@ impl Plugin for EditorPlugin {
             ))
             // Update systems - selection
             .add_systems(Update, (
-                handle_selection,
                 handle_deselection,
                 highlight_selected,
                 remove_outline_from_deselected,

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
+use bevy::picking::prelude::Pickable;
 
 use super::components::{EditorCamera, EditorEntity};
 use super::resources::EditorMouseMotion;
@@ -20,15 +21,16 @@ pub fn setup_test_scene(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // Ground plane
+    // Ground plane (not pickable - it's a reference plane)
     commands.spawn((
         EditorEntity,
         Mesh3d(meshes.add(Plane3d::default().mesh().size(20.0, 20.0))),
         MeshMaterial3d(materials.add(Color::srgb(0.3, 0.5, 0.3))),
         Transform::from_xyz(0.0, 0.0, 0.0),
+        Pickable::IGNORE, // Don't select the ground
     ));
 
-    // Some test cubes
+    // Some test cubes (pickable)
     for i in -2..3 {
         for j in -2..3 {
             if i == 0 && j == 0 {
@@ -43,6 +45,7 @@ pub fn setup_test_scene(
                     0.7 + j as f32 * 0.1,
                 ))),
                 Transform::from_xyz(i as f32 * 3.0, 1.0, j as f32 * 3.0),
+                Pickable::default(), // Make it pickable
             ));
         }
     }

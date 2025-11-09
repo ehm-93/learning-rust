@@ -8,26 +8,57 @@ Two-database SQLite architecture separating immutable game content from player s
 ### Static Database (`game_static.db`)
 Immutable game content. Replaced entirely on updates.
 
+Illustrative, not final:
+
 ```sql
--- Module definitions
-CREATE TABLE modules (
+-- Visual atoms (models/)
+CREATE TABLE models (
     id TEXT PRIMARY KEY,
+    path TEXT NOT NULL,  -- e.g., "models/chest.glb"
     mesh_path TEXT NOT NULL,
     default_material TEXT,
     collision_type TEXT,
     vertex_colors TEXT  -- JSON array
 );
 
--- Hand-crafted level chunks
-CREATE TABLE chunks (
+-- Functional atoms (component definitions)
+CREATE TABLE components (
     id TEXT PRIMARY KEY,
-    x INTEGER, y INTEGER, z INTEGER,
-    template TEXT,
-    faction TEXT DEFAULT 'abandoned',
-    entities TEXT,  -- JSON blob of placed entities
-    UNIQUE(x, y, z)
+    name TEXT NOT NULL,  -- e.g., "Interactable", "Container"
+    rust_type TEXT NOT NULL,
+    default_config TEXT  -- JSON schema
 );
-CREATE INDEX idx_chunks_spatial ON chunks(x, y, z);
+
+-- Prefabs (molecules from prefabs/)
+CREATE TABLE prefabs (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL,  -- e.g., "prefabs/chest_common"
+    model_id TEXT,  -- References models.id
+    components TEXT,  -- JSON array of component configs
+    children TEXT,  -- JSON array of child entities
+    scripts TEXT,  -- JSON map of script files
+    FOREIGN KEY (model_id) REFERENCES models(id)
+);
+
+-- Hand-crafted levels (from levels/)
+CREATE TABLE levels (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL,  -- e.g., "levels/corporate_hub"
+    chunk_x INTEGER, 
+    chunk_y INTEGER, 
+    chunk_z INTEGER,
+    chunk_size_x INTEGER,
+    chunk_size_y INTEGER,
+    chunk_size_z INTEGER,
+    faction TEXT DEFAULT 'abandoned',
+    always_loaded BOOLEAN DEFAULT false,
+    connections TEXT,  -- JSON array of connection points
+    prefab_instances TEXT,  -- JSON array of placed prefabs
+    UNIQUE(chunk_x, chunk_y, chunk_z)
+);
+CREATE INDEX idx_levels_spatial ON levels(chunk_x, chunk_y, chunk_z);
 
 -- Narrative content
 CREATE TABLE datapads (
@@ -36,24 +67,6 @@ CREATE TABLE datapads (
     content TEXT,
     location_hint TEXT,
     year_written INTEGER
-);
-
--- Game definitions
-CREATE TABLE props (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    mesh_path TEXT,
-    weight REAL,
-    value INTEGER,
-    components TEXT  -- JSON ECS components
-);
-
--- Scripting
-CREATE TABLE scripts (
-    id TEXT PRIMARY KEY,
-    name TEXT UNIQUE,
-    trigger_type TEXT,  -- 'on_enter', 'on_interact', 'on_timer'
-    script TEXT         -- Lua code
 );
 
 -- Metadata
@@ -129,252 +142,162 @@ CREATE TABLE settings (
 
 ### Directory Structure
 ```
-content/
-├── schema/
-│   ├── static_v1.sql
-│   └── dynamic_v1.sql
-├── levels/
-│   ├── 00_corporate_hub.yaml
-│   ├── 01_transit_alpha.yaml
-│   └── 99_the_deep.yaml
-├── props/
-│   └── definitions.yaml
-├── narrative/
-│   ├── datapads.yaml
-│   └── timeline.yaml
-└── build.py
+assets/
+├── models/          # Visual atoms (.glb files)
+├── prefabs/         # Molecules (directories with YAML + scripts)
+├── levels/          # Organisms (directories with YAML + scripts)
+└── build_tool       # Converts YAMLs to database
 ```
 
-### YAML to SQL Conversion
-```python
-# build.py
-import yaml
-import json
-import sqlite3
+### Content Processing
 
-def yaml_to_sql(yaml_file, table_name):
-    with open(yaml_file) as f:
-        data = yaml.safe_load(f)
-    
-    # Convert based on content type
-    if table_name == 'chunks':
-        return convert_level(data)
-    elif table_name == 'props':
-        return convert_props(data)
-    # ...etc
+**Build Process:**
+1. Scan `models/` directory and index all .glb files
+2. Parse all `prefabs/*/prefab.yaml` files and convert to database entries
+3. Parse all `levels/*/level.yaml` files and convert to database entries
+4. Process narrative content (datapads, lore)
+5. Optimize database (indexing, vacuuming)
+6. Generate `game_static.db`
 
-def convert_level(data):
-    chunk = data['chunk']
-    entities = json.dumps(data.get('entities', []))
-    
-    return f"""
-        INSERT INTO chunks (id, x, y, z, faction, entities)
-        VALUES ('{chunk['id']}', {chunk['position'][0]}, 
-                {chunk['position'][1]}, {chunk['position'][2]},
-                '{chunk.get('faction', 'abandoned')}', 
-                '{entities}');
-    """
+**Prefab Conversion:**
+- Read prefab.yaml structure
+- Extract model references, components, children
+- Store as single database row with JSON blobs for complex data
+- Link to model IDs and script paths
 
-def build_static_db():
-    conn = sqlite3.connect('game_static.db')
-    
-    # Schema
-    conn.executescript(open('schema/static_v1.sql').read())
-    
-    # Content
-    for yaml_file in Path('levels').glob('*.yaml'):
-        conn.executescript(yaml_to_sql(yaml_file, 'chunks'))
-    
-    # Optimize
-    conn.execute("VACUUM")
-    conn.execute("ANALYZE")
-```
+**Level Conversion:**
+- Read level.yaml with all placed prefab instances
+- Calculate chunk coordinates from world position
+- Store prefab placements, spawn points, triggers
+- Preserve connection points for procedural generation
+- Link scripts and narrative elements
 
 ## Runtime Usage
 
-### Database Connection
-```rust
-use rusqlite::{Connection, OpenFlags};
+### Database Access
 
-pub struct GameDatabase {
-    static_db: Connection,   // Read-only
-    dynamic_db: Connection,  // Read-write
-}
+**Dual Database System:**
+- **Static DB**: Read-only, contains all game content, replaced on updates
+- **Dynamic DB**: Read-write, contains player saves and runtime state
+- Databases can be queried together using ATTACH
 
-impl GameDatabase {
-    pub fn new(save_slot: u32) -> Result<Self> {
-        // Open static DB read-only
-        let static_db = Connection::open_with_flags(
-            "game_static.db",
-            OpenFlags::SQLITE_OPEN_READ_ONLY
-        )?;
-        
-        // Open or create save
-        let save_path = format!("saves/slot_{}.db", save_slot);
-        let dynamic_db = if Path::new(&save_path).exists() {
-            Connection::open(&save_path)?
-        } else {
-            // Copy template
-            std::fs::copy("game_dynamic_template.db", &save_path)?;
-            Connection::open(&save_path)?
-        };
-        
-        // Attach for cross-DB queries
-        dynamic_db.execute(
-            "ATTACH DATABASE 'game_static.db' AS static",
-            []
-        )?;
-        
-        Ok(Self { static_db, dynamic_db })
-    }
-}
-```
+**Query Flow:**
+1. Check dynamic DB for generated/modified chunks
+2. Fall back to static DB for hand-authored content
+3. Cache frequently accessed data in memory
+4. Track player discoveries and modifications in dynamic DB
 
-### Querying
-```rust
-// Get chunk (check procedural first, then static)
-pub fn get_chunk(&self, coords: ChunkCoord) -> Option<ChunkData> {
-    // Check generated chunks
-    if let Ok(data) = self.dynamic_db.query_row(
-        "SELECT entities FROM generated_chunks 
-         WHERE x=? AND y=? AND z=? AND save_id=?",
-        params![coords.x, coords.y, coords.z, self.save_id],
-        |row| row.get::<_, String>(0)
-    ) {
-        return Some(parse_chunk_data(&data));
-    }
-    
-    // Check static chunks
-    if let Ok(data) = self.static_db.query_row(
-        "SELECT entities FROM chunks 
-         WHERE x=? AND y=? AND z=?",
-        params![coords.x, coords.y, coords.z],
-        |row| row.get::<_, String>(0)
-    ) {
-        return Some(parse_chunk_data(&data));
-    }
-    
-    None
-}
-
-// Track discovery
-pub fn mark_discovered(&self, entity_id: &str, chunk_id: &str) {
-    self.dynamic_db.execute(
-        "INSERT OR IGNORE INTO discoveries 
-         (save_id, entity_id, chunk_id) 
-         VALUES (?, ?, ?)",
-        params![self.save_id, entity_id, chunk_id]
-    ).ok();
-}
-```
+**Key Operations:**
+- Load level data by chunk coordinates
+- Retrieve prefab definitions by ID
+- Query model paths for asset loading
+- Track player discoveries across chunks
+- Store runtime modifications (doors opened, items taken, etc.)
 
 ## Update System
 
-### Patching
-```bash
-#!/bin/bash
-# update.sh
+### Patching Strategy
 
-# Backup saves
-cp -r saves/ "backup_$(date +%s)/"
+**Update Process:**
+1. Backup all player saves before update
+2. Replace `game_static.db` atomically (single file swap)
+3. Check version compatibility between old saves and new content
+4. Run database migrations if schema changed
+5. Verify save file integrity
 
-# Replace static DB (atomic)
-mv game_static_new.db game_static.db
+**Migration System:**
+- Version-specific SQL scripts for schema changes
+- Applied to dynamic DB only (saves)
+- Can add columns, update defaults, transform data
+- Preserves player progress across updates
 
-# Run migrations if needed
-VERSION_OLD=$(sqlite3 saves/slot_1.db "SELECT value FROM settings WHERE key='version'")
-VERSION_NEW=$(sqlite3 game_static.db "SELECT version FROM metadata")
-
-if [ -f "migrations/${VERSION_OLD}_to_${VERSION_NEW}.sql" ]; then
-    for save in saves/*.db; do
-        sqlite3 "$save" < "migrations/${VERSION_OLD}_to_${VERSION_NEW}.sql"
-    done
-fi
-```
-
-### Migration Example
-```sql
--- migrations/v1.0_to_v1.1.sql
--- Add new column safely
-ALTER TABLE chunk_states ADD COLUMN temperature REAL DEFAULT 20.0;
-
--- Update version
-UPDATE settings SET value = '1.1' WHERE key = 'version';
-```
+**Benefits:**
+- Player saves never touched during content updates
+- Rollback is just restoring old game_static.db
+- Moddable: users can replace database or add content
+- Fast updates: replace one file instead of many
 
 ## Git Workflow
 
 ### Development
-```bash
-# Edit human-friendly YAML
-vim levels/mining_shaft_7.yaml
-
-# Convert to SQL (pre-commit hook)
-python build.py
-
-# Both tracked in git
-git add levels/mining_shaft_7.yaml
-git add generated/mining_shaft_7.sql
-
-# CI builds game_static.db
-make release
-```
+Content creators work with human-friendly formats:
+- Artists export .glb files to `models/`
+- Designers create prefabs in editor → saves to `prefabs/*/prefab.yaml`
+- Level designers place prefabs → saves to `levels/*/level.yaml`
+- Build tool converts everything to `game_static.db`
 
 ### Version Control
 ```
 .gitignore:
-*.db         # Don't track binary DBs
-saves/       # Don't track saves
+game_static.db     # Don't track built DB (regenerate from YAMLs)
+game_dynamic*.db   # Don't track saves
+saves/             # Don't track saves
 
-git-lfs:
-*.db filter=lfs  # Or use LFS for binaries
+Tracked:
+models/**/*.glb    # All visual atoms
+prefabs/**/        # All prefab directories
+levels/**/         # All level directories
+build_tool         # Database builder
+schema/            # DB schemas
 ```
+
+**Workflow Benefits:**
+- Artists/designers work in familiar formats
+- Git tracks source files, not generated database
+- Merge conflicts rare (YAMLs in separate directories)
+- CI/CD builds database automatically
+- Easy to see what changed in code review
 
 ## Advantages
 
-1. **Clean Updates**: Replace one file, saves untouched
-2. **Moddability**: Players can query/modify databases
+1. **Clean Updates**: Replace one file (game_static.db), saves untouched
+2. **Moddability**: Players can add models/, prefabs/, levels/ directories
 3. **Debugging**: SQL queries for game state inspection
-4. **Performance**: SQLite handles millions of entities
+4. **Performance**: SQLite handles millions of entities efficiently
 5. **Compatibility**: Migrations preserve saves across versions
-6. **Version Control**: YAML sources are diff-friendly
-7. **Hot Reload**: Change YAML, rebuild DB, see changes
+6. **Version Control**: YAML/GLB sources are diff-friendly and mergeable
+7. **Hot Reload**: Change YAML, rebuild DB, see changes immediately
+8. **Shared Vocabulary**: Prefabs used by editor, procedural gen, and runtime
+9. **Artist-Friendly**: Artists work in Blender, export .glb, done
+10. **Designer-Friendly**: Designers use editor GUI, saves to readable YAML
 
 ## Query Examples
 
 ### Analytics
-```sql
--- Player progress
-SELECT COUNT(DISTINCT chunk_id) as explored_chunks,
-       COUNT(*) as total_discoveries,
-       MAX(timestamp) as last_played
-FROM discoveries WHERE save_id = 1;
-
--- Death locations
-SELECT chunk_id, COUNT(*) as deaths 
-FROM events 
-WHERE event_type = 'player_death' 
-GROUP BY chunk_id 
-ORDER BY deaths DESC;
-```
+Example queries for tracking player behavior:
+- Count explored chunks and discovered items per save
+- Find most dangerous areas (death heatmap by chunk)
+- Track time spent per depth zone
+- Identify rarely-discovered secrets
 
 ### Modding
-```sql
--- Add custom content
-INSERT INTO static.chunks VALUES ('mod_nightmare', -9999, -9999, -9999, ...);
+Players/modders can extend the game by:
+- Adding custom .glb models to `mods/models/`
+- Creating new prefabs referencing those models
+- Designing complete custom levels
+- Inserting new datapads, lore, narratives
+- Modifying loot tables and spawn rates
+- All via direct SQL or tool-assisted workflows
 
--- Modify game rules
-UPDATE static.props SET value = value * 2;  -- Double all item values
-
--- Unlock everything
-INSERT INTO discoveries SELECT 1, id, 'cheated' FROM static.datapads;
-```
+**Modding Approach:**
+- Drop content into appropriate directories
+- Run build tool to regenerate database
+- Or directly insert into database tables
+- Game loads mods alongside base content
 
 ## Performance Considerations
 
-- Memory-map static DB for read performance
-- Keep frequently accessed data in Bevy ECS
-- Use prepared statements for repeated queries
-- Index spatial coordinates for range queries
-- VACUUM periodically to maintain performance
-- Use transactions for bulk operations
+- Memory-map static DB for fast read performance
+- Keep frequently accessed data in game ECS (not queried every frame)
+- Use prepared/cached queries for repeated lookups
+- Index spatial coordinates for efficient range queries
+- Vacuum dynamic DB periodically to reclaim space
+- Use transactions for bulk operations (batch inserts/updates)
+- Lazy-load level data only when chunk becomes active
+
+**Memory Strategy:**
+- Static DB stays memory-mapped (read-only, safe)
+- Prefab definitions cached after first load
+- Model paths cached in asset manager
+- Level data loaded on-demand per chunk
+- Player state kept in ECS, persisted to DB on save events

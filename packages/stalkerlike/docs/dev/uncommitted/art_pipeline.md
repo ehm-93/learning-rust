@@ -1,7 +1,7 @@
 # Art Pipeline
 
 ## Overview
-Low-poly aesthetic inspired by Deep Rock Galactic and Metro 2033, emphasizing oppressive underground atmosphere through deliberate artistic constraints.
+Low-poly aesthetic inspired by Deep Rock Galactic x Metro 2033, emphasizing oppressive underground atmosphere through deliberate artistic constraints.
 
 ## Visual Style Guide
 
@@ -76,50 +76,65 @@ glTF 2.0 Binary (.glb):
 
 ## Modular Asset System
 
-### Tunnel Modules
+### Tunnel Modules (Visual Atoms)
 ```yaml
-Core Set (5 pieces minimum):
-  tunnel_straight:
+Core Set (5 pieces minimum in models/):
+  tunnel_straight.glb:
     size: [4, 3, 4]  # meters
     connections: [north, south]
-    variants: [clean, damaged, sealed]
     
-  tunnel_corner:
+  tunnel_corner.glb:
     size: [4, 3, 4]
     connections: [north, east]
     
-  tunnel_T:
+  tunnel_T.glb:
     size: [4, 3, 4]
     connections: [north, south, east]
     
-  tunnel_cross:
+  tunnel_cross.glb:
     size: [4, 3, 4]
     connections: [north, south, east, west]
     
-  tunnel_end:
+  tunnel_end.glb:
     size: [4, 3, 4]
     connections: [north]
+
+# Prefabs combine these with functionality
+prefabs/tunnel_cross_abandoned/:
+  base: tunnel_cross.glb
+  components: [Damaged(0.7), Powered(false)]
+  props: [debris_pile, sparking_cable]
+  lighting: emergency_only
 ```
 
-### Environmental Storytelling Props
+### Environmental Storytelling Props (Visual Atoms)
 ```yaml
-Industrial:
-  - mining_drill (200 polys)
-  - ore_cart (150 polys)
-  - pressure_valve (80 polys)
-  - cable_spool (100 polys)
+Industrial models/:
+  - mining_drill.glb (200 polys)
+  - ore_cart.glb (150 polys)
+  - pressure_valve.glb (80 polys)
+  - cable_spool.glb (100 polys)
   
-Abandoned:
-  - sleeping_bag (50 polys)
-  - makeshift_stove (120 polys)
-  - personal_effects (30-50 polys each)
-  - corpse_miner (500 polys)
+Abandoned models/:
+  - sleeping_bag.glb (50 polys)
+  - makeshift_stove.glb (120 polys)
+  - personal_effects.glb (30-50 polys each)
+  - corpse_miner.glb (500 polys)
   
-C-7 Infected:
-  - crystal_growth_small (50 polys)
-  - crystal_growth_large (200 polys)
-  - dissolved_wall (modified tunnel piece)
-  - impossible_geometry (non-euclidean mesh)
+C-7 Infected models/:
+  - crystal_growth_small.glb (50 polys)
+  - crystal_growth_large.glb (200 polys)
+  - dissolved_wall.glb (modified tunnel piece)
+  - impossible_geometry.glb (non-euclidean mesh)
+
+# Designers combine these into prefabs with functionality:
+prefabs/interactive_terminal/:
+  model: terminal.glb
+  components: [Interactable, DatapadSource("log_017")]
+  
+prefabs/locked_chest/:
+  model: chest.glb
+  components: [Interactable, Container, RequiresKey("blue_keycard")]
 ```
 
 ## Optimization Techniques
@@ -280,16 +295,89 @@ Before export:
 - [ ] Named descriptively
 - [ ] Collision simplified or separate
 
-## Git Storage
+## Asset Organization
+
+### Three-Tier Structure
 
 ```
 assets/
-├── models/
-│   ├── modules/        # .glb files
-│   ├── props/          # .glb files
-│   └── sources/        # .blend files (Git LFS)
-├── textures/
-│   └── atlas.png       # Minimal textures
-└── materials/
-    └── definitions.ron  # Material definitions
+├── models/           # Visual atoms - Blender exports (.glb files)
+│   ├── chair.glb
+│   ├── table.glb
+│   ├── chest.glb
+│   ├── tunnel_straight.glb
+│   └── mining_drill.glb
+│
+├── prefabs/          # Molecules - Editor-created reusable objects
+│   ├── chest_common/
+│   │   ├── prefab.yaml       # Visual (chest.glb) + Components
+│   │   └── on_open.lua       # Optional custom logic
+│   ├── dining_set/
+│   │   └── prefab.yaml       # Visual arrangement (table + chairs)
+│   └── tunnel_4way_damaged/
+│       └── prefab.yaml       # Module + props + lighting
+│
+└── levels/           # Organisms - Complete playable scenes
+    ├── corporate_hub/
+    │   ├── level.yaml        # Placed prefab instances
+    │   ├── intro_sequence.lua
+    │   └── notes.md
+    └── mining_shaft_7/
+        ├── level.yaml
+        ├── quest_puzzle.lua
+        └── notes.md
+```
+
+### Asset Types Explained
+
+**Visual Atoms** (`models/`)
+- Single objects exported from Blender
+- Just mesh, animations, skeleton - no game logic
+- Examples: `chair.glb`, `chest.glb`, `drill.glb`
+- Always committed to git
+- Created by artists
+
+**Functional Atoms** (defined in Rust)
+- Game components: `Interactable`, `Container`, `LootTable`, `Door`, `Switch`
+- Available in editor as dropdown selections
+- Configurable per-instance
+- Created by programmers
+
+**Molecules** (`prefabs/`)
+- Visual atoms + functional atoms combined
+- Reusable across multiple levels
+- Directory-based (prefab.yaml + optional scripts)
+- Created by designers in the editor
+- Examples:
+  - `chest_common/`: chest.glb + Interactable + Container
+  - `dining_set/`: table.glb + 4× chair.glb arranged
+  - `emergency_light/`: light.glb + Light component + flicker script
+
+**Organisms** (`levels/`)
+- Complete playable chunks (32m × 32m × 32m)
+- Placed prefab instances + level-specific scripts
+- Directory-based (level.yaml + scripts + docs)
+- Created by level designers
+- Examples: `corporate_hub/`, `mining_shaft_7/`
+
+### Workflow
+
+1. **Artist** exports `chest.glb` (visual atom) → `models/`
+2. **Programmer** adds `Container` component (functional atom) → game code
+3. **Designer** combines in editor: `chest.glb` + `Interactable` + `Container` → `prefabs/chest_common/`
+4. **Level Designer** places `chest_common` 50 times → `levels/cafeteria/`
+
+### Git Storage Strategy
+
+```yaml
+Git Tracked:
+  models/: All .glb files (~500KB each)
+  prefabs/: All prefab.yaml files (~5-10KB each)
+  levels/: All level.yaml files (~50-200KB each)
+  sources/: .blend files (Git LFS recommended)
+
+Not Tracked:
+  Generated content (procedural chunks)
+  Player saves (dynamic database)
+  Compiled assets (cached builds)
 ```

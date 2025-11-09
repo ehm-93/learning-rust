@@ -1,29 +1,20 @@
 # World Architecture & Chunking
 
 ## Overview
-True-scale 10km deep mining colony with seamless streaming, combining hand-authored narrative spaces with procedural connective tissue.
+True-scale 10km deep mining colony with seamless streaming. Primarily hand-authored content with copy-paste variations for efficiency. Procedural generation deferred until hand-crafting becomes prohibitive.
 
 ## World Structure
 
 ### Coordinate System
-```rust
-// World space uses standard 3D coordinates
-// Y-axis represents depth (negative = deeper)
-struct WorldPosition {
-    x: f32,  // East-West
-    y: f32,  // Depth (0 = surface, -10000 = deepest)
-    z: f32,  // North-South
-}
+**World Space**: Standard 3D coordinates where Y-axis represents depth
+- X: East-West positioning
+- Y: Depth (0 = surface, -10000 = deepest point)
+- Z: North-South positioning
 
-// Chunk coordinates for spatial indexing
-struct ChunkCoord {
-    x: i32,  // Chunk index X
-    y: i32,  // Chunk index Y (depth)
-    z: i32,  // Chunk index Z
-}
-
-const CHUNK_SIZE: f32 = 32.0;  // 32x32x32 meter chunks
-```
+**Chunk Coordinates**: Integer indices for spatial organization
+- Each chunk is 32×32×32 meters
+- Chunk indices derived from world position ÷ 32
+- Simplifies loading/unloading regions
 
 ### Scale Reference
 - **Surface to Corporate Hub**: 100m (3 chunks)
@@ -36,209 +27,135 @@ const CHUNK_SIZE: f32 = 32.0;  // 32x32x32 meter chunks
 ## Streaming Architecture
 
 ### Memory Management
-```rust
-struct ChunkManager {
-    // Currently loaded chunks
-    loaded: HashMap<ChunkCoord, LoadedChunk>,
-    
-    // Loading queue
-    load_queue: VecDeque<ChunkCoord>,
-    
-    // Unload queue
-    unload_queue: VecDeque<ChunkCoord>,
-    
-    // Player position for reference
-    player_chunk: ChunkCoord,
-}
+**Chunk Manager Responsibilities:**
+- Track currently loaded chunks in memory
+- Maintain load/unload queues
+- Monitor player position
+- Enforce memory budgets
+- Handle level-of-detail transitions
 
-struct LoadedChunk {
-    coord: ChunkCoord,
-    entities: Vec<Entity>,
-    lod_level: LODLevel,
-    last_accessed: Instant,
-    memory_size: usize,
-}
-```
+**Per-Chunk Data:**
+- Coordinate and spatial info
+- Entity references (for ECS)
+- Current LOD level
+- Last access time (for LRU unloading)
+- Memory footprint estimate
 
 ### Loading Strategy
-```rust
-// Concentric loading zones around player
-const LOAD_DISTANCES: [(i32, LODLevel); 4] = [
-    (1, LODLevel::Full),      // Adjacent chunks: everything
-    (2, LODLevel::Reduced),   // Nearby: geometry + lights
-    (3, LODLevel::Minimal),   // Distant: geometry only
-    (4, LODLevel::Unloaded),  // Beyond: nothing
-];
+**Concentric zones around player:**
+- **Distance 1 (Adjacent)**: Full detail - everything loads
+- **Distance 2 (Nearby)**: Reduced detail - geometry + lights only
+- **Distance 3 (Distant)**: Minimal - simplified geometry
+- **Distance 4+**: Unloaded - not in memory
 
-fn calculate_chunks_to_load(player_chunk: ChunkCoord) -> Vec<(ChunkCoord, LODLevel)> {
-    let mut chunks = Vec::new();
-    
-    for (radius, lod) in LOAD_DISTANCES.iter() {
-        for dx in -radius..=radius {
-            for dy in -radius..=radius {
-                for dz in -radius..=radius {
-                    // Skip if in inner radius
-                    let dist = dx.abs().max(dy.abs()).max(dz.abs());
-                    if dist != *radius { continue; }
-                    
-                    let coord = ChunkCoord {
-                        x: player_chunk.x + dx,
-                        y: player_chunk.y + dy,
-                        z: player_chunk.z + dz,
-                    };
-                    
-                    chunks.push((coord, *lod));
-                }
-            }
-        }
-    }
-    
-    chunks
-}
-```
+**Algorithm:**
+- Calculate player's current chunk
+- Generate list of chunks within each distance ring
+- Load new chunks by priority
+- Unload chunks beyond maximum distance
+- Transition LOD for chunks changing zones
 
-## Floating Origin
+## Coordinate Management
 
-### Precision Management
-```rust
-// Prevent floating point errors at extreme distances
-struct FloatingOrigin {
-    offset: DVec3,  // 64-bit precision offset
-    threshold: f32, // When to recenter (e.g., 1000m)
-}
+### Precision Considerations
+At 10km depth, 32-bit floating-point precision is still adequate (sub-centimeter accuracy). Floating origin systems are typically unnecessary until distances exceed 50-100km.
 
-fn floating_origin_system(
-    mut origin: ResMut<FloatingOrigin>,
-    mut player: Query<&mut Transform, With<Player>>,
-    mut everything: Query<&mut Transform, Without<Player>>,
-) {
-    let player_pos = player.single().translation;
-    
-    if player_pos.length() > origin.threshold {
-        // Record offset
-        origin.offset += player_pos.as_dvec3();
-        
-        // Shift world back to origin
-        for mut transform in everything.iter_mut() {
-            transform.translation -= player_pos;
-        }
-        
-        // Reset player to origin
-        player.single_mut().translation = Vec3::ZERO;
-    }
-}
-```
+**Simple Approach:**
+- Use standard world coordinates with Y=0 at surface, Y=-10000 at deepest point
+- 32-bit floats maintain millimeter precision at this scale
+- No special coordinate handling required
+
+**If Future Expansion Needed:**
+If the world grows beyond 50km in any dimension, consider:
+- Floating origin system (shift world periodically)
+- 64-bit coordinates for true position
+- Chunked coordinate system (sector + local offset)
+
+**Current Scale:**
+- 10km depth fits comfortably in standard floating-point range
+- Precision remains adequate for gameplay and physics
+- Simpler implementation without origin shifting
 
 ## Chunk Types
 
 ### Classification
-```rust
-enum ChunkType {
-    // Hand-authored critical path
-    Narrative {
-        id: String,
-        script: Option<String>,
-    },
-    
-    // Procedural with constraints
-    Procedural {
-        template: String,
-        seed: u64,
-    },
-    
-    // Mix of both
-    Hybrid {
-        base: String,
-        modifications: Vec<Modification>,
-    },
-    
-    // Empty space (optimization)
-    Void,
-}
-```
+**Narrative** (from `levels/`):  
+Hand-authored critical path and major locations
 
-### Chunk Templates
+**Filler** (from `levels/`):  
+Copy-paste variations of common sections
+- Start with template (e.g., `tunnel_straight_01`)
+- Duplicate and modify (lighting, props, damage)
+- Save as new level (`tunnel_straight_02`, etc.)
+- Much faster than procedural tuning
+
+**Void**:  
+Empty space optimization (nothing to load)
+
+### Content Strategy
+**Phase 1 (MVP)**: 
+- Hand-author all critical path content
+- Create 5-10 tunnel templates
+- Copy-paste and modify for variety
+- Focus on quality over quantity
+
+**Phase 2 (If Needed)**:
+- If hand-authoring becomes bottleneck
+- Consider simple procedural for filler only
+- Keep narrative content always hand-crafted
+
+### Level Templates (Hand-Authored)
 ```yaml
-templates:
-  corporate_hub:
-    type: narrative
-    size: [64, 32, 64]  # Can span multiple chunks
-    connections:
-      - {pos: [32, 0, 0], dir: north, type: transit}
-      - {pos: [0, -16, 32], dir: down, type: shaft}
-    always_loaded: true
-    
-  mining_shaft:
-    type: procedural
-    size: [32, 32, 32]
-    variations: [intact, damaged, flooded]
-    prop_density: 0.4
-    lighting: sparse
-    
-  connector_tunnel:
-    type: hybrid
-    size: [32, 32, 32]
-    base: tunnel_straight
-    can_modify: [props, lighting]
+# levels/corporate_hub/level.yaml
+level:
+  id: corporate_hub
+  type: narrative
+  size: [64, 32, 64]  # Can span multiple chunks
+  connections:
+    - pos: [32, 0, 0]
+      dir: north
+      socket: tunnel_large
+      tags: [main_path]
+    - pos: [0, -16, 32]
+      dir: down
+      socket: shaft
+      tags: [maintenance]
+  always_loaded: true
+  
+# Procedural system references prefabs/
+procedural_config:
+  tunnel_prefabs: [tunnel_straight, tunnel_corner, tunnel_T]
+  variation: [intact, damaged, flooded]
+  prop_density: 0.4
+  lighting: sparse
 ```
 
 ## Performance Optimization
 
 ### Occlusion Culling
-```rust
-// Portal-based occlusion for tunnels
-struct Portal {
-    position: Vec3,
-    normal: Vec3,
-    connected_chunks: [ChunkCoord; 2],
-}
+**Portal-based system for tunnels:**
+- Define portals at tunnel connections
+- Track which chunks are visible through portals
+- Only render chunks with visible path from player
+- Effective in underground environment (natural occlusion)
 
-fn is_chunk_visible(
-    chunk: ChunkCoord,
-    player_pos: Vec3,
-    portals: &[Portal],
-) -> bool {
-    // Check if any portal to this chunk is visible
-    for portal in portals.iter() {
-        if !portal.connected_chunks.contains(&chunk) {
-            continue;
-        }
-        
-        let to_portal = portal.position - player_pos;
-        let facing = to_portal.normalize().dot(portal.normal);
-        
-        if facing > 0.0 {
-            return true;  // Portal is visible
-        }
-    }
-    
-    false
-}
-```
+**Portal Structure:**
+- Position and normal vector
+- References to connected chunks
+- Can be closed/opened by gameplay (doors, cave-ins)
 
 ### Batch Rendering
-```rust
-// Instance rendering for repeated elements
-struct InstanceData {
-    transform: Mat4,
-    color_variation: Vec4,
-}
+**Instancing for repeated elements:**
+- Group identical meshes together
+- Single draw call for many instances
+- Per-instance transforms and color variations
+- Crucial for props (lights, pipes, debris)
 
-fn batch_props(props: &[PropInstance]) -> HashMap<MeshHandle, Vec<InstanceData>> {
-    let mut batches = HashMap::new();
-    
-    for prop in props {
-        batches.entry(prop.mesh.clone())
-            .or_insert_with(Vec::new)
-            .push(InstanceData {
-                transform: prop.transform.compute_matrix(),
-                color_variation: prop.color,
-            });
-    }
-    
-    batches
-}
-```
+**Batching Strategy:**
+- Organize by mesh handle
+- Collect instance data (transform, color)
+- Submit as instanced draw call
+- Can handle hundreds of props efficiently
 
 ## Save System Integration
 
@@ -265,163 +182,90 @@ INSERT INTO chunk_modifications VALUES (
 ```
 
 ### Loading Modified Chunks
-```rust
-fn load_chunk_with_modifications(
-    coord: ChunkCoord,
-    db: &Connection,
-) -> ChunkData {
-    // Load base chunk
-    let mut chunk = load_base_chunk(coord);
-    
-    // Apply modifications
-    let mods: Vec<Modification> = db.prepare(
-        "SELECT modification_type, data 
-         FROM chunk_modifications 
-         WHERE chunk_x = ? AND chunk_y = ? AND chunk_z = ?"
-    )?.query_map([coord.x, coord.y, coord.z], |row| {
-        Ok(Modification {
-            mod_type: row.get(0)?,
-            data: serde_json::from_str(&row.get::<_, String>(1)?).ok()?,
-        })
-    })?.collect();
-    
-    for modification in mods {
-        chunk.apply_modification(modification);
-    }
-    
-    chunk
-}
-```
+**Chunk Loading Priority:**
+1. Check if chunk contains hand-authored level (query database by coordinates)
+2. If yes: Load from `levels/` directory YAML
+3. If no: Empty/void space
+4. Apply any runtime modifications from dynamic database (doors opened, items taken, etc.)
+5. Spawn entities into ECS
+
+**No Procedural Generation Initially:**
+- All content explicitly authored or copy-pasted
+- Simpler, more predictable, faster to iterate
+- Add procedural generation later only if genuinely needed
+- Most games overestimate need for procedural content
+
+**Modification Tracking:**
+- Store player-caused changes in dynamic database
+- Keyed by chunk coordinates
+- JSON blobs for flexibility
+- Applied on top of base chunk data
+- Preserves player agency in world
 
 ## Network Considerations (Future)
 
 ### Chunk Ownership
-```rust
-// For potential multiplayer
-struct ChunkOwnership {
-    chunk: ChunkCoord,
-    owner: Option<PlayerId>,
-    version: u64,
-    dirty: bool,
-}
+**For potential multiplayer:**
+- Track which player "owns" each chunk (server authority)
+- Version number for detecting conflicts
+- Dirty flag for modified chunks needing sync
 
-// Deterministic generation means only changes need syncing
-struct ChunkDelta {
-    chunk: ChunkCoord,
-    base_version: u64,
-    modifications: Vec<Modification>,
-}
-```
+**Deterministic Generation:**
+- Same seed = same procedural content
+- Only modifications need network sync
+- Reduces bandwidth dramatically
+- Chunk deltas instead of full chunks
 
 ## Debug Visualization
 
 ### Chunk Boundaries
-```rust
-fn debug_draw_chunks(
-    mut gizmos: Gizmos,
-    chunks: Query<&LoadedChunk>,
-    debug: Res<DebugSettings>,
-) {
-    if !debug.show_chunk_bounds { return; }
-    
-    for chunk in chunks.iter() {
-        let world_pos = chunk.coord.to_world_pos();
-        let color = match chunk.lod_level {
-            LODLevel::Full => Color::GREEN,
-            LODLevel::Reduced => Color::YELLOW,
-            LODLevel::Minimal => Color::RED,
-            _ => Color::GRAY,
-        };
-        
-        gizmos.cuboid(
-            Transform::from_translation(world_pos)
-                .with_scale(Vec3::splat(CHUNK_SIZE)),
-            color,
-        );
-    }
-}
-```
+**Visual debugging tools:**
+- Toggle display of chunk boundaries (wireframe boxes)
+- Color-code by LOD level (green=full, yellow=reduced, red=minimal)
+- Show chunk coordinates as text labels
+- Display memory usage per chunk
 
 ### Performance Metrics
-```rust
-struct ChunkingMetrics {
-    chunks_loaded: usize,
-    chunks_in_memory: usize,
-    total_memory_mb: f32,
-    load_time_ms: f32,
-    generation_time_ms: f32,
-}
+**Real-time monitoring:**
+- Chunks loaded vs. total in memory
+- Total memory consumption (MB)
+- Load/generation time (ms)
+- Frame time impact
+- Cache hit/miss rates
 
-fn display_metrics(metrics: Res<ChunkingMetrics>) {
-    debug_ui.text(format!(
-        "Chunks: {}/{} | Memory: {:.1}MB | Load: {:.1}ms",
-        metrics.chunks_loaded,
-        metrics.chunks_in_memory,
-        metrics.total_memory_mb,
-        metrics.load_time_ms,
-    ));
-}
-```
+**Display Options:**
+- Overlay HUD during development
+- Export to log file for analysis
+- Integration with profiling tools
 
 ## Seamless Transitions
 
 ### Chunk Loading Priority
-```rust
-enum LoadPriority {
-    Critical = 0,     // Player's current chunk
-    High = 1,         // Adjacent chunks
-    Medium = 2,       // Visible chunks
-    Low = 3,          // Predictive loading
-    Background = 4,   // Preloading
-}
+**Priority Levels:**
+- **Critical**: Player's current chunk (must be loaded)
+- **High**: Adjacent chunks + predicted next chunk
+- **Medium**: Visible chunks in range
+- **Low**: Predictive loading based on movement
+- **Background**: Preloading for known paths
 
-fn prioritize_loading(
-    player_velocity: Vec3,
-    player_chunk: ChunkCoord,
-    chunk_to_load: ChunkCoord,
-) -> LoadPriority {
-    let distance = chunk_distance(player_chunk, chunk_to_load);
-    
-    // Predictive loading based on movement
-    let predicted_chunk = predict_next_chunk(player_chunk, player_velocity);
-    
-    match distance {
-        0 => LoadPriority::Critical,
-        1 => LoadPriority::High,
-        2 if chunk_to_load == predicted_chunk => LoadPriority::High,
-        2 => LoadPriority::Medium,
-        3 if chunk_to_load == predicted_chunk => LoadPriority::Medium,
-        _ => LoadPriority::Low,
-    }
-}
-```
+**Predictive Loading:**
+- Analyze player velocity vector
+- Predict next chunk based on direction
+- Pre-load along movement path
+- Reduces pop-in during fast movement
 
 ### Smooth LOD Transitions
-```rust
-fn smooth_lod_transition(
-    chunk: &mut LoadedChunk,
-    target_lod: LODLevel,
-    delta_time: f32,
-) {
-    const TRANSITION_SPEED: f32 = 2.0;
-    
-    match (chunk.lod_level, target_lod) {
-        (LODLevel::Minimal, LODLevel::Reduced) => {
-            // Fade in props
-            for prop in &mut chunk.props {
-                prop.opacity = (prop.opacity + delta_time * TRANSITION_SPEED).min(1.0);
-            }
-        },
-        (LODLevel::Reduced, LODLevel::Full) => {
-            // Fade in details
-            for detail in &mut chunk.details {
-                detail.opacity = (detail.opacity + delta_time * TRANSITION_SPEED).min(1.0);
-            }
-        },
-        _ => {},
-    }
-}
-```
+**Fade System:**
+- Gradually transition between LOD levels
+- Fade in props when upgrading LOD
+- Fade in detail geometry
+- Prevents jarring visual changes
+- Configurable transition speed (2-3 seconds typical)
+
+**State Machine:**
+- Track current and target LOD per chunk
+- Interpolate opacity/visibility
+- Handle bidirectional transitions (upgrading and downgrading)
 
 ## Best Practices
 

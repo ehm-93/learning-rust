@@ -23,6 +23,7 @@
 use bevy::prelude::*;
 use bevy::pbr::MaterialPlugin;
 use bevy::picking::mesh_picking::MeshPickingPlugin;
+use bevy::winit::WinitWindows;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 // Domain modules
@@ -82,6 +83,7 @@ impl Plugin for EditorPlugin {
                 setup_editor_camera,
                 setup_grid,
                 lock_cursor_on_start,
+                maximize_window,
             ))
 
             // Update systems - camera
@@ -109,5 +111,17 @@ impl Plugin for EditorPlugin {
                 inspector_ui,
                 status_bar_ui,
             ));
+    }
+}
+
+/// Maximize the window on startup
+fn maximize_window(
+    windows: Query<Entity, With<Window>>,
+    winit_windows: NonSend<WinitWindows>,
+) {
+    for entity in windows.iter() {
+        if let Some(winit_window) = winit_windows.get_window(entity) {
+            winit_window.set_maximized(true);
+        }
     }
 }

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use bevy::picking::events::{Pointer, Click};
 
-use super::components::EditorEntity;
-use super::placement::PlacementState;
+use crate::editor::core::types::EditorEntity;
+use crate::editor::objects::placement::PlacementState;
 
 /// Resource tracking the currently selected entity
 #[derive(Resource, Default)]

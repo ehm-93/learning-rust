@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use super::components::{EditorCamera, EditorEntity};
-use super::grid::{snap_to_grid, GridConfig};
-use super::primitives::{AssetCatalog, PrimitiveDefinition};
+use crate::editor::core::types::EditorEntity;
+use crate::editor::viewport::{camera::EditorCamera, grid::{snap_to_grid, GridConfig}, raycasting::ray_plane_intersection};
+use crate::editor::objects::primitives::{PrimitiveDefinition};
 
 /// Resource tracking the current placement state
 #[derive(Resource, Default)]
@@ -152,25 +152,5 @@ pub fn place_object(
 
         // Continue placement mode for multiple placements
         // User needs to press ESC to exit
-    }
-}
-
-/// Ray-plane intersection helper
-fn ray_plane_intersection(
-    ray_origin: Vec3,
-    ray_direction: Vec3,
-    plane_origin: Vec3,
-    plane_normal: Vec3,
-) -> Option<f32> {
-    let denom = plane_normal.dot(ray_direction);
-    if denom.abs() < 0.0001 {
-        return None; // Ray is parallel to plane
-    }
-
-    let t = (plane_origin - ray_origin).dot(plane_normal) / denom;
-    if t >= 0.0 {
-        Some(t)
-    } else {
-        None
     }
 }

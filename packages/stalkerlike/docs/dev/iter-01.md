@@ -486,6 +486,8 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 - Clean separation between read and write - no accidental modifications yet
 
 #### 6. **Play mode entry/exit (P key) - critical for iteration loops**
+Defered, will revisit with a better defined game mode. Current solution is a placeholder that cannot be dropped into the editor.
+
 - [ ] Create `EditorState` enum (Editor, EditorPlayMode)
 - [ ] Add P key binding to enter play mode
 - [ ] Serialize current scene state before entering play mode

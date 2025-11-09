@@ -395,7 +395,7 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 - [x] Add G key toggle for snap mode (persistent state resource)
 - [x] Implement position snapping (0.5m increments)
 - [x] Implement rotation snapping (15° increments)
-- [ ] Add visual indicator when snap is enabled (status bar text)
+- [x] Add visual indicator when snap is enabled (status bar text)
 - [ ] Add subtle visual feedback when object snaps to grid (optional)
 
 **Implementation Notes:**

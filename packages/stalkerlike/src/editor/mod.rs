@@ -72,6 +72,7 @@ impl Plugin for EditorPlugin {
             .add_systems(EguiPrimaryContextPass, (
                 asset_browser_ui,
                 inspector_ui,
+                status_bar_ui,
             ));
     }
 }

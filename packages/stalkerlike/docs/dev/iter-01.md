@@ -365,12 +365,12 @@ Keep it simple. This iteration is about proving we can build and test scenes wit
 - Y-axis movement always uses world up (not camera-relative) for predictable altitude control
 
 #### 2. Primitive spawning (cube, sphere, plane)
-- [ ] Create `AssetCatalog` resource with primitive definitions
-- [ ] Implement mesh generation for cube (1x1x1m)
-- [ ] Implement mesh generation for sphere (1m diameter)
-- [ ] Implement mesh generation for plane (10x10m)
-- [ ] Implement mesh generation for cylinder (1m × 2m)
-- [ ] Implement mesh generation for capsule (0.5m × 2m)
+- [x] Create `AssetCatalog` resource with primitive definitions
+- [x] Implement mesh generation for cube (1x1x1m)
+- [x] Implement mesh generation for sphere (1m diameter)
+- [x] Implement mesh generation for plane (10x10m)
+- [x] Implement mesh generation for cylinder (1m × 2m)
+- [x] Implement mesh generation for capsule (0.5m × 2m)
 - [ ] Add vertex color support to primitive materials
 - [ ] Create asset browser UI panel (EGUI) - simple list for MVP
 - [ ] Implement "place mode" state when asset clicked

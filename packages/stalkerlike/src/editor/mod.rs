@@ -30,6 +30,7 @@ use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 mod core;
 mod input;
 mod objects;
+mod persistence;
 mod ui;
 mod viewport;
 
@@ -42,6 +43,11 @@ use objects::{
     placement::{PlacementState, update_preview_position, place_object},
     primitives::AssetCatalog,
     selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected},
+};
+use persistence::{
+    SceneFile,
+    log_stalkerlike_home,
+    systems::{save_scene_system, load_scene_system, mark_scene_dirty},
 };
 use viewport::{
     camera::{setup_editor_camera, toggle_mouse_lock, camera_look, camera_movement, lock_cursor_on_start},
@@ -80,6 +86,7 @@ impl Plugin for EditorPlugin {
             .init_resource::<GizmoState>()
             .init_resource::<OutlineMaterial>()
             .init_resource::<InspectorState>()
+            .init_resource::<SceneFile>()
 
             // Observers for picking events and component changes
             .add_observer(handle_selection)
@@ -91,6 +98,7 @@ impl Plugin for EditorPlugin {
                 setup_editor_camera,
                 setup_grid,
                 lock_cursor_on_start,
+                log_stalkerlike_home,
                 maximize_window,
             ))
 
@@ -120,6 +128,12 @@ impl Plugin for EditorPlugin {
             .add_systems(Update, (
                 update_gizmo_position,
                 toggle_transform_mode,
+            ))
+            // Update systems - persistence
+            .add_systems(Update, (
+                save_scene_system,
+                load_scene_system,
+                mark_scene_dirty,
             ))
             // Update systems - UI (must run in EGUI pass)
             .add_systems(EguiPrimaryContextPass, (

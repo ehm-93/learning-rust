@@ -3,12 +3,14 @@ use bevy_egui::{egui, EguiContexts};
 
 use crate::editor::viewport::grid::GridConfig;
 use crate::editor::objects::gizmo::GizmoState;
+use crate::editor::persistence::SceneFile;
 
 /// Render the status bar at the bottom of the screen
 pub fn status_bar_ui(
     mut contexts: EguiContexts,
     grid_config: Res<GridConfig>,
     gizmo_state: Res<GizmoState>,
+    scene_file: Res<SceneFile>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -39,8 +41,28 @@ pub fn status_bar_ui(
 
                 ui.separator();
 
+                // Scene file indicator
+                let file_name = scene_file.path
+                    .as_ref()
+                    .and_then(|p| p.file_name())
+                    .and_then(|f| f.to_str())
+                    .unwrap_or("untitled");
+                let file_text = if scene_file.dirty {
+                    format!("{}*", file_name) // Asterisk indicates unsaved changes
+                } else {
+                    file_name.to_string()
+                };
+                let file_color = if scene_file.dirty {
+                    egui::Color32::YELLOW
+                } else {
+                    egui::Color32::WHITE
+                };
+                ui.colored_label(file_color, file_text);
+
+                ui.separator();
+
                 // Help text
-                ui.label("F: cycle mode | G: toggle snap");
+                ui.label("F: cycle mode | G: toggle snap | Ctrl+S: save | Ctrl+O: load");
             });
         });
 }

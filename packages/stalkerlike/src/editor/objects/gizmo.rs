@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::picking::events::{Pointer, Drag, Over, Out};
 
 use crate::editor::core::materials::GizmoMaterial;
-use crate::editor::objects::selection::{SelectedEntity, Selected};
+use crate::editor::objects::selection::{SelectionSet, Selected};
 use crate::editor::viewport::grid::GridConfig;
 
 // GIZMO LIFECYCLE:
@@ -344,41 +344,66 @@ pub fn despawn_gizmo(
     }
 }
 
-/// Update gizmo position, rotation, and scale to follow selected object
+/// Update gizmo position, rotation, and scale to follow selected object(s)
+/// For multi-select, positions at the center of all selected objects' bounding box
 /// Scale is adjusted based on camera distance to maintain constant screen-space size
 pub fn update_gizmo_position(
-    selected: Res<SelectedEntity>,
+    selection: Res<SelectionSet>,
     selected_query: Query<&Transform, With<Selected>>,
     mut gizmo_query: Query<&mut Transform, (With<GizmoRoot>, Without<Selected>)>,
     camera_query: Query<&GlobalTransform, With<Camera>>,
     gizmo_state: Res<GizmoState>,
 ) {
-    let Some(selected_entity) = selected.entity else {
+    if selection.is_empty() {
         return;
-    };
-
-    let Ok(selected_transform) = selected_query.get(selected_entity) else {
-        return;
-    };
+    }
 
     let Ok(camera_transform) = camera_query.single() else {
         return;
     };
 
-    // Calculate distance from camera to gizmo
-    let distance = (camera_transform.translation() - selected_transform.translation).length();
+    // Calculate the center position of all selected entities
+    let mut center = Vec3::ZERO;
+    let mut count = 0;
+
+    for entity in &selection.entities {
+        if let Ok(transform) = selected_query.get(*entity) {
+            center += transform.translation;
+            count += 1;
+        }
+    }
+
+    if count == 0 {
+        return;
+    }
+
+    center /= count as f32;
+
+    // Calculate distance from camera to gizmo center
+    let distance = (camera_transform.translation() - center).length();
 
     // Scale based on distance to maintain constant screen-space size
     // The 0.15 factor controls the apparent size - tune as needed
     let scale_factor = distance * 0.15;
 
     for mut gizmo_transform in gizmo_query.iter_mut() {
-        gizmo_transform.translation = selected_transform.translation;
+        gizmo_transform.translation = center;
 
         // Apply rotation based on orientation mode
-        gizmo_transform.rotation = match gizmo_state.orientation {
-            TransformOrientation::Global => Quat::IDENTITY, // Align with world axes
-            TransformOrientation::Local => selected_transform.rotation, // Align with object
+        // For multi-select, always use Global orientation (Local would be ambiguous)
+        gizmo_transform.rotation = if selection.len() > 1 {
+            Quat::IDENTITY // Multi-select always uses Global orientation
+        } else if let Some(first_entity) = selection.first() {
+            if let Ok(first_transform) = selected_query.get(first_entity) {
+                match gizmo_state.orientation {
+                    TransformOrientation::Global => Quat::IDENTITY,
+                    TransformOrientation::Local => first_transform.rotation,
+                }
+            } else {
+                Quat::IDENTITY
+            }
+        } else {
+            Quat::IDENTITY
         };
 
         gizmo_transform.scale = Vec3::splat(scale_factor);
@@ -386,15 +411,17 @@ pub fn update_gizmo_position(
 }
 
 /// Handle drag on gizmo handle (entity observer) - fires continuously while dragging
+/// For multi-select, applies transform to all selected entities
 fn on_gizmo_drag(
     drag: Trigger<Pointer<Drag>>,
     gizmo_state: Res<GizmoState>,
     handle_query: Query<&GizmoAxis, With<GizmoHandle>>,
-    selected: Res<SelectedEntity>,
+    selection: Res<SelectionSet>,
     mut selected_query: Query<&mut Transform, With<Selected>>,
     grid_config: Res<GridConfig>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    gizmo_query: Query<&Transform, (With<GizmoRoot>, Without<Selected>)>,
 ) {
     info!("Gizmo drag event: {:?}", drag.event());
 
@@ -405,14 +432,9 @@ fn on_gizmo_drag(
         return;
     };
 
-    // Get the selected object's transform
-    let Some(selected_entity) = selected.entity else {
+    if selection.is_empty() {
         return;
-    };
-
-    let Ok(mut transform) = selected_query.get_mut(selected_entity) else {
-        return;
-    };
+    }
 
     // Get drag delta from the event
     let delta = drag.event().delta;
@@ -422,11 +444,17 @@ fn on_gizmo_drag(
         return;
     };
 
+    // Get gizmo position for distance calculation
+    let Ok(gizmo_transform) = gizmo_query.single() else {
+        return;
+    };
+
     // Calculate drag scale based on distance from camera (farther = larger movements)
-    let distance = (camera_transform.translation() - transform.translation).length();
+    let distance = (camera_transform.translation() - gizmo_transform.translation).length();
     let base_drag_scale = distance * 0.001; // Reduced from 0.002 for slower default speed
 
     // Apply speed modifiers based on keyboard input
+    // Note: Ctrl is also used for multi-select, but during drag it modifies speed
     let ctrl = keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
     let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
 
@@ -440,92 +468,109 @@ fn on_gizmo_drag(
 
     let drag_scale = base_drag_scale * speed_multiplier;
 
-    // Apply drag based on current mode and axis
-    match gizmo_state.mode {
-        TransformMode::Translate => {
-            // Build movement vector in the gizmo's space
-            let mut movement = Vec3::ZERO;
-            match axis {
-                GizmoAxis::X => movement.x = delta.x * drag_scale,
-                GizmoAxis::Y => movement.y = -delta.y * drag_scale, // Invert Y for intuitive up/down
-                GizmoAxis::Z => movement.z = delta.y * drag_scale, // Use vertical drag for Z (forward/back)
-            }
+    // Apply drag to ALL selected entities
+    for entity in &selection.entities {
+        let Ok(mut transform) = selected_query.get_mut(*entity) else {
+            continue;
+        };
 
-            // Transform movement based on orientation mode
-            let world_movement = match gizmo_state.orientation {
-                TransformOrientation::Global => movement, // Already in world space
-                TransformOrientation::Local => transform.rotation * movement, // Rotate to local space
-            };
-
-            // Apply movement
-            transform.translation += world_movement;
-
-            // Apply grid snapping if enabled (in world space)
-            if grid_config.snap_enabled {
-                let spacing = grid_config.spacing;
+        // Apply drag based on current mode and axis
+        match gizmo_state.mode {
+            TransformMode::Translate => {
+                // Build movement vector in the gizmo's space
+                let mut movement = Vec3::ZERO;
                 match axis {
-                    GizmoAxis::X => {
-                        if gizmo_state.orientation == TransformOrientation::Global {
-                            transform.translation.x = (transform.translation.x / spacing).round() * spacing;
-                        }
+                    GizmoAxis::X => movement.x = delta.x * drag_scale,
+                    GizmoAxis::Y => movement.y = -delta.y * drag_scale, // Invert Y for intuitive up/down
+                    GizmoAxis::Z => movement.z = delta.y * drag_scale, // Use vertical drag for Z (forward/back)
+                }
+
+                // Transform movement based on orientation mode
+                // For multi-select, always use Global (Local would be ambiguous)
+                let world_movement = if selection.len() > 1 {
+                    movement // Multi-select always in world space
+                } else {
+                    match gizmo_state.orientation {
+                        TransformOrientation::Global => movement, // Already in world space
+                        TransformOrientation::Local => transform.rotation * movement, // Rotate to local space
                     }
-                    GizmoAxis::Y => {
-                        if gizmo_state.orientation == TransformOrientation::Global {
-                            transform.translation.y = (transform.translation.y / spacing).round() * spacing;
+                };
+
+                // Apply movement
+                transform.translation += world_movement;
+
+                // Apply grid snapping if enabled (in world space)
+                if grid_config.snap_enabled {
+                    let spacing = grid_config.spacing;
+                    match axis {
+                        GizmoAxis::X => {
+                            if selection.len() == 1 || gizmo_state.orientation == TransformOrientation::Global {
+                                transform.translation.x = (transform.translation.x / spacing).round() * spacing;
+                            }
                         }
-                    }
-                    GizmoAxis::Z => {
-                        if gizmo_state.orientation == TransformOrientation::Global {
-                            transform.translation.z = (transform.translation.z / spacing).round() * spacing;
+                        GizmoAxis::Y => {
+                            if selection.len() == 1 || gizmo_state.orientation == TransformOrientation::Global {
+                                transform.translation.y = (transform.translation.y / spacing).round() * spacing;
+                            }
+                        }
+                        GizmoAxis::Z => {
+                            if selection.len() == 1 || gizmo_state.orientation == TransformOrientation::Global {
+                                transform.translation.z = (transform.translation.z / spacing).round() * spacing;
+                            }
                         }
                     }
                 }
             }
-        }
-        TransformMode::Rotate => {
-            // Rotation: use drag distance as angle delta
-            let angle_delta = delta.length() * drag_scale * if delta.x + delta.y < 0.0 { -1.0 } else { 1.0 };
+            TransformMode::Rotate => {
+                // Rotation: use drag distance as angle delta
+                let angle_delta = delta.length() * drag_scale * if delta.x + delta.y < 0.0 { -1.0 } else { 1.0 };
 
-            // Build rotation quaternion around the selected axis
-            let axis_rotation = match axis {
-                GizmoAxis::X => Quat::from_rotation_x(angle_delta),
-                GizmoAxis::Y => Quat::from_rotation_y(angle_delta),
-                GizmoAxis::Z => Quat::from_rotation_z(angle_delta),
-            };
+                // Build rotation quaternion around the selected axis
+                let axis_rotation = match axis {
+                    GizmoAxis::X => Quat::from_rotation_x(angle_delta),
+                    GizmoAxis::Y => Quat::from_rotation_y(angle_delta),
+                    GizmoAxis::Z => Quat::from_rotation_z(angle_delta),
+                };
 
-            // Apply rotation based on orientation mode
-            transform.rotation = match gizmo_state.orientation {
-                TransformOrientation::Global => {
-                    // Global: rotate around world axis
-                    axis_rotation * transform.rotation
+                // Apply rotation based on orientation mode
+                // For multi-select, always use Global
+                transform.rotation = if selection.len() > 1 {
+                    axis_rotation * transform.rotation // Multi-select always Global
+                } else {
+                    match gizmo_state.orientation {
+                        TransformOrientation::Global => {
+                            // Global: rotate around world axis
+                            axis_rotation * transform.rotation
+                        }
+                        TransformOrientation::Local => {
+                            // Local: rotate around object's local axis
+                            transform.rotation * axis_rotation
+                        }
+                    }
+                };
+
+                // Apply rotation snapping if enabled
+                if grid_config.snap_enabled {
+                    let snap_angle = 15.0_f32.to_radians();
+                    let mut euler = transform.rotation.to_euler(EulerRot::XYZ);
+
+                    match axis {
+                        GizmoAxis::X => euler.0 = (euler.0 / snap_angle).round() * snap_angle,
+                        GizmoAxis::Y => euler.1 = (euler.1 / snap_angle).round() * snap_angle,
+                        GizmoAxis::Z => euler.2 = (euler.2 / snap_angle).round() * snap_angle,
+                    }
+
+                    transform.rotation = Quat::from_euler(EulerRot::XYZ, euler.0, euler.1, euler.2);
                 }
-                TransformOrientation::Local => {
-                    // Local: rotate around object's local axis
-                    transform.rotation * axis_rotation
-                }
-            };
-
-            // Apply rotation snapping if enabled
-            if grid_config.snap_enabled {
-                let snap_angle = 15.0_f32.to_radians();
-                let mut euler = transform.rotation.to_euler(EulerRot::XYZ);
+            }
+            TransformMode::Scale => {
+                let scale_delta = -delta.y * drag_scale;
 
                 match axis {
-                    GizmoAxis::X => euler.0 = (euler.0 / snap_angle).round() * snap_angle,
-                    GizmoAxis::Y => euler.1 = (euler.1 / snap_angle).round() * snap_angle,
-                    GizmoAxis::Z => euler.2 = (euler.2 / snap_angle).round() * snap_angle,
+                    GizmoAxis::X => transform.scale.x = (transform.scale.x + scale_delta).max(0.01),
+                    GizmoAxis::Y => transform.scale.y = (transform.scale.y + scale_delta).max(0.01),
+                    GizmoAxis::Z => transform.scale.z = (transform.scale.z + scale_delta).max(0.01),
                 }
-
-                transform.rotation = Quat::from_euler(EulerRot::XYZ, euler.0, euler.1, euler.2);
-            }
-        }
-        TransformMode::Scale => {
-            let scale_delta = -delta.y * drag_scale;
-
-            match axis {
-                GizmoAxis::X => transform.scale.x = (transform.scale.x + scale_delta).max(0.01),
-                GizmoAxis::Y => transform.scale.y = (transform.scale.y + scale_delta).max(0.01),
-                GizmoAxis::Z => transform.scale.z = (transform.scale.z + scale_delta).max(0.01),
             }
         }
     }
@@ -565,7 +610,7 @@ fn on_gizmo_hover_end(
     let handle_entity = trigger.target();
 
     // Restore original colors for all child meshes
-    if let Ok((children)) = handle_query.get(handle_entity) {
+    if let Ok(children) = handle_query.get(handle_entity) {
         for child in children.iter() {
             if let Ok(material_handle) = material_query.get(child) {
                 if let Some(material) = materials.get_mut(&material_handle.0) {

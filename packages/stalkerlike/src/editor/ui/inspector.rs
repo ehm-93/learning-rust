@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
-use crate::editor::objects::selection::SelectedEntity;
+use crate::editor::objects::selection::SelectionSet;
 
 /// Local UI state for text input buffers
 #[derive(Resource, Default)]
@@ -23,9 +23,10 @@ pub struct InspectorState {
 }
 
 /// Render the inspector panel with editable numeric fields
+/// For multi-select, shows aggregate information instead of individual properties
 pub fn inspector_ui(
     mut contexts: EguiContexts,
-    selected: Res<SelectedEntity>,
+    selection: Res<SelectionSet>,
     mut transform_query: Query<&mut Transform>,
     name_query: Query<&Name>,
     mut inspector_state: ResMut<InspectorState>,
@@ -41,29 +42,78 @@ pub fn inspector_ui(
             ui.heading("Inspector");
             ui.separator();
 
-            if let Some(entity) = selected.entity {
-                ui.label("Selected Object");
-                ui.add_space(4.0);
+            if selection.is_empty() {
+                inspector_state.last_entity = None;
+                ui.label("No selection");
+                ui.separator();
+                ui.label("Click an object to select");
+                ui.label("Ctrl+Click to multi-select");
+                return;
+            }
 
-                // Show entity name if it has one
-                if let Ok(name) = name_query.get(entity) {
-                    ui.label(format!("Name: {}", name));
-                } else {
-                    ui.label(format!("Entity: {:?}", entity));
-                }
-
+            // Multi-select: show aggregate information
+            if selection.len() > 1 {
+                inspector_state.last_entity = None;
+                ui.label(format!("Multiple Objects Selected ({})", selection.len()));
                 ui.separator();
 
-                // Update buffers if selection changed
-                if inspector_state.last_entity != Some(entity) {
-                    inspector_state.last_entity = Some(entity);
-                    if let Ok(transform) = transform_query.get(entity) {
-                        update_buffers_from_transform(&mut inspector_state, &transform);
+                // Calculate bounding box of all selected entities
+                let mut min = Vec3::splat(f32::INFINITY);
+                let mut max = Vec3::splat(f32::NEG_INFINITY);
+                let mut center = Vec3::ZERO;
+                let mut count = 0;
+
+                for entity in &selection.entities {
+                    if let Ok(transform) = transform_query.get(*entity) {
+                        let pos = transform.translation;
+                        min = min.min(pos);
+                        max = max.max(pos);
+                        center += pos;
+                        count += 1;
                     }
                 }
 
-                // Editable transform fields
-                if let Ok(mut transform) = transform_query.get_mut(entity) {
+                if count > 0 {
+                    center /= count as f32;
+                    let bounds = max - min;
+
+                    ui.group(|ui| {
+                        ui.label("Aggregate Properties:");
+                        ui.label(format!("Center: ({:.2}, {:.2}, {:.2})", center.x, center.y, center.z));
+                        ui.label(format!("Bounds: ({:.2}, {:.2}, {:.2})", bounds.x, bounds.y, bounds.z));
+                    });
+
+                    ui.add_space(8.0);
+                    ui.label("Tip: Use gizmo to transform all selected objects together");
+                }
+
+                return;
+            }
+
+            // Single selection: show detailed properties
+            let entity = selection.first().unwrap();
+            ui.label("Selected Object");
+            ui.add_space(4.0);
+
+            // Show entity name if it has one
+            if let Ok(name) = name_query.get(entity) {
+                ui.label(format!("Name: {}", name));
+            } else {
+                ui.label(format!("Entity: {:?}", entity));
+            }
+
+            ui.separator();
+
+            // Update buffers if selection changed
+            if inspector_state.last_entity != Some(entity) {
+                inspector_state.last_entity = Some(entity);
+                if let Ok(transform) = transform_query.get(entity) {
+                    update_buffers_from_transform(&mut inspector_state, &transform);
+                }
+            }
+
+            // Editable transform fields
+            if let Ok(mut transform) = transform_query.get_mut(entity) {
                     ui.label("Transform:");
 
                     // Position
@@ -180,12 +230,6 @@ pub fn inspector_ui(
                         update_buffers_from_transform(&mut inspector_state, &transform);
                     }
                 }
-            } else {
-                inspector_state.last_entity = None;
-                ui.label("No selection");
-                ui.separator();
-                ui.label("Click an object to select");
-            }
         });
 }
 

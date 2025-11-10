@@ -4,9 +4,11 @@
 //! - Primitive definitions and catalog (what objects can be created)
 //! - Object placement system (creating new objects)
 //! - Object selection system (picking and highlighting)
+//! - Box selection system (multi-select via drag)
 //! - Transform manipulation (gizmos)
 //! - Future: duplication, deletion
 
+pub mod box_select;
 pub mod gizmo;
 pub mod outline;
 pub mod placement;

@@ -2,11 +2,12 @@
 
 use bevy::prelude::*;
 
+use super::box_select::{BoxSelectState, start_box_select, update_box_select, complete_box_select, cancel_box_select, render_box_select};
 use super::gizmo::{GizmoState, spawn_gizmo, despawn_gizmo, update_gizmo_position, toggle_transform_mode};
 use super::outline::{spawn_outlines, despawn_outlines, sync_outline_transforms};
 use super::placement::{PlacementState, update_preview_position, place_object};
 use super::primitives::AssetCatalog;
-use super::selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected, delete_selected};
+use super::selection::{SelectionSet, SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected, delete_selected};
 
 /// Plugin for object lifecycle management (primitives, placement, selection, gizmos)
 pub struct ObjectsPlugin;
@@ -17,8 +18,10 @@ impl Plugin for ObjectsPlugin {
             // Resources
             .init_resource::<AssetCatalog>()
             .init_resource::<PlacementState>()
-            .init_resource::<SelectedEntity>()
+            .init_resource::<SelectionSet>()
+            .init_resource::<SelectedEntity>() // Legacy - kept for backward compatibility during migration
             .init_resource::<GizmoState>()
+            .init_resource::<BoxSelectState>()
 
             // Observers for selection and gizmos
             .add_observer(handle_selection)
@@ -40,6 +43,15 @@ impl Plugin for ObjectsPlugin {
                 spawn_outlines,
                 despawn_outlines,
                 sync_outline_transforms,
+            ))
+
+            // Update systems - box select
+            .add_systems(Update, (
+                start_box_select,
+                update_box_select,
+                complete_box_select,
+                cancel_box_select,
+                render_box_select,
             ))
 
             // Update systems - gizmo

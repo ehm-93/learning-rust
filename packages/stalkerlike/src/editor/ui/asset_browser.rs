@@ -16,12 +16,15 @@ pub fn asset_browser_ui(
         return;
     };
 
-    egui::Window::new("Assets")
-        .default_pos([10.0, 100.0])
-        .default_width(150.0)
+    egui::SidePanel::left("asset_browser")
+        .default_width(200.0)
+        .resizable(true)
         .show(ctx, |ui| {
-            ui.heading("Primitives");
+            ui.heading("Assets");
             ui.separator();
+
+            ui.label("Primitives");
+            ui.add_space(4.0);
 
             for primitive in &asset_catalog.primitives {
                 if ui.button(&primitive.name).clicked() {
@@ -36,6 +39,7 @@ pub fn asset_browser_ui(
             }
 
             if placement_state.active {
+                ui.add_space(8.0);
                 ui.separator();
                 ui.colored_label(egui::Color32::YELLOW, "Placement Mode");
                 if let Some(prim) = &placement_state.selected_primitive {

@@ -34,13 +34,16 @@ pub fn inspector_ui(
         return;
     };
 
-    egui::Window::new("Inspector")
-        .default_pos([1200.0, 100.0])
-        .default_width(250.0)
+    egui::SidePanel::right("inspector")
+        .default_width(280.0)
+        .resizable(true)
         .show(ctx, |ui| {
+            ui.heading("Inspector");
+            ui.separator();
+
             if let Some(entity) = selected.entity {
-                ui.heading("Selected Object");
-                ui.separator();
+                ui.label("Selected Object");
+                ui.add_space(4.0);
 
                 // Show entity name if it has one
                 if let Ok(name) = name_query.get(entity) {

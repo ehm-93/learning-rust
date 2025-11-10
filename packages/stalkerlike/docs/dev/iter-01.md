@@ -981,4 +981,16 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 
 ## What's Next: Iteration 2
 
-With the editor MVP proving we can hand-craft scenes with primitives, Iteration 2 will focus on importing custom 3D models (GLTF/GLB), building a prefab system for reusable compound objects, and implementing advanced snapping (edge-to-edge, vertex, surface alignment) to enable efficient modular construction - essentially evolving from "place cubes" to "assemble complex environments from custom assets and prefabs" while introducing a proper asset pipeline and material editor for artistic control over the colony's visual atmosphere.
+With the editor MVP proving we can hand-craft scenes with primitives, Iteration 2 will focus on:
+
+1. **Inspector Panel Refactor** - Transition from monolithic inspector to component-driven architecture where each component type can register its own sub-panel with custom UI, enabling extensibility and proper validation (see `uncommitted/editor-inspector.md` for detailed specification)
+
+2. **Custom 3D Model Import** - GLTF/GLB asset pipeline with proper material handling, LOD support, and mesh optimization for the low-poly aesthetic
+
+3. **Prefab System** - Reusable compound objects with override tracking, nested prefabs, and variant management for efficient content creation
+
+4. **Advanced Snapping** - Edge-to-edge, vertex, and surface alignment tools to enable precise modular construction beyond simple grid snapping
+
+5. **Material Editor** - Proper PBR material authoring with texture assignment, presets, and real-time preview for artistic control over the colony's visual atmosphere
+
+Essentially evolving from "place cubes" to "assemble complex environments from custom assets and prefabs" while building the foundational systems (extensible inspector, asset pipeline) that will support all future editor features.

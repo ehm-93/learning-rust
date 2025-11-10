@@ -62,7 +62,7 @@ pub fn inspector_ui(
                 // Editable transform fields
                 if let Ok(mut transform) = transform_query.get_mut(entity) {
                     ui.label("Transform:");
-                    
+
                     // Position
                     ui.group(|ui| {
                         ui.label("Position:");
@@ -197,7 +197,7 @@ fn edit_float_field(ui: &mut egui::Ui, buffer: &mut String, width: f32) -> bool 
 
     // Validate on text change (highlight invalid input)
     let is_valid = buffer.parse::<f32>().is_ok() || buffer.is_empty();
-    
+
     // Add visual feedback in the same row
     if !is_valid {
         response = response.on_hover_text("Invalid number");
@@ -205,7 +205,7 @@ fn edit_float_field(ui: &mut egui::Ui, buffer: &mut String, width: f32) -> bool 
 
     // Apply changes on Enter key
     let enter_pressed = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-    
+
     enter_pressed && is_valid
 }
 

@@ -25,5 +25,5 @@ pub mod scene;
 pub mod systems;
 
 // Re-export for use in editor plugin
-pub use systems::SceneFile;
+pub use systems::CurrentFile;
 pub use systems::log_stalkerlike_home;

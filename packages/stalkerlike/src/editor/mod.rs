@@ -45,7 +45,7 @@ use objects::{
     selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected, delete_selected},
 };
 use persistence::{
-    SceneFile,
+    CurrentFile,
     log_stalkerlike_home,
     systems::{save_scene_system, load_scene_system, mark_scene_dirty},
 };
@@ -56,6 +56,11 @@ use viewport::{
 use ui::{
     asset_browser::asset_browser_ui,
     inspector::{inspector_ui, InspectorState},
+    menu_bar::{
+        menu_bar_ui,
+        NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent,
+        handle_new_file, handle_save, handle_open_file, handle_save_as,
+    },
     status_bar::status_bar_ui,
 };
 
@@ -77,6 +82,12 @@ impl Plugin for EditorPlugin {
             .add_plugins(MaterialPlugin::<GridMaterial>::default())
             .add_plugins(MaterialPlugin::<GizmoMaterial>::default())
 
+            // Events
+            .add_event::<NewFileEvent>()
+            .add_event::<OpenFileEvent>()
+            .add_event::<SaveEvent>()
+            .add_event::<SaveAsEvent>()
+
             // Resources
             .init_resource::<EditorMouseMotion>()
             .init_resource::<AssetCatalog>()
@@ -86,7 +97,7 @@ impl Plugin for EditorPlugin {
             .init_resource::<GizmoState>()
             .init_resource::<OutlineMaterial>()
             .init_resource::<InspectorState>()
-            .init_resource::<SceneFile>()
+            .init_resource::<CurrentFile>()
 
             // Observers for picking events and component changes
             .add_observer(handle_selection)
@@ -135,13 +146,18 @@ impl Plugin for EditorPlugin {
                 save_scene_system,
                 load_scene_system,
                 mark_scene_dirty,
+                handle_new_file,
+                handle_save,
+                handle_open_file,
+                handle_save_as,
             ))
             // Update systems - UI (must run in EGUI pass)
             .add_systems(EguiPrimaryContextPass, (
+                menu_bar_ui,
+                status_bar_ui,
                 asset_browser_ui,
                 inspector_ui,
-                status_bar_ui,
-            ));
+            ).chain());
     }
 }
 

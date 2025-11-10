@@ -6,8 +6,8 @@ entities:
 - name: null
   transform:
     position:
-    - -1.3766499
-    - 0.0
+    - 1.2392687
+    - 0.6147915
     - 1.3317595
     rotation:
     - 0.0
@@ -16,7 +16,7 @@ entities:
     - 1.0
     scale:
     - 1.0
-    - 1.0
+    - 0.8717131
     - 1.0
   components:
   - type: Mesh
@@ -26,4 +26,28 @@ entities:
     - 0.7
     - 0.7
     - 0.7
+    - 1.0
+- name: null
+  transform:
+    position:
+    - 1.561037
+    - 0.2657572
+    - 1.6373987
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 0.1509817
+    - 0.13265312
+    - 0.22885169
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.7
+    - 0.6
+    - 0.5
     - 1.0

@@ -3,14 +3,14 @@ use bevy_egui::{egui, EguiContexts};
 
 use crate::editor::viewport::grid::GridConfig;
 use crate::editor::objects::gizmo::GizmoState;
-use crate::editor::persistence::SceneFile;
+use crate::editor::persistence::CurrentFile;
 
 /// Render the status bar at the bottom of the screen
 pub fn status_bar_ui(
     mut contexts: EguiContexts,
     grid_config: Res<GridConfig>,
     gizmo_state: Res<GizmoState>,
-    scene_file: Res<SceneFile>,
+    current_file: Res<CurrentFile>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -42,17 +42,13 @@ pub fn status_bar_ui(
                 ui.separator();
 
                 // Scene file indicator
-                let file_name = scene_file.path
-                    .as_ref()
-                    .and_then(|p| p.file_name())
-                    .and_then(|f| f.to_str())
-                    .unwrap_or("untitled");
-                let file_text = if scene_file.dirty {
+                let file_name = current_file.get_filename();
+                let file_text = if current_file.is_dirty() {
                     format!("{}*", file_name) // Asterisk indicates unsaved changes
                 } else {
-                    file_name.to_string()
+                    file_name
                 };
-                let file_color = if scene_file.dirty {
+                let file_color = if current_file.is_dirty() {
                     egui::Color32::YELLOW
                 } else {
                     egui::Color32::WHITE

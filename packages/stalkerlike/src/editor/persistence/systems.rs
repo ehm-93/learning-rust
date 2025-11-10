@@ -23,17 +23,59 @@ fn get_default_scene_path() -> PathBuf {
     home.join("assets").join("levels").join("test_scene.yaml")
 }
 
-/// Resource tracking the current scene file path
+/// Resource tracking the current scene file
 #[derive(Resource, Default)]
-pub struct SceneFile {
+pub struct CurrentFile {
     pub path: Option<PathBuf>,
     pub dirty: bool,
+}
+
+impl CurrentFile {
+    /// Get the current file path or the default path
+    pub fn get_path(&self) -> PathBuf {
+        self.path.clone().unwrap_or_else(get_default_scene_path)
+    }
+
+    /// Set the current file path
+    pub fn set_path(&mut self, path: PathBuf) {
+        self.path = Some(path);
+    }
+
+    /// Mark the file as clean (saved)
+    pub fn mark_clean(&mut self) {
+        self.dirty = false;
+    }
+
+    /// Mark the file as dirty (unsaved changes)
+    pub fn mark_dirty(&mut self) {
+        self.dirty = true;
+    }
+
+    /// Check if there are unsaved changes
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
+    /// Check if a file path is set
+    pub fn has_path(&self) -> bool {
+        self.path.is_some()
+    }
+
+    /// Get the filename for display
+    pub fn get_filename(&self) -> String {
+        self.path
+            .as_ref()
+            .and_then(|p| p.file_name())
+            .and_then(|f| f.to_str())
+            .unwrap_or("untitled")
+            .to_string()
+    }
 }
 
 /// System to handle save scene keyboard shortcut (Ctrl+S)
 pub fn save_scene_system(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut scene_file: ResMut<SceneFile>,
+    mut current_file: ResMut<CurrentFile>,
     editor_entities: Query<(
         Entity,
         &Transform,
@@ -47,8 +89,14 @@ pub fn save_scene_system(
     // Check for Ctrl+S
     if keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight) {
         if keyboard.just_pressed(KeyCode::KeyS) {
+            // Skip save if no file is open
+            if !current_file.has_path() {
+                warn!("No file open, cannot save. Use Save As... instead.");
+                return;
+            }
+
             // Use current path or default relative to STALKERLIKE_HOME
-            let path = scene_file.path.clone().unwrap_or_else(get_default_scene_path);
+            let path = current_file.get_path();
 
             // Ensure the directory exists
             if let Some(parent) = path.parent() {
@@ -61,8 +109,8 @@ pub fn save_scene_system(
             match save_scene(path.clone(), editor_entities, meshes, materials) {
                 Ok(()) => {
                     info!("Scene saved to {}", path.display());
-                    scene_file.path = Some(path);
-                    scene_file.dirty = false;
+                    current_file.set_path(path);
+                    current_file.mark_clean();
                 }
                 Err(e) => {
                     error!("Failed to save scene: {}", e);
@@ -76,7 +124,7 @@ pub fn save_scene_system(
 pub fn load_scene_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
-    mut scene_file: ResMut<SceneFile>,
+    mut current_file: ResMut<CurrentFile>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     editor_entities: Query<Entity, With<EditorEntity>>,
@@ -85,7 +133,7 @@ pub fn load_scene_system(
     if keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight) {
         if keyboard.just_pressed(KeyCode::KeyO) {
             // Use current path or default relative to STALKERLIKE_HOME
-            let path = scene_file.path.clone().unwrap_or_else(get_default_scene_path);
+            let path = current_file.get_path();
 
             // Check if file exists
             if !path.exists() {
@@ -101,8 +149,8 @@ pub fn load_scene_system(
             match load_scene(path.clone(), &mut commands, &mut meshes, &mut materials) {
                 Ok(()) => {
                     info!("Scene loaded from {}", path.display());
-                    scene_file.path = Some(path);
-                    scene_file.dirty = false;
+                    current_file.set_path(path);
+                    current_file.mark_clean();
                 }
                 Err(e) => {
                     error!("Failed to load scene: {}", e);
@@ -114,7 +162,7 @@ pub fn load_scene_system(
 
 /// System to mark scene as dirty when entities are modified
 pub fn mark_scene_dirty(
-    mut scene_file: ResMut<SceneFile>,
+    mut current_file: ResMut<CurrentFile>,
     changed_entities: Query<
         Entity,
         (
@@ -128,7 +176,7 @@ pub fn mark_scene_dirty(
     >,
 ) {
     if !changed_entities.is_empty() {
-        scene_file.dirty = true;
+        current_file.mark_dirty();
     }
 }
 

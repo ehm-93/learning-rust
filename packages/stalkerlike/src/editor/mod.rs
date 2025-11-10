@@ -38,6 +38,7 @@ use core::materials::GridMaterial;
 use input::mouse::EditorMouseMotion;
 use objects::{
     gizmo::{GizmoState, spawn_gizmo, update_gizmo_position, start_gizmo_drag, update_gizmo_drag, end_gizmo_drag, toggle_transform_mode},
+    outline::{OutlineMaterial, spawn_outlines, despawn_outlines, sync_outline_transforms},
     placement::{PlacementState, update_preview_position, place_object},
     primitives::AssetCatalog,
     selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected},
@@ -76,6 +77,7 @@ impl Plugin for EditorPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<GridConfig>()
             .init_resource::<GizmoState>()
+            .init_resource::<OutlineMaterial>()
 
             // Observers for picking events
             .add_observer(handle_selection)
@@ -108,6 +110,9 @@ impl Plugin for EditorPlugin {
                 handle_deselection,
                 highlight_selected,
                 remove_outline_from_deselected,
+                spawn_outlines,
+                despawn_outlines,
+                sync_outline_transforms,
             ))
             // Update systems - gizmo
             .add_systems(Update, (

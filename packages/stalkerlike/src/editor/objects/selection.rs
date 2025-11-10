@@ -3,6 +3,7 @@ use bevy::picking::events::{Pointer, Click};
 
 use crate::editor::core::types::EditorEntity;
 use crate::editor::objects::placement::PlacementState;
+use crate::editor::objects::outline::Outlined;
 
 /// Resource tracking the currently selected entity
 #[derive(Resource, Default)]
@@ -72,23 +73,19 @@ pub fn handle_deselection(
 /// Add visual outline to selected entities
 pub fn highlight_selected(
     mut commands: Commands,
-    selected_query: Query<Entity, (With<Selected>, Without<Outline>)>,
+    selected_query: Query<Entity, (With<Selected>, Without<Outlined>)>,
 ) {
     for entity in selected_query.iter() {
-        commands.entity(entity).insert(Outline {
-            color: Color::srgb(1.0, 0.8, 0.0), // Yellow outline
-            offset: Val::Px(2.0),
-            width: Val::Px(3.0),
-        });
+        commands.entity(entity).insert(Outlined);
     }
 }
 
 /// Remove outline from deselected entities
 pub fn remove_outline_from_deselected(
     mut commands: Commands,
-    outline_query: Query<Entity, (With<Outline>, Without<Selected>)>,
+    outline_query: Query<Entity, (With<Outlined>, Without<Selected>)>,
 ) {
     for entity in outline_query.iter() {
-        commands.entity(entity).remove::<Outline>();
+        commands.entity(entity).remove::<Outlined>();
     }
 }

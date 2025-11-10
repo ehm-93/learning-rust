@@ -8,6 +8,7 @@
 //! - Future: duplication, deletion
 
 pub mod gizmo;
+pub mod outline;
 pub mod placement;
 pub mod primitives;
 pub mod selection;

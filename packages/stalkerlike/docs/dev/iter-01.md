@@ -185,7 +185,7 @@ entities:
 
 **Play Mode**:
 - P key or button to enter play mode
-- Spawn player at designated spawn point (or origin if none)
+- Spawn player at origin
 - All editor UI hidden, game systems active
 - ESC to exit back to editor
 - Scene state preserved when returning to editor
@@ -307,7 +307,6 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - [x] Can fly around scene smoothly with editor camera
 - [x] Grid display shows spatial reference
 - [x] Can toggle grid snapping with G key (0.5m position, 15° rotation)
-- [ ] Can toggle chunk boundary visualization (B key)
 - [x] Can spawn primitives (cube, sphere, plane, cylinder, capsule) into scene
 - [x] Can select objects by clicking in viewport (single object)
 - [ ] **Can press P to enter play mode and test level (deferred)**
@@ -319,7 +318,6 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - [ ] Can edit transform values numerically in inspector
 - [ ] Can save scene to YAML file (Ctrl+S)
 - [ ] Can load saved scene from YAML (Ctrl+O)
-- [ ] Scene includes chunk metadata (position, bounds, faction)
 - [ ] Can group objects (Ctrl+G) and ungroup (Ctrl+Shift+G)
 - [ ] Can multi-select with Ctrl+click (after grouping implemented)
 - [ ] Can box-select multiple objects (after grouping implemented)
@@ -331,10 +329,8 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - [x] Selection is unambiguous (clear visual feedback with yellow outline)
 - [x] **Grid snapping feels natural and predictable (visual + functional, works with gizmos)**
 - [ ] **Play mode works by end of week 1 (tight iteration loops)** - DEFERRED
-- [ ] Scene YAML files are human-readable and version-control friendly (not yet implemented)
 - [ ] No crashes when switching between editor and play mode (not yet testable)
 - [x] Camera movement feels smooth and controllable
-- [ ] Chunk bounds visualization helps with spatial awareness (32m reference) - not yet implemented
 - [ ] Duplicate offset (+1m X) is consistent and predictable (not yet implemented)
 - [x] Multi-select only available after grouping is implemented (correctly deferred)
 
@@ -493,7 +489,7 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Create `EditorState` enum (Editor, EditorPlayMode)
 - [ ] Add P key binding to enter play mode
 - [ ] Serialize current scene state before entering play mode
-- [ ] Spawn player entity at origin (or spawn point if exists)
+- [ ] Spawn player entity at origin
 - [ ] Hide all editor UI (panels, gizmos, grid)
 - [ ] Enable game systems (physics, player controller, etc.)
 - [ ] Add ESC key binding to exit play mode
@@ -507,37 +503,51 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 
 #### 7. Translate gizmo with drag interaction (respects grid snapping) ✅ COMPLETE
 - [x] Create gizmo rendering system (always on top)
-- [x] Render X-axis arrow (red sphere) at selected object position
-- [x] Render Y-axis arrow (blue sphere) at selected object position
-- [x] Render Z-axis arrow (green sphere) at selected object position
+- [x] Render X-axis arrow (red arrow with cylinder + cone)
+- [x] Render Y-axis arrow (green arrow with cylinder + cone)
+- [x] Render Z-axis arrow (blue arrow with cylinder + cone)
+- [x] Add thin axis lines connecting center to handles
+- [x] Implement constant screen-space sizing (scale with camera distance)
 - [x] Implement ray-cast intersection with gizmo handles (using Bevy's picking)
-- [x] Add hover highlighting for gizmo handles (built-in from emissive material)
+- [x] Add hover highlighting for gizmo handles (emissive material brightening)
 - [x] Implement click-and-drag logic for handles
 - [x] Constrain movement to selected axis only
 - [x] Apply grid snapping during drag (if enabled)
 - [x] Update object transform in real-time during drag
 - [x] Release on mouse-up to finalize transform
-- [ ] Add visual feedback showing drag axis constraint (RGB color coding)
+- [x] Add Local/Global orientation toggle (O key)
+- [x] Implement speed modifiers (Shift = 4x, Ctrl = 0.25x)
 
 **Implementation Notes:**
-- Used RGB sphere handles (0.3m radius) instead of traditional arrow gizmos for simplicity
-- Color scheme matches grid: X=red, Y=blue, Z=green
-- Handles positioned 1.5m from object center on each axis
+- Arrow-style gizmos like Blender: cylinder shaft (0.02 radius, 1.0 length) + cone tip (0.05 radius, 0.2 height)
+- Thin axis lines (0.01 radius cylinders) connect center to handles for better spatial reference
+- Color scheme: X=red, Y=green, Z=blue (standard 3D convention)
+- Constant screen-space sizing: scale = camera_distance * 0.15
+- Custom GizmoMaterial with disabled depth testing (CompareFunction::Always) - always renders on top
+- Material uses individual f32 fields (color_r, color_g, color_b, color_a, emissive_r/g/b/a) for WGSL buffer alignment
 - Built on Bevy's picking system with Pickable component
-- Click observer starts drag, Drag observer updates transform, mouse release ends drag
-- GizmoState resource tracks mode (Translate/Rotate/Scale), drag state, and axis
-- Distance-based drag scaling (0.002 * camera distance) for consistent feel
+- Observer pattern: on_gizmo_drag fires continuously during drag
+- Distance-based drag scaling (0.001 * camera distance) for consistent feel across distances
 - Vertical mouse movement controls Y and Z axes (intuitive up/down)
 - Horizontal mouse movement controls X axis
 - Grid snapping respects GridConfig.snap_enabled (0.5m spacing)
-- Emissive materials provide built-in highlight without custom shaders
+- Hover highlighting: emissive increases to (2.0, 2.0, 2.0) white, restored to axis color on hover end
+- Local/Global orientation (O key toggle):
+  - Global: gizmos align with world axes (Quat::IDENTITY)
+  - Local: gizmos rotate with object (uses object's rotation)
+  - Transforms applied in correct space (world for Global, rotated by object for Local)
+- Speed modifiers applied to drag_scale:
+  - Normal: 1.0x (base_drag_scale = 0.001)
+  - Shift: 4.0x faster
+  - Ctrl: 0.25x slower (precision mode)
+- Material organization: Moved to core/materials.rs for centralized material management
 
 #### 8. Rotate gizmo with drag interaction (15° snap when enabled) ✅ COMPLETE
 - [x] Switch gizmo to rotation mode with F key
-- [x] Render X-axis rotation handle (red sphere around X)
-- [x] Render Y-axis rotation handle (blue sphere around Y)
-- [x] Render Z-axis rotation handle (green sphere around Z)
-- [x] Implement arc handle intersection testing (reuses sphere picking)
+- [x] Render X-axis rotation handle (red arrow around X)
+- [x] Render Y-axis rotation handle (green arrow around Y)
+- [x] Render Z-axis rotation handle (blue arrow around Z)
+- [x] Implement arc handle intersection testing (reuses arrow picking)
 - [x] Add hover highlighting for rotation handles (emissive material)
 - [x] Implement circular drag logic (convert mouse delta to angle)
 - [x] Constrain rotation to selected axis only
@@ -546,8 +556,8 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [x] Display angle value during rotation (shown in inspector - deferred to editable inspector)
 
 **Implementation Notes:**
-- Same RGB sphere handles used for all modes (Translate/Rotate/Scale)
-- Color scheme: X=red, Y=blue, Z=green (consistent with grid)
+- Same arrow handles used for all modes (Translate/Rotate/Scale) - unified visual language
+- Color scheme: X=red, Y=green, Z=blue (standard 3D convention)
 - F key cycles forward through modes: Translate → Rotate → Scale
 - Shift+F cycles backward: Scale → Rotate → Translate
 - Rotation speed: 0.02 radians per pixel of drag distance
@@ -555,14 +565,16 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - 15° snap when grid_config.snap_enabled = true (matches spec)
 - Uses Euler angles (XYZ order) for rotation editing
 - Mode displayed in status bar with light blue color
+- Works in both Local and Global orientation modes
+- Speed modifiers (Shift/Ctrl) apply to rotation speed
 
 #### 9. Scale gizmo with drag interaction ✅ COMPLETE
 - [x] Switch gizmo to scale mode with F key
-- [x] Render X-axis scale handle (red sphere)
-- [x] Render Y-axis scale handle (blue sphere)
-- [x] Render Z-axis scale handle (green sphere)
+- [x] Render X-axis scale handle (red arrow)
+- [x] Render Y-axis scale handle (green arrow)
+- [x] Render Z-axis scale handle (blue arrow)
 - [ ] Add center handle for uniform scaling (white/gray) - deferred, single-axis sufficient for MVP
-- [x] Implement handle intersection testing (reuses sphere picking)
+- [x] Implement handle intersection testing (reuses arrow picking)
 - [x] Add hover highlighting for scale handles (emissive material)
 - [x] Implement drag-to-scale logic (mouse delta → scale factor)
 - [x] Constrain scaling to selected axis (or uniform for center - deferred)
@@ -574,11 +586,12 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - Scale speed: 0.01 per pixel of vertical mouse drag
 - Vertical drag: up = increase scale, down = decrease scale
 - Minimum scale: 0.01 to prevent zero/negative values
-- Same sphere handles as translate/rotate modes (consistency)
-- Color scheme: X=red, Y=blue, Z=green (matches grid and other modes)
+- Same arrow handles as translate/rotate modes (consistency)
+- Color scheme: X=red, Y=green, Z=blue (matches grid and other modes)
 - F key cycles forward, Shift+F cycles backward
 - No uniform scale handle in MVP - can add later if needed
 - Works per-axis only (matches spec for Week 2)
+- Speed modifiers (Shift/Ctrl) apply to scale rate
 
 #### 10. Inspector with editable numeric fields
 - [ ] Convert transform fields from read-only to editable
@@ -591,23 +604,12 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Support precision to 3 decimal places
 - [ ] Update viewport in real-time as values change
 
-#### 11. Chunk boundary visualization (B key toggle)
-- [ ] Create chunk bounds rendering system
-- [ ] Render wireframe box for current chunk (32x32x32m)
-- [ ] Use distinct color (e.g., cyan/magenta) for chunk bounds
-- [ ] Add B key toggle for visibility
-- [ ] Display chunk position label (world coordinates)
-- [ ] Show chunk size in meters
-- [ ] Optionally render adjacent chunk outlines (faded)
-- [ ] Add status bar indicator when chunk viz is enabled
-
 ---
 
 ### Week 3: Scene Management + Multi-Object
 
 #### 12. Scene serialization to YAML (save)
 - [ ] Create `SceneData` serializable struct (serde)
-- [ ] Add chunk metadata fields (id, position, bounds, faction)
 - [ ] Implement entity serialization (name, transform, components)
 - [ ] Serialize mesh references (not embedded geometry)
 - [ ] Serialize material references
@@ -626,25 +628,13 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Read YAML file using `serde_yaml`
 - [ ] Validate scene format and version
 - [ ] Clear existing scene entities
-- [ ] Deserialize chunk metadata
 - [ ] Spawn entities from scene data
 - [ ] Restore transforms, meshes, materials
 - [ ] Restore editor camera position if saved
 - [ ] Add error handling for malformed YAML
 - [ ] Show confirmation message on successful load
 
-#### 14. Chunk metadata in scene files (position, bounds, faction)
-- [ ] Create `ChunkMetadata` component
-- [ ] Add chunk ID field (string, e.g., "mining_shaft_7")
-- [ ] Add world position field (Vec3, Y = depth)
-- [ ] Add bounds field (Vec3, default [32, 32, 32])
-- [ ] Add optional faction field (string)
-- [ ] Display chunk metadata in inspector (separate section)
-- [ ] Make chunk metadata editable in inspector
-- [ ] Include chunk metadata in YAML serialization
-- [ ] Restore chunk metadata on scene load
-
-#### 15. Group/ungroup operations (Ctrl+G / Ctrl+Shift+G)
+#### 14. Group/ungroup operations (Ctrl+G / Ctrl+Shift+G)
 - [ ] Add Ctrl+G keybinding for group
 - [ ] Create parent entity when grouping selected objects
 - [ ] Move selected entities to be children of parent
@@ -656,7 +646,7 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Delete empty parent entity after ungroup
 - [ ] Update hierarchy panel to reflect changes
 
-#### 16. Multi-select (Ctrl+click) and box select (now that grouping exists)
+#### 15. Multi-select (Ctrl+click) and box select (now that grouping exists)
 - [ ] Add `SelectionSet` resource to track multiple selected entities
 - [ ] Implement Ctrl+click to add/remove from selection
 - [ ] Highlight all selected objects with outline
@@ -668,7 +658,7 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Inspector shows multi-select summary (count, bounds)
 - [ ] Duplicate/delete operations work on selection set
 
-#### 17. Duplicate/delete operations (with defined +1m X-axis offset)
+#### 16. Duplicate/delete operations (with defined +1m X-axis offset)
 - [ ] Add Ctrl+D keybinding for duplicate
 - [ ] Clone all components of selected entities
 - [ ] Offset duplicates by +1m on X-axis (or dominant horizontal)
@@ -680,7 +670,7 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Show confirmation dialog for delete if preferred
 - [ ] Clear selection after delete
 
-#### 18. Hierarchy panel
+#### 17. Hierarchy panel
 - [ ] Create hierarchy EGUI panel on left side
 - [ ] Display tree view of all scene entities
 - [ ] Show parent-child relationships with indentation
@@ -696,17 +686,7 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 
 ### Week 4: Polish & Stability
 
-#### 19. Player spawn point designation
-- [ ] Create `PlayerSpawnPoint` component marker
-- [ ] Add "Set as Spawn Point" button in inspector
-- [ ] Render spawn point icon in viewport (distinct gizmo)
-- [ ] Ensure only one spawn point exists (remove others)
-- [ ] Save spawn point to YAML scene file
-- [ ] Use spawn point position when entering play mode
-- [ ] Fall back to origin if no spawn point exists
-- [ ] Show spawn point rotation as forward direction arrow
-
-#### 20. Scene dirty flag and auto-save (every 5 minutes)
+#### 18. Scene dirty flag and auto-save (every 5 minutes)
 - [ ] Add `SceneDirty` resource (bool flag)
 - [ ] Set dirty flag on any scene modification
 - [ ] Show asterisk in title bar when dirty
@@ -718,7 +698,7 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Recover from auto-save on crash/reload
 - [ ] Clear dirty flag after save
 
-#### 21. Polish gizmo visuals and interactions
+#### 19. Polish gizmo visuals and interactions
 - [ ] Smooth out gizmo handle highlighting
 - [ ] Add subtle animation to gizmo on selection
 - [ ] Improve handle size scaling based on camera distance
@@ -728,18 +708,17 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Ensure gizmo renders on top of all geometry
 - [ ] Add fade-in/fade-out transitions
 
-#### 22. Bug fixes and edge cases
+#### 20. Bug fixes and edge cases
 - [ ] Test scene load with missing assets
 - [ ] Test save/load with complex hierarchies
 - [ ] Test multi-select with grouped objects
 - [ ] Test gizmo interaction at extreme scales
 - [ ] Test camera collision with scene bounds
-- [ ] Test play mode with no spawn point
 - [ ] Test rapid mode switching (editor ↔ play)
 - [ ] Test grid snapping at chunk boundaries
 - [ ] Fix any reported crashes or data loss
 
-#### 23. Keyboard shortcut refinements
+#### 21. Keyboard shortcut refinements
 - [ ] Add shortcut reference panel (accessible via F1 or ?)
 - [ ] Document all keybindings in UI
 - [ ] Ensure no conflicting keybindings
@@ -922,6 +901,65 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
    - Green = enabled/active (snap ON)
    - Gray = disabled (snap OFF)
    - Yellow = warning/special mode (placement active)
+
+### Transform Gizmos (Week 2)
+1. **Arrow-style gizmos over spheres**: Blender-like visual language
+   - Cylinder shafts (0.02 radius, 1.0 length) + cone tips (0.05 radius, 0.2 height)
+   - More intuitive axis direction than simple spheres
+   - Thin axis lines (0.01 radius) connect center to handles
+2. **Constant screen-space sizing**: `scale = camera_distance * 0.15`
+   - Gizmos maintain consistent apparent size regardless of distance
+   - Prevents tiny gizmos at long distances or giant gizmos up close
+   - 0.15 factor tuned for comfortable visual size
+3. **Custom GizmoMaterial for always-on-top rendering**:
+   - Uses `Material::specialize()` to override depth pipeline
+   - `CompareFunction::Always` disables depth testing
+   - `depth_write_enabled = false` prevents depth buffer writes
+   - Gizmos always visible even when behind other geometry
+4. **WGSL buffer alignment with individual f32 fields**:
+   - Initially used vec4 for color and emissive
+   - Hit shader validation error: "Buffer size 32 > min_binding_size 16"
+   - Solution: Break into 8 individual f32 fields (color_r/g/b/a, emissive_r/g/b/a)
+   - WGSL fragment shader constructs vec4s from individual floats
+   - Helper function `GizmoMaterial::new(color, emissive)` unpacks LinearRgba
+5. **Local/Global orientation toggle**:
+   - O key switches between world-aligned (Global) and object-aligned (Local)
+   - Global: gizmo rotation = Quat::IDENTITY
+   - Local: gizmo rotation = selected object's rotation
+   - Transforms applied in correct coordinate space
+6. **Speed modifiers for precision control**:
+   - Base drag scale reduced from 0.002 to 0.001 (slower default)
+   - Ctrl: 0.25x speed (fine adjustments)
+   - Shift: 4.0x speed (quick movements)
+   - Applies to all transform modes (translate, rotate, scale)
+7. **Unified handle system**: Same arrow geometry for all modes
+   - Translate, Rotate, and Scale all use same visual handles
+   - F key cycles forward, Shift+F cycles backward
+   - Consistent color scheme: X=red, Y=green, Z=blue
+8. **Observer-based interaction**: Clean event-driven architecture
+   - `on_gizmo_hover`: Increases emissive to (2.0, 2.0, 2.0) white
+   - `on_gizmo_hover_end`: Restores axis-specific emissive color
+   - `on_gizmo_drag`: Updates transform continuously during drag
+   - Each handle entity has its own observers (entity-specific callbacks)
+
+### Material Organization (Week 2)
+1. **Centralized materials in core/materials.rs**:
+   - GridMaterial: Grid rendering with distance-based fade
+   - GizmoMaterial: Transform gizmo with always-on-top rendering
+   - OutlineMaterial: Selection outline using inverted normals
+2. **Benefits of centralization**:
+   - Single source of truth for all custom materials
+   - Easier to find and modify materials
+   - Consistent with domain-based architecture (core = shared fundamentals)
+   - Clean imports: `use crate::editor::core::materials::{GridMaterial, GizmoMaterial, OutlineMaterial};`
+3. **Shaders remain in assets/shaders/**:
+   - `grid.wgsl`: Grid line rendering with distance fade
+   - `gizmo_material.wgsl`: Gizmo fragment shader (color + emissive)
+   - Separation of Rust structs (CPU) and WGSL code (GPU)
+4. **Material registration in EditorPlugin**:
+   - `MaterialPlugin::<GridMaterial>::default()`
+   - `MaterialPlugin::<GizmoMaterial>::default()`
+   - No need for OutlineMaterial plugin (uses StandardMaterial resource)
 
 ## References
 - Blender's transform gizmo system (industry standard UX)

@@ -6,10 +6,12 @@
 //! - Object selection system (picking and highlighting)
 //! - Box selection system (multi-select via drag)
 //! - Transform manipulation (gizmos)
+//! - Grouping/ungrouping (hierarchical organization)
 //! - Future: duplication, deletion
 
 pub mod box_select;
 pub mod gizmo;
+pub mod grouping;
 pub mod outline;
 pub mod placement;
 pub mod plugin;

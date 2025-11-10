@@ -49,7 +49,7 @@ use viewport::{
 };
 use ui::{
     asset_browser::asset_browser_ui,
-    inspector::inspector_ui,
+    inspector::{inspector_ui, InspectorState},
     status_bar::status_bar_ui,
 };
 
@@ -79,6 +79,7 @@ impl Plugin for EditorPlugin {
             .init_resource::<GridConfig>()
             .init_resource::<GizmoState>()
             .init_resource::<OutlineMaterial>()
+            .init_resource::<InspectorState>()
 
             // Observers for picking events and component changes
             .add_observer(handle_selection)

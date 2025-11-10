@@ -290,17 +290,17 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 ## Success Criteria
 
 ### Progress Summary (Week 2)
-**Completed**: 7/9 core systems ✅
+**Completed**: 8/9 core systems ✅
 - ✅ Camera controller with fly-around controls
 - ✅ Primitive spawning with placement system
 - ✅ Grid display with snapping and status bar
 - ✅ Selection system (Bevy's built-in picking - MIGRATED!)
 - ✅ Inspector panel (basic implementation, ready for expansion)
 - ✅ Transform gizmos (translate, rotate, scale with RGB spheres)
-- ❌ Editable inspector fields (deferred to Week 3)
+- ✅ Editable inspector fields (with steppers and validation!)
 - ❌ Play mode entry/exit (not started)
 
-**Status**: Ahead of schedule! Transform gizmos complete. Play mode and editable inspector remain.
+**Status**: Week 2 essentially complete! Only play mode remains, which is deferred pending better game mode integration.
 
 ### Core Functionality
 - [x] Can launch editor with `--editor` flag
@@ -315,7 +315,7 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - [x] Can rotate selected objects with rotate gizmo (snaps when grid enabled)
 - [x] Can scale selected objects with scale gizmo
 - [x] Can see object properties in inspector panel
-- [ ] Can edit transform values numerically in inspector
+- [x] Can edit transform values numerically in inspector
 - [ ] Can save scene to YAML file (Ctrl+S)
 - [ ] Can load saved scene from YAML (Ctrl+O)
 - [ ] Can group objects (Ctrl+G) and ungroup (Ctrl+Shift+G)
@@ -593,16 +593,28 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - Works per-axis only (matches spec for Week 2)
 - Speed modifiers (Shift/Ctrl) apply to scale rate
 
-#### 10. Inspector with editable numeric fields
-- [ ] Convert transform fields from read-only to editable
-- [ ] Add text input for position X, Y, Z
-- [ ] Add text input for rotation X, Y, Z (Euler angles)
-- [ ] Add text input for scale X, Y, Z
-- [ ] Validate numeric input (reject non-numbers)
-- [ ] Apply changes on Enter key or focus loss
-- [ ] Add increment/decrement buttons (+/- steppers)
-- [ ] Support precision to 3 decimal places
-- [ ] Update viewport in real-time as values change
+#### 10. Inspector with editable numeric fields ✅ COMPLETE
+- [x] Convert transform fields from read-only to editable
+- [x] Add text input for position X, Y, Z
+- [x] Add text input for rotation X, Y, Z (Euler angles)
+- [x] Add text input for scale X, Y, Z
+- [x] Validate numeric input (reject non-numbers)
+- [x] Apply changes on Enter key or focus loss
+- [x] Add increment/decrement buttons (+/- steppers)
+- [x] Support precision to 3 decimal places
+- [x] Update viewport in real-time as values change
+
+**Implementation Notes:**
+- InspectorState resource maintains text buffers for all transform fields
+- Buffers update when selection changes or transform modified externally (e.g., gizmo)
+- Text fields validate input in real-time with hover tooltip for invalid numbers
+- Enter key applies changes immediately
+- Stepper buttons: -/+ with configurable step size (0.1 for pos/scale, 5.0° for rotation)
+- Rotation displayed in degrees (user-friendly) but stored as radians internally
+- Scale clamped to 0.01 minimum to prevent zero/negative values
+- Three decimal place precision throughout (format!("{:.3}"))
+- Real-time viewport updates via mutable Transform query
+- Detection of external changes via transform.is_changed() to keep buffers in sync
 
 ---
 

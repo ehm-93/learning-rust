@@ -3,13 +3,14 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
-use super::asset_browser::asset_browser_ui;
+// Note: asset_browser_ui is now integrated into hierarchy_ui
 use super::confirmation_dialog::{ConfirmationDialog, ErrorDialog, confirmation_dialog_ui, error_dialog_ui};
+use super::hierarchy::{hierarchy_ui, HierarchyState};
 use super::inspector::{inspector_ui, InspectorState};
 use super::menu_bar::menu_bar_ui;
 use super::status_bar::status_bar_ui;
 
-/// Plugin for all editor UI panels (menu bar, asset browser, inspector, etc.)
+/// Plugin for all editor UI panels (menu bar, hierarchy+assets, inspector, etc.)
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
@@ -19,6 +20,7 @@ impl Plugin for UiPlugin {
             .add_plugins(EguiPlugin::default())
 
             // Resources
+            .init_resource::<HierarchyState>()
             .init_resource::<InspectorState>()
             .init_resource::<ConfirmationDialog>()
             .init_resource::<ErrorDialog>()
@@ -29,7 +31,7 @@ impl Plugin for UiPlugin {
                 confirmation_dialog_ui,
                 error_dialog_ui,
                 status_bar_ui,
-                asset_browser_ui,
+                hierarchy_ui,      // Now includes asset browser
                 inspector_ui,
             ).chain());
     }

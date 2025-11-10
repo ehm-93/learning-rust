@@ -290,7 +290,7 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 ## Success Criteria
 
 ### Progress Summary (Week 3)
-**Completed**: 10/9 core systems ✅ (exceeded original scope!)
+**Completed**: 11/9 core systems ✅ (exceeded original scope!)
 - ✅ Camera controller with fly-around controls
 - ✅ Primitive spawning with placement system
 - ✅ Grid display with snapping and status bar
@@ -301,9 +301,10 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - ✅ Scene save/load with YAML serialization
 - ✅ Group/ungroup operations (Ctrl+G / Ctrl+Shift+G)
 - ✅ Multi-select (Ctrl+click) - already working!
+- ✅ Hierarchy panel (tree view with inline editing, visibility/lock toggles)
 - ❌ Play mode entry/exit (deferred pending game mode integration)
 
-**Status**: Week 3 grouping complete! Scene management and hierarchy operations fully functional.
+**Status**: Week 3 complete with hierarchy panel! Full scene management, tree view navigation, and entity organization now available.
 
 ### Core Functionality
 - [x] Can launch editor with `--editor` flag
@@ -711,16 +712,16 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - Works seamlessly with existing multi-select (Ctrl+click)
 
 #### 15. Multi-select (Ctrl+click) and box select (now that grouping exists)
-- [ ] Add `SelectionSet` resource to track multiple selected entities
-- [ ] Implement Ctrl+click to add/remove from selection
-- [ ] Highlight all selected objects with outline
-- [ ] Update gizmo to show at center of selection bounds
-- [ ] Implement box select drag (click-drag in empty space)
-- [ ] Render selection box rectangle during drag
-- [ ] Select all objects intersecting box on release
-- [ ] Transform gizmo applies to all selected objects
-- [ ] Inspector shows multi-select summary (count, bounds)
-- [ ] Duplicate/delete operations work on selection set
+- [x] Add `SelectionSet` resource to track multiple selected entities
+- [x] Implement Ctrl+click to add/remove from selection
+- [x] Highlight all selected objects with outline
+- [x] Update gizmo to show at center of selection bounds
+- [x] Implement box select drag (click-drag in empty space)
+- [x] Render selection box rectangle during drag
+- [x] Select all objects intersecting box on release
+- [x] Transform gizmo applies to all selected objects
+- [x] Inspector shows multi-select summary (count, bounds)
+- [x] Duplicate/delete operations work on selection set
 
 #### 16. Duplicate/delete operations (with defined +1m X-axis offset)
 - [ ] Add Ctrl+D keybinding for duplicate
@@ -728,23 +729,39 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Offset duplicates by +1m on X-axis (or dominant horizontal)
 - [ ] Maintain parent-child relationships in duplicates
 - [ ] Auto-select duplicated objects after creation
-- [ ] Add Del keybinding for delete
-- [ ] Remove selected entities from scene
-- [ ] Clean up orphaned children on parent delete
+- [x] Add Del keybinding for delete
+- [x] Remove selected entities from scene
+- [x] Clean up orphaned children on parent delete
 - [ ] Show confirmation dialog for delete if preferred
-- [ ] Clear selection after delete
+- [x] Clear selection after delete
 
-#### 17. Hierarchy panel
-- [ ] Create hierarchy EGUI panel on left side
-- [ ] Display tree view of all scene entities
-- [ ] Show parent-child relationships with indentation
-- [ ] Add expand/collapse arrows for parent entities
-- [ ] Display entity name (editable inline)
-- [ ] Add show/hide toggle button per entity
-- [ ] Add lock/unlock toggle button per entity
-- [ ] Implement click-to-select in hierarchy
-- [ ] Sync selection between hierarchy and viewport
-- [ ] Add drag-and-drop to reparent entities (optional)
+#### 17. Hierarchy panel ✅ COMPLETE
+- [x] Create hierarchy EGUI panel on left side
+- [x] Display tree view of all scene entities
+- [x] Show parent-child relationships with indentation
+- [x] Add expand/collapse arrows for parent entities
+- [x] Display entity name (editable inline)
+- [x] Add show/hide toggle button per entity
+- [x] Add lock/unlock toggle button per entity
+- [x] Implement click-to-select in hierarchy
+- [x] Sync selection between hierarchy and viewport
+- [ ] Add drag-and-drop to reparent entities (optional - deferred)
+
+**Implementation Notes:**
+- Created `editor/ui/hierarchy.rs` with full tree view functionality
+- HierarchyState resource tracks expanded nodes and rename state
+- Entities without ChildOf component are treated as root nodes
+- Recursive rendering with indentation (16px per level)
+- Inline name editing: double-click to rename, Enter to confirm, Escape to cancel
+- Visibility toggle: Eye icon controls Visibility component (Inherited/Hidden)
+- Lock toggle: Lock icon prevents selection (checked in handle_selection)
+- Group entities display with folder icon (📁) for visual distinction
+- Multi-select support: Ctrl+click works in hierarchy just like viewport
+- Right-click context menu: Rename, Delete, Duplicate (duplicate TODO)
+- Selection highlight: Yellow text for selected entities
+- Selection sync: Both directions work (hierarchy → viewport, viewport → hierarchy)
+- Locked entities shown in gray and cannot be selected
+- Proper cleanup on entity deletion (removes from selection)
 
 ---
 

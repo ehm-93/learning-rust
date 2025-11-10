@@ -7,6 +7,9 @@ use crate::editor::objects::placement::PlacementState;
 use crate::editor::objects::outline::Outlined;
 use crate::editor::objects::gizmo::GizmoHandle;
 
+// Import Locked from hierarchy module
+use crate::editor::ui::hierarchy::Locked;
+
 /// Resource tracking the set of currently selected entities
 #[derive(Resource, Default)]
 pub struct SelectionSet {
@@ -78,6 +81,7 @@ pub fn handle_selection(
     placement_state: Res<PlacementState>,
     editor_query: Query<(), With<EditorEntity>>,
     gizmo_query: Query<(), With<GizmoHandle>>,
+    locked_query: Query<(), With<Locked>>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     // Don't select if in placement mode
@@ -94,6 +98,12 @@ pub fn handle_selection(
 
     // Only select EditorEntity objects
     if editor_query.get(clicked_entity).is_err() {
+        return;
+    }
+
+    // Don't select if entity is locked
+    if locked_query.get(clicked_entity).is_ok() {
+        info!("Cannot select locked entity: {:?}", clicked_entity);
         return;
     }
 

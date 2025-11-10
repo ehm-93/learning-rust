@@ -1,6 +1,7 @@
 //! Save and load systems triggered by keyboard shortcuts or UI events
 
 use bevy::prelude::*;
+use bevy::tasks::{block_on, AsyncComputeTaskPool, Task};
 use std::path::PathBuf;
 
 use crate::editor::persistence::scene::{save_scene, load_scene};
@@ -228,53 +229,104 @@ pub fn handle_save(
     }
 }
 
+/// Component to track pending file open task
+#[derive(Component)]
+pub(crate) struct FileOpenTask(Task<Option<PathBuf>>);
+
 /// System to handle open file event
 /// Opens a file picker dialog to select a scene file
 pub fn handle_open_file(
     mut events: EventReader<OpenFileEvent>,
     mut commands: Commands,
+) {
+    for _ in events.read() {
+        // Spawn async file dialog task
+        let task_pool = AsyncComputeTaskPool::get();
+        let task = task_pool.spawn(async move {
+            rfd::AsyncFileDialog::new()
+                .add_filter("Scene Files", &["yaml", "yml"])
+                .set_title("Open Scene")
+                .pick_file()
+                .await
+                .map(|handle| handle.path().to_path_buf())
+        });
+
+        commands.spawn(FileOpenTask(task));
+    }
+}
+
+/// System to poll file open tasks and load the scene when ready
+pub fn poll_file_open_tasks(
+    mut commands: Commands,
     mut current_file: ResMut<CurrentFile>,
     mut error_dialog: ResMut<ErrorDialog>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut tasks: Query<(Entity, &mut FileOpenTask)>,
     editor_entities: Query<Entity, With<EditorEntity>>,
 ) {
-    for _ in events.read() {
-        // Open file picker dialog
-        let file_dialog = rfd::FileDialog::new()
-            .add_filter("Scene Files", &["yaml", "yml"])
-            .set_title("Open Scene");
+    for (task_entity, mut task) in tasks.iter_mut() {
+        if let Some(result) = block_on(futures_lite::future::poll_once(&mut task.0)) {
+            // Task is complete, despawn it
+            commands.entity(task_entity).despawn();
 
-        if let Some(path) = file_dialog.pick_file() {
-            // Clear existing scene entities
-            for entity in editor_entities.iter() {
-                commands.entity(entity).despawn();
-            }
-
-            match load_scene(path.clone(), &mut commands, &mut meshes, &mut materials) {
-                Ok(()) => {
-                    info!("Scene loaded from {}", path.display());
-                    current_file.set_path(path);
-                    current_file.mark_clean();
+            if let Some(path) = result {
+                // Clear existing scene entities
+                for entity in editor_entities.iter() {
+                    commands.entity(entity).despawn();
                 }
-                Err(e) => {
-                    error!("Failed to load scene: {}", e);
-                    error_dialog.show_error(
-                        "Load Failed",
-                        format!("Failed to load scene from {}:\n{}", path.display(), e)
-                    );
+
+                match load_scene(path.clone(), &mut commands, &mut meshes, &mut materials) {
+                    Ok(()) => {
+                        info!("Scene loaded from {}", path.display());
+                        current_file.set_path(path);
+                        current_file.mark_clean();
+                    }
+                    Err(e) => {
+                        error!("Failed to load scene: {}", e);
+                        error_dialog.show_error(
+                            "Load Failed",
+                            format!("Failed to load scene from {}:\n{}", path.display(), e)
+                        );
+                    }
                 }
             }
         }
     }
 }
 
+/// Component to track pending save as task
+#[derive(Component)]
+pub(crate) struct FileSaveTask(Task<Option<PathBuf>>);
+
 /// System to handle save as event
 /// Opens a file picker dialog to choose where to save the scene
 pub fn handle_save_as(
     mut events: EventReader<SaveAsEvent>,
+    mut commands: Commands,
+) {
+    for _ in events.read() {
+        // Spawn async file dialog task
+        let task_pool = AsyncComputeTaskPool::get();
+        let task = task_pool.spawn(async move {
+            rfd::AsyncFileDialog::new()
+                .add_filter("Scene Files", &["yaml", "yml"])
+                .set_title("Save Scene As")
+                .save_file()
+                .await
+                .map(|handle| handle.path().to_path_buf())
+        });
+
+        commands.spawn(FileSaveTask(task));
+    }
+}
+
+/// System to poll save as tasks and save the scene when ready
+pub fn poll_save_as_tasks(
+    mut commands: Commands,
     mut current_file: ResMut<CurrentFile>,
     mut error_dialog: ResMut<ErrorDialog>,
+    mut tasks: Query<(Entity, &mut FileSaveTask)>,
     editor_entities: Query<(
         Entity,
         &Transform,
@@ -285,37 +337,37 @@ pub fn handle_save_as(
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
 ) {
-    for _ in events.read() {
-        // Open save file picker dialog
-        let file_dialog = rfd::FileDialog::new()
-            .add_filter("Scene Files", &["yaml", "yml"])
-            .set_title("Save Scene As");
+    for (task_entity, mut task) in tasks.iter_mut() {
+        if let Some(result) = block_on(futures_lite::future::poll_once(&mut task.0)) {
+            // Task is complete, despawn it
+            commands.entity(task_entity).despawn();
 
-        if let Some(path) = file_dialog.save_file() {
-            // Ensure the directory exists
-            if let Some(parent) = path.parent() {
-                if let Err(e) = std::fs::create_dir_all(parent) {
-                    error!("Failed to create directory {}: {}", parent.display(), e);
-                    error_dialog.show_error(
-                        "Save Failed",
-                        format!("Failed to create directory {}:\n{}", parent.display(), e)
-                    );
-                    return;
+            if let Some(path) = result {
+                // Ensure the directory exists
+                if let Some(parent) = path.parent() {
+                    if let Err(e) = std::fs::create_dir_all(parent) {
+                        error!("Failed to create directory {}: {}", parent.display(), e);
+                        error_dialog.show_error(
+                            "Save Failed",
+                            format!("Failed to create directory {}:\n{}", parent.display(), e)
+                        );
+                        return;
+                    }
                 }
-            }
 
-            match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials)) {
-                Ok(()) => {
-                    info!("Scene saved as {}", path.display());
-                    current_file.set_path(path);
-                    current_file.mark_clean();
-                }
-                Err(e) => {
-                    error!("Failed to save scene: {}", e);
-                    error_dialog.show_error(
-                        "Save Failed",
-                        format!("Failed to save scene:\n{}", e)
-                    );
+                match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials)) {
+                    Ok(()) => {
+                        info!("Scene saved as {}", path.display());
+                        current_file.set_path(path);
+                        current_file.mark_clean();
+                    }
+                    Err(e) => {
+                        error!("Failed to save scene: {}", e);
+                        error_dialog.show_error(
+                            "Save Failed",
+                            format!("Failed to save scene:\n{}", e)
+                        );
+                    }
                 }
             }
         }

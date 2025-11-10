@@ -1,13 +1,14 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
-use crate::editor::persistence::{CurrentFile, NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
+use crate::editor::persistence::{AutoSaveInterval, AutoSaveTimer, CurrentFile, NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
 use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, PendingAction};
 
 /// Render the top menu bar
 pub fn menu_bar_ui(
     mut contexts: EguiContexts,
     current_file: Res<CurrentFile>,
+    mut autosave_timer: ResMut<AutoSaveTimer>,
     mut dialog: ResMut<ConfirmationDialog>,
     mut new_file_events: EventWriter<NewFileEvent>,
     mut open_file_events: EventWriter<OpenFileEvent>,
@@ -51,6 +52,26 @@ pub fn menu_bar_ui(
                     save_as_events.write(SaveAsEvent);
                     ui.close();
                 }
+
+                ui.separator();
+
+                // Autosave submenu
+                ui.menu_button(format!("Autosave ({})", autosave_timer.interval.label()), |ui| {
+                    for interval in AutoSaveInterval::all() {
+                        let is_selected = autosave_timer.interval == *interval;
+                        let label = if is_selected {
+                            format!("✓ {}", interval.label())
+                        } else {
+                            interval.label().to_string()
+                        };
+
+                        if ui.button(label).clicked() {
+                            autosave_timer.set_interval(*interval);
+                            info!("Autosave interval set to: {}", interval.label());
+                            ui.close();
+                        }
+                    }
+                });
             });
         });
     });

@@ -3,7 +3,7 @@ use bevy_egui::{egui, EguiContexts};
 
 use crate::editor::viewport::grid::GridConfig;
 use crate::editor::objects::gizmo::GizmoState;
-use crate::editor::persistence::CurrentFile;
+use crate::editor::persistence::{AutoSaveTimer, CurrentFile};
 
 /// Render the status bar at the bottom of the screen
 pub fn status_bar_ui(
@@ -11,6 +11,7 @@ pub fn status_bar_ui(
     grid_config: Res<GridConfig>,
     gizmo_state: Res<GizmoState>,
     current_file: Res<CurrentFile>,
+    autosave_timer: Res<AutoSaveTimer>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -54,6 +55,22 @@ pub fn status_bar_ui(
                     egui::Color32::WHITE
                 };
                 ui.colored_label(file_color, file_text);
+
+                ui.separator();
+
+                // Last saved indicator
+                let last_saved_text = format!("Saved: {}", current_file.get_last_saved_text());
+                ui.colored_label(egui::Color32::LIGHT_GRAY, last_saved_text);
+
+                ui.separator();
+
+                // Autosave indicator
+                if autosave_timer.is_enabled() {
+                    let autosave_text = format!("Autosave: {}", autosave_timer.interval.label());
+                    ui.colored_label(egui::Color32::GREEN, autosave_text);
+                } else {
+                    ui.colored_label(egui::Color32::GRAY, "Autosave: Disabled");
+                }
 
                 ui.separator();
 

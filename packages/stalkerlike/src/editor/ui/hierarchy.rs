@@ -131,6 +131,7 @@ pub fn hierarchy_ui(
                 // Calculate available height for hierarchy (leave space for assets)
                 let available_height = ui.available_height() - 200.0; // Reserve 200px for assets
                 egui::ScrollArea::vertical()
+                    .id_salt("hierarchy_scroll")
                     .max_height(available_height)
                     .show(ui, |ui| {
                         for entity in root_entities {
@@ -159,7 +160,9 @@ pub fn hierarchy_ui(
             ui.add_space(4.0);
 
             // Render asset buttons in a scrollable area
-            egui::ScrollArea::vertical().show(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .id_salt("assets_scroll")
+                .show(ui, |ui| {
                 for primitive in &asset_catalog.primitives {
                     if ui.button(&primitive.name).clicked() {
                         start_placement(

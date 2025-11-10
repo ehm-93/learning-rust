@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use bevy::tasks::{block_on, AsyncComputeTaskPool, Task};
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use crate::editor::persistence::scene::{save_scene, load_scene};
 use crate::editor::persistence::events::{NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
@@ -10,10 +11,21 @@ use crate::editor::core::types::EditorEntity;
 use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, ErrorDialog, PendingAction};
 
 /// Resource tracking the current scene file
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct CurrentFile {
     pub path: Option<PathBuf>,
     pub dirty: bool,
+    pub last_saved: Option<Instant>,
+}
+
+impl Default for CurrentFile {
+    fn default() -> Self {
+        Self {
+            path: None,
+            dirty: false,
+            last_saved: None,
+        }
+    }
 }
 
 impl CurrentFile {
@@ -30,6 +42,7 @@ impl CurrentFile {
     /// Mark the file as clean (saved)
     pub fn mark_clean(&mut self) {
         self.dirty = false;
+        self.last_saved = Some(Instant::now());
     }
 
     /// Mark the file as dirty (unsaved changes)
@@ -55,6 +68,23 @@ impl CurrentFile {
             .and_then(|f| f.to_str())
             .unwrap_or("untitled")
             .to_string()
+    }
+
+    /// Get a human-readable string for how long ago the file was saved
+    pub fn get_last_saved_text(&self) -> String {
+        match self.last_saved {
+            Some(instant) => {
+                let elapsed = instant.elapsed();
+                if elapsed.as_secs() < 60 {
+                    "just now".to_string()
+                } else if elapsed.as_secs() < 3600 {
+                    format!("{}m ago", elapsed.as_secs() / 60)
+                } else {
+                    format!("{}h ago", elapsed.as_secs() / 3600)
+                }
+            }
+            None => "never".to_string(),
+        }
     }
 }
 
@@ -369,6 +399,142 @@ pub fn poll_save_as_tasks(
                         );
                     }
                 }
+            }
+        }
+    }
+}
+
+/// Autosave interval options
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AutoSaveInterval {
+    Disabled,
+    OneMinute,
+    FiveMinutes,
+    TenMinutes,
+    FifteenMinutes,
+    ThirtyMinutes,
+}
+
+impl AutoSaveInterval {
+    /// Get the duration for this interval
+    pub fn duration(&self) -> Option<Duration> {
+        match self {
+            AutoSaveInterval::Disabled => None,
+            AutoSaveInterval::OneMinute => Some(Duration::from_secs(60)),
+            AutoSaveInterval::FiveMinutes => Some(Duration::from_secs(5 * 60)),
+            AutoSaveInterval::TenMinutes => Some(Duration::from_secs(10 * 60)),
+            AutoSaveInterval::FifteenMinutes => Some(Duration::from_secs(15 * 60)),
+            AutoSaveInterval::ThirtyMinutes => Some(Duration::from_secs(30 * 60)),
+        }
+    }
+
+    /// Get a human-readable label for this interval
+    pub fn label(&self) -> &'static str {
+        match self {
+            AutoSaveInterval::Disabled => "Disabled",
+            AutoSaveInterval::OneMinute => "1 minute",
+            AutoSaveInterval::FiveMinutes => "5 minutes",
+            AutoSaveInterval::TenMinutes => "10 minutes",
+            AutoSaveInterval::FifteenMinutes => "15 minutes",
+            AutoSaveInterval::ThirtyMinutes => "30 minutes",
+        }
+    }
+
+    /// Get all available intervals
+    pub fn all() -> &'static [AutoSaveInterval] {
+        &[
+            AutoSaveInterval::Disabled,
+            AutoSaveInterval::OneMinute,
+            AutoSaveInterval::FiveMinutes,
+            AutoSaveInterval::TenMinutes,
+            AutoSaveInterval::FifteenMinutes,
+            AutoSaveInterval::ThirtyMinutes,
+        ]
+    }
+}
+
+/// Resource to track autosave timing
+#[derive(Resource)]
+pub struct AutoSaveTimer {
+    /// Timer for autosave interval
+    pub timer: Timer,
+    /// Current interval setting
+    pub interval: AutoSaveInterval,
+}
+
+impl Default for AutoSaveTimer {
+    fn default() -> Self {
+        let interval = AutoSaveInterval::FiveMinutes;
+        let duration = interval.duration().unwrap_or(Duration::from_secs(5 * 60));
+        Self {
+            timer: Timer::new(duration, TimerMode::Repeating),
+            interval,
+        }
+    }
+}
+
+impl AutoSaveTimer {
+    /// Set a new interval and reset the timer
+    pub fn set_interval(&mut self, interval: AutoSaveInterval) {
+        self.interval = interval;
+        if let Some(duration) = interval.duration() {
+            self.timer = Timer::new(duration, TimerMode::Repeating);
+        }
+    }
+
+    /// Check if autosave is enabled
+    pub fn is_enabled(&self) -> bool {
+        self.interval != AutoSaveInterval::Disabled
+    }
+}
+
+/// System to automatically save the scene at regular intervals
+pub fn autosave_system(
+    time: Res<Time>,
+    mut timer: ResMut<AutoSaveTimer>,
+    mut current_file: ResMut<CurrentFile>,
+    editor_entities: Query<(
+        Entity,
+        &Transform,
+        Option<&Name>,
+        Option<&Mesh3d>,
+        Option<&MeshMaterial3d<StandardMaterial>>,
+    ), With<EditorEntity>>,
+    meshes: Res<Assets<Mesh>>,
+    materials: Res<Assets<StandardMaterial>>,
+) {
+    // Tick the timer
+    timer.timer.tick(time.delta());
+
+    // Only autosave if:
+    // 1. Autosave is enabled (not Disabled)
+    // 2. Timer finished
+    // 3. There's a file open
+    // 4. There are unsaved changes
+    if timer.is_enabled()
+        && timer.timer.just_finished()
+        && current_file.has_path()
+        && current_file.is_dirty()
+    {
+        let Some(path) = current_file.get_path() else {
+            return;
+        };
+
+        // Ensure the directory exists
+        if let Some(parent) = path.parent() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                error!("Autosave failed to create directory {}: {}", parent.display(), e);
+                return;
+            }
+        }
+
+        match save_scene(path.clone(), editor_entities, meshes, materials) {
+            Ok(()) => {
+                info!("Autosaved scene to {}", path.display());
+                current_file.mark_clean();
+            }
+            Err(e) => {
+                error!("Autosave failed: {}", e);
             }
         }
     }

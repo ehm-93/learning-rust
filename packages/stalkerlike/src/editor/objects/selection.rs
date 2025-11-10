@@ -4,6 +4,7 @@ use bevy::picking::events::{Pointer, Click};
 use crate::editor::core::types::EditorEntity;
 use crate::editor::objects::placement::PlacementState;
 use crate::editor::objects::outline::Outlined;
+use crate::editor::objects::gizmo::GizmoHandle;
 
 /// Resource tracking the currently selected entity
 #[derive(Resource, Default)]
@@ -23,6 +24,7 @@ pub fn handle_selection(
     selected_query: Query<Entity, With<Selected>>,
     placement_state: Res<PlacementState>,
     editor_query: Query<(), With<EditorEntity>>,
+    gizmo_query: Query<(), With<GizmoHandle>>,
 ) {
     // Don't select if in placement mode
     if placement_state.active {
@@ -30,6 +32,11 @@ pub fn handle_selection(
     }
 
     let clicked_entity = trigger.target();
+
+    // Don't select if clicking a gizmo handle
+    if gizmo_query.get(clicked_entity).is_ok() {
+        return;
+    }
 
     // Only select EditorEntity objects
     if editor_query.get(clicked_entity).is_err() {

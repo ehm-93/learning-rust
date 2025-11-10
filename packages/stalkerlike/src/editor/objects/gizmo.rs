@@ -1,7 +1,6 @@
 use bevy::prelude::*;
-use bevy::picking::events::{Pointer, Click, Drag, DragEnd, Over, Out};
+use bevy::picking::events::{Pointer, DragStart, Drag, Over, Out};
 
-use crate::editor::objects::outline::Outlined;
 use crate::editor::objects::selection::{SelectedEntity, Selected};
 use crate::editor::viewport::grid::GridConfig;
 
@@ -24,24 +23,16 @@ pub enum TransformMode {
     Scale,
 }
 
-/// Resource tracking current transform mode and drag state
+/// Resource tracking current transform mode
 #[derive(Resource)]
 pub struct GizmoState {
     pub mode: TransformMode,
-    pub dragging: bool,
-    pub drag_axis: Option<GizmoAxis>,
-    pub drag_start_pos: Vec3,
-    pub drag_start_value: Vec3, // Position, rotation, or scale at drag start
 }
 
 impl Default for GizmoState {
     fn default() -> Self {
         Self {
             mode: TransformMode::Translate,
-            dragging: false,
-            drag_axis: None,
-            drag_start_pos: Vec3::ZERO,
-            drag_start_value: Vec3::ZERO,
         }
     }
 }
@@ -61,6 +52,32 @@ pub struct GizmoHandle;
 /// Marker component for the gizmo root entity
 #[derive(Component)]
 pub struct GizmoRoot;
+
+/// Toggle transform mode with F key (forward) and Shift+F (backward)
+pub fn toggle_transform_mode(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut gizmo_state: ResMut<GizmoState>,
+) {
+    let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
+
+    if keyboard.just_pressed(KeyCode::KeyF) {
+        gizmo_state.mode = if shift {
+            // Shift+F: cycle backward
+            match gizmo_state.mode {
+                TransformMode::Translate => TransformMode::Scale,
+                TransformMode::Rotate => TransformMode::Translate,
+                TransformMode::Scale => TransformMode::Rotate,
+            }
+        } else {
+            // F: cycle forward
+            match gizmo_state.mode {
+                TransformMode::Translate => TransformMode::Rotate,
+                TransformMode::Rotate => TransformMode::Scale,
+                TransformMode::Scale => TransformMode::Translate,
+            }
+        };
+    }
+}
 
 /// Spawn gizmo handles at the selected object's position
 ///
@@ -116,11 +133,9 @@ pub fn spawn_gizmo(
         ViewVisibility::default(),
         Pickable::default(), // Make it selectable
     ))
-    .observe(on_gizmo_click)
-    .observe(on_gizmo_drag)
-    .observe(on_gizmo_drag_end)
     .observe(on_gizmo_hover)
     .observe(on_gizmo_hover_end)
+    .observe(on_gizmo_drag)
     .id();
 
     // Y-axis handle (blue)
@@ -140,11 +155,9 @@ pub fn spawn_gizmo(
         ViewVisibility::default(),
         Pickable::default(),
     ))
-    .observe(on_gizmo_click)
-    .observe(on_gizmo_drag)
-    .observe(on_gizmo_drag_end)
     .observe(on_gizmo_hover)
     .observe(on_gizmo_hover_end)
+    .observe(on_gizmo_drag)
     .id();
 
     // Z-axis handle (green)
@@ -164,11 +177,9 @@ pub fn spawn_gizmo(
         ViewVisibility::default(),
         Pickable::default(),
     ))
-    .observe(on_gizmo_click)
-    .observe(on_gizmo_drag)
-    .observe(on_gizmo_drag_end)
     .observe(on_gizmo_hover)
     .observe(on_gizmo_hover_end)
+    .observe(on_gizmo_drag)
     .id();
 
     // Parent handles to root
@@ -208,59 +219,26 @@ pub fn update_gizmo_position(
     }
 }
 
-/// Handle starting drag on gizmo handle (entity observer)
-fn on_gizmo_click(
-    trigger: Trigger<Pointer<Click>>,
-    mut gizmo_state: ResMut<GizmoState>,
-    handle_query: Query<&GizmoAxis, With<GizmoHandle>>,
-    selected: Res<SelectedEntity>,
-    selected_query: Query<&Transform, With<Selected>>,
-    mouse: Res<ButtonInput<MouseButton>>,
-) {
-    // Only start drag on left mouse button
-    if !mouse.pressed(MouseButton::Left) {
-        return;
-    }
-
-    let handle_entity = trigger.target();
-
-    // Check if we clicked a gizmo handle
-    if let Ok(axis) = handle_query.get(handle_entity) {
-        // Get selected object's current transform
-        if let Some(selected_entity) = selected.entity {
-            if let Ok(transform) = selected_query.get(selected_entity) {
-                gizmo_state.dragging = true;
-                gizmo_state.drag_axis = Some(*axis);
-                gizmo_state.drag_start_pos = transform.translation;
-
-                // Store initial value based on mode
-                gizmo_state.drag_start_value = match gizmo_state.mode {
-                    TransformMode::Translate => transform.translation,
-                    TransformMode::Rotate => transform.rotation.to_euler(EulerRot::XYZ).into(),
-                    TransformMode::Scale => transform.scale,
-                };
-            }
-        }
-    }
-}
-
-/// Handle drag movement on gizmo handle (entity observer)
+/// Handle drag on gizmo handle (entity observer) - fires continuously while dragging
 fn on_gizmo_drag(
-    trigger: Trigger<Pointer<Drag>>,
+    drag: Trigger<Pointer<Drag>>,
     gizmo_state: Res<GizmoState>,
+    handle_query: Query<&GizmoAxis, With<GizmoHandle>>,
     selected: Res<SelectedEntity>,
     mut selected_query: Query<&mut Transform, With<Selected>>,
     grid_config: Res<GridConfig>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
 ) {
-    if !gizmo_state.dragging {
-        return;
-    }
+    info!("Gizmo drag event: {:?}", drag.event());
 
-    let Some(axis) = gizmo_state.drag_axis else {
+    let handle_entity = drag.target();
+
+    // Get the axis of the handle being dragged
+    let Ok(axis) = handle_query.get(handle_entity) else {
         return;
     };
 
+    // Get the selected object's transform
     let Some(selected_entity) = selected.entity else {
         return;
     };
@@ -269,14 +247,13 @@ fn on_gizmo_drag(
         return;
     };
 
-    // Get camera for calculating drag delta in world space
+    // Get drag delta from the event
+    let delta = drag.event().delta;
+
+    // Get camera for calculating drag scale
     let Ok((_camera, camera_transform)) = camera_query.single() else {
         return;
     };
-
-    // Get drag delta from pointer event
-    let event = trigger.event();
-    let delta = event.delta;
 
     // Calculate drag scale based on distance from camera (farther = larger movements)
     let distance = (camera_transform.translation() - transform.translation).length();
@@ -343,57 +320,38 @@ fn on_gizmo_drag(
     }
 }
 
-/// Handle ending drag on gizmo handle (entity observer)
-fn on_gizmo_drag_end(
-    _trigger: Trigger<Pointer<DragEnd>>,
-    mut gizmo_state: ResMut<GizmoState>,
-) {
-    if gizmo_state.dragging {
-        gizmo_state.dragging = false;
-        gizmo_state.drag_axis = None;
-    }
-}
-
-/// Toggle transform mode with F key (forward) and Shift+F (backward)
-pub fn toggle_transform_mode(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mut gizmo_state: ResMut<GizmoState>,
-) {
-    let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
-
-    if keyboard.just_pressed(KeyCode::KeyF) {
-        gizmo_state.mode = if shift {
-            // Shift+F: cycle backward
-            match gizmo_state.mode {
-                TransformMode::Translate => TransformMode::Scale,
-                TransformMode::Rotate => TransformMode::Translate,
-                TransformMode::Scale => TransformMode::Rotate,
-            }
-        } else {
-            // F: cycle forward
-            match gizmo_state.mode {
-                TransformMode::Translate => TransformMode::Rotate,
-                TransformMode::Rotate => TransformMode::Scale,
-                TransformMode::Scale => TransformMode::Translate,
-            }
-        };
-    }
-}
-
 /// Highlight gizmo handle on hover (entity observer)
 fn on_gizmo_hover(
     trigger: Trigger<Pointer<Over>>,
-    mut commands: Commands,
+    handle_query: Query<&MeshMaterial3d<StandardMaterial>, With<GizmoHandle>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let handle_entity = trigger.target();
-    commands.entity(handle_entity).insert(Outlined { size: 1.2 });
+
+    if let Ok(material_handle) = handle_query.get(handle_entity) {
+        if let Some(material) = materials.get_mut(&material_handle.0) {
+            // Increase emissive on hover for highlight effect
+            material.emissive = LinearRgba::rgb(2.0, 2.0, 2.0);
+        }
+    }
 }
 
 /// Remove highlight from gizmo handle when hover ends (entity observer)
 fn on_gizmo_hover_end(
     trigger: Trigger<Pointer<Out>>,
-    mut commands: Commands,
+    handle_query: Query<(&GizmoAxis, &MeshMaterial3d<StandardMaterial>), With<GizmoHandle>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let handle_entity = trigger.target();
-    commands.entity(handle_entity).remove::<Outlined>();
+
+    if let Ok((axis, material_handle)) = handle_query.get(handle_entity) {
+        if let Some(material) = materials.get_mut(&material_handle.0) {
+            // Restore original emissive based on axis color
+            material.emissive = match axis {
+                GizmoAxis::X => LinearRgba::rgb(0.5, 0.0, 0.0), // Red
+                GizmoAxis::Y => LinearRgba::rgb(0.0, 0.0, 0.5), // Blue
+                GizmoAxis::Z => LinearRgba::rgb(0.0, 0.5, 0.0), // Green
+            };
+        }
+    }
 }

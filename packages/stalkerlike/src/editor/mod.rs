@@ -42,7 +42,7 @@ use objects::{
     outline::{spawn_outlines, despawn_outlines, sync_outline_transforms},
     placement::{PlacementState, update_preview_position, place_object},
     primitives::AssetCatalog,
-    selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected},
+    selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected, delete_selected},
 };
 use persistence::{
     SceneFile,
@@ -118,6 +118,7 @@ impl Plugin for EditorPlugin {
             // Update systems - selection
             .add_systems(Update, (
                 handle_deselection,
+                delete_selected,
                 highlight_selected,
                 remove_outline_from_deselected,
                 spawn_outlines,

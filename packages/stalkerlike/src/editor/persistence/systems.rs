@@ -136,7 +136,7 @@ pub fn mark_scene_dirty(
 pub fn log_stalkerlike_home() {
     let home = get_stalkerlike_home();
     info!("STALKERLIKE_HOME: {}", home.display());
-    
+
     let default_path = get_default_scene_path();
     info!("Default scene path: {}", default_path.display());
 }

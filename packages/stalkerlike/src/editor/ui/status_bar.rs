@@ -62,7 +62,7 @@ pub fn status_bar_ui(
                 ui.separator();
 
                 // Help text
-                ui.label("F: cycle mode | G: toggle snap | Ctrl+S: save | Ctrl+O: load");
+                ui.label("F: cycle mode | G: toggle snap | Del: delete | Ctrl+S: save | Ctrl+O: load");
             });
         });
 }

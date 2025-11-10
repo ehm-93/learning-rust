@@ -316,13 +316,13 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - [x] Can scale selected objects with scale gizmo
 - [x] Can see object properties in inspector panel
 - [x] Can edit transform values numerically in inspector
-- [ ] Can save scene to YAML file (Ctrl+S)
-- [ ] Can load saved scene from YAML (Ctrl+O)
+- [x] Can save scene to YAML file (Ctrl+S)
+- [x] Can load saved scene from YAML (Ctrl+O)
 - [ ] Can group objects (Ctrl+G) and ungroup (Ctrl+Shift+G)
 - [ ] Can multi-select with Ctrl+click (after grouping implemented)
 - [ ] Can box-select multiple objects (after grouping implemented)
 - [ ] Can duplicate objects with Ctrl+D (offset +1m on X-axis)
-- [ ] Can delete objects with Del key
+- [x] Can delete objects with Del key
 
 ### Quality Checks
 - [x] Gizmo interactions feel responsive and accurate (RGB sphere handles with distance-based scaling)

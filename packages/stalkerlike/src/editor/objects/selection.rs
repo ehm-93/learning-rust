@@ -96,3 +96,28 @@ pub fn remove_outline_from_deselected(
         commands.entity(entity).remove::<Outlined>();
     }
 }
+
+/// Handle entity deletion (Delete key)
+pub fn delete_selected(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut selected: ResMut<SelectedEntity>,
+    mut commands: Commands,
+    selected_query: Query<Entity, With<Selected>>,
+    placement_state: Res<PlacementState>,
+) {
+    // Don't delete if in placement mode
+    if placement_state.active {
+        return;
+    }
+
+    if keyboard.just_pressed(KeyCode::Delete) && selected.entity.is_some() {
+        // Delete all selected entities
+        for entity in selected_query.iter() {
+            info!("Deleting entity: {:?}", entity);
+            commands.entity(entity).despawn();
+        }
+
+        // Clear selection
+        selected.entity = None;
+    }
+}

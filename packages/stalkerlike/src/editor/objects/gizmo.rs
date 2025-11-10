@@ -1,8 +1,19 @@
 use bevy::prelude::*;
-use bevy::picking::events::{Pointer, Click, Drag};
+use bevy::picking::events::{Pointer, Click, Drag, DragEnd, Over, Out};
 
+use crate::editor::objects::outline::Outlined;
 use crate::editor::objects::selection::{SelectedEntity, Selected};
 use crate::editor::viewport::grid::GridConfig;
+
+// GIZMO LIFECYCLE:
+// - spawn_gizmo() triggers on OnAdd<Selected> - creates gizmo when entity selected
+// - update_gizmo_position() runs every frame - syncs gizmo to selected object
+// - despawn_gizmo() triggers on OnRemove<Selected> - cleans up when deselected
+// - Entity-specific observers (on_gizmo_*) handle all interaction events:
+//   * on_gizmo_click: Start drag on Click
+//   * on_gizmo_drag: Update transform during Drag
+//   * on_gizmo_drag_end: End drag on DragEnd
+//   * on_gizmo_hover/on_gizmo_hover_end: Visual feedback on Over/Out
 
 /// Transform mode for the gizmo
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -52,25 +63,22 @@ pub struct GizmoHandle;
 pub struct GizmoRoot;
 
 /// Spawn gizmo handles at the selected object's position
+///
+/// Observers are attached directly to each gizmo handle entity for efficient
+/// event handling. This is more performant than global observers since events
+/// only trigger on the specific entity being interacted with.
+///
+/// This system runs when the Selected component is added to an entity.
 pub fn spawn_gizmo(
+    trigger: Trigger<OnAdd, Selected>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    selected: Res<SelectedEntity>,
-    selected_query: Query<&Transform, With<Selected>>,
-    gizmo_query: Query<Entity, With<GizmoRoot>>,
+    transform_query: Query<&Transform>,
 ) {
-    // Remove existing gizmo if any
-    for entity in gizmo_query.iter() {
-        commands.entity(entity).despawn();
-    }
+    let selected_entity = trigger.target();
 
-    // Only spawn if something is selected
-    let Some(selected_entity) = selected.entity else {
-        return;
-    };
-
-    let Ok(transform) = selected_query.get(selected_entity) else {
+    let Ok(transform) = transform_query.get(selected_entity) else {
         return;
     };
 
@@ -107,7 +115,13 @@ pub fn spawn_gizmo(
         InheritedVisibility::default(),
         ViewVisibility::default(),
         Pickable::default(), // Make it selectable
-    )).id();
+    ))
+    .observe(on_gizmo_click)
+    .observe(on_gizmo_drag)
+    .observe(on_gizmo_drag_end)
+    .observe(on_gizmo_hover)
+    .observe(on_gizmo_hover_end)
+    .id();
 
     // Y-axis handle (blue)
     let y_handle = commands.spawn((
@@ -125,7 +139,13 @@ pub fn spawn_gizmo(
         InheritedVisibility::default(),
         ViewVisibility::default(),
         Pickable::default(),
-    )).id();
+    ))
+    .observe(on_gizmo_click)
+    .observe(on_gizmo_drag)
+    .observe(on_gizmo_drag_end)
+    .observe(on_gizmo_hover)
+    .observe(on_gizmo_hover_end)
+    .id();
 
     // Z-axis handle (green)
     let z_handle = commands.spawn((
@@ -143,12 +163,30 @@ pub fn spawn_gizmo(
         InheritedVisibility::default(),
         ViewVisibility::default(),
         Pickable::default(),
-    )).id();
+    ))
+    .observe(on_gizmo_click)
+    .observe(on_gizmo_drag)
+    .observe(on_gizmo_drag_end)
+    .observe(on_gizmo_hover)
+    .observe(on_gizmo_hover_end)
+    .id();
 
     // Parent handles to root
     commands.entity(root).add_children(&[x_handle, y_handle, z_handle]);
+}
 
-    info!("Spawned gizmo at position: {:?}", position);
+/// Despawn gizmo handles when entity is deselected
+///
+/// This system runs when the Selected component is removed from an entity.
+pub fn despawn_gizmo(
+    _trigger: Trigger<OnRemove, Selected>,
+    mut commands: Commands,
+    gizmo_query: Query<Entity, With<GizmoRoot>>,
+) {
+    // Remove all gizmo entities
+    for entity in gizmo_query.iter() {
+        commands.entity(entity).despawn();
+    }
 }
 
 /// Update gizmo position to follow selected object
@@ -170,8 +208,8 @@ pub fn update_gizmo_position(
     }
 }
 
-/// Handle starting drag on gizmo handle
-pub fn start_gizmo_drag(
+/// Handle starting drag on gizmo handle (entity observer)
+fn on_gizmo_click(
     trigger: Trigger<Pointer<Click>>,
     mut gizmo_state: ResMut<GizmoState>,
     handle_query: Query<&GizmoAxis, With<GizmoHandle>>,
@@ -201,15 +239,13 @@ pub fn start_gizmo_drag(
                     TransformMode::Rotate => transform.rotation.to_euler(EulerRot::XYZ).into(),
                     TransformMode::Scale => transform.scale,
                 };
-
-                info!("Started dragging {:?} axis in {:?} mode", axis, gizmo_state.mode);
             }
         }
     }
 }
 
-/// Handle drag movement on gizmo handle
-pub fn update_gizmo_drag(
+/// Handle drag movement on gizmo handle (entity observer)
+fn on_gizmo_drag(
     trigger: Trigger<Pointer<Drag>>,
     gizmo_state: Res<GizmoState>,
     selected: Res<SelectedEntity>,
@@ -307,14 +343,12 @@ pub fn update_gizmo_drag(
     }
 }
 
-/// Handle ending drag on gizmo handle
-pub fn end_gizmo_drag(
+/// Handle ending drag on gizmo handle (entity observer)
+fn on_gizmo_drag_end(
+    _trigger: Trigger<Pointer<DragEnd>>,
     mut gizmo_state: ResMut<GizmoState>,
-    mouse: Res<ButtonInput<MouseButton>>,
 ) {
-    // End drag when left mouse button is released
-    if gizmo_state.dragging && mouse.just_released(MouseButton::Left) {
-        info!("Ended dragging {:?} axis", gizmo_state.drag_axis);
+    if gizmo_state.dragging {
         gizmo_state.dragging = false;
         gizmo_state.drag_axis = None;
     }
@@ -343,7 +377,23 @@ pub fn toggle_transform_mode(
                 TransformMode::Scale => TransformMode::Translate,
             }
         };
-
-        info!("Transform mode: {:?}", gizmo_state.mode);
     }
+}
+
+/// Highlight gizmo handle on hover (entity observer)
+fn on_gizmo_hover(
+    trigger: Trigger<Pointer<Over>>,
+    mut commands: Commands,
+) {
+    let handle_entity = trigger.target();
+    commands.entity(handle_entity).insert(Outlined { size: 1.2 });
+}
+
+/// Remove highlight from gizmo handle when hover ends (entity observer)
+fn on_gizmo_hover_end(
+    trigger: Trigger<Pointer<Out>>,
+    mut commands: Commands,
+) {
+    let handle_entity = trigger.target();
+    commands.entity(handle_entity).remove::<Outlined>();
 }

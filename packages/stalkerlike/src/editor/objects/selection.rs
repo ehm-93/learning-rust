@@ -76,7 +76,7 @@ pub fn highlight_selected(
     selected_query: Query<Entity, (With<Selected>, Without<Outlined>)>,
 ) {
     for entity in selected_query.iter() {
-        commands.entity(entity).insert(Outlined);
+        commands.entity(entity).insert(Outlined::default());
     }
 }
 

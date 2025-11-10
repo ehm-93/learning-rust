@@ -510,8 +510,8 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [x] Render X-axis arrow (red sphere) at selected object position
 - [x] Render Y-axis arrow (blue sphere) at selected object position
 - [x] Render Z-axis arrow (green sphere) at selected object position
-- [ ] Implement ray-cast intersection with gizmo handles (using Bevy's picking)
-- [ ] Add hover highlighting for gizmo handles (built-in from emissive material)
+- [x] Implement ray-cast intersection with gizmo handles (using Bevy's picking)
+- [x] Add hover highlighting for gizmo handles (built-in from emissive material)
 - [ ] Implement click-and-drag logic for handles
 - [ ] Constrain movement to selected axis only
 - [ ] Apply grid snapping during drag (if enabled)

@@ -37,7 +37,7 @@ mod viewport;
 use core::materials::GridMaterial;
 use input::mouse::EditorMouseMotion;
 use objects::{
-    gizmo::{GizmoState, spawn_gizmo, update_gizmo_position, start_gizmo_drag, update_gizmo_drag, end_gizmo_drag, toggle_transform_mode},
+    gizmo::{GizmoState, spawn_gizmo, despawn_gizmo, update_gizmo_position, toggle_transform_mode},
     outline::{OutlineMaterial, spawn_outlines, despawn_outlines, sync_outline_transforms},
     placement::{PlacementState, update_preview_position, place_object},
     primitives::AssetCatalog,
@@ -79,10 +79,10 @@ impl Plugin for EditorPlugin {
             .init_resource::<GizmoState>()
             .init_resource::<OutlineMaterial>()
 
-            // Observers for picking events
+            // Observers for picking events and component changes
             .add_observer(handle_selection)
-            .add_observer(start_gizmo_drag)
-            .add_observer(update_gizmo_drag)
+            .add_observer(spawn_gizmo)    // OnAdd<Selected>
+            .add_observer(despawn_gizmo)  // OnRemove<Selected>
 
             // Startup systems
             .add_systems(Startup, (
@@ -116,10 +116,8 @@ impl Plugin for EditorPlugin {
             ))
             // Update systems - gizmo
             .add_systems(Update, (
-                spawn_gizmo,
                 update_gizmo_position,
                 toggle_transform_mode,
-                end_gizmo_drag,
             ))
             // Update systems - UI (must run in EGUI pass)
             .add_systems(EguiPrimaryContextPass, (

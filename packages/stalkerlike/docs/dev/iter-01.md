@@ -631,11 +631,11 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [x] Show confirmation message on successful save (console log)
 - [x] Add scene dirty flag indicator in status bar
 - [x] Implement Ctrl+S keybinding for save
-- [ ] Show file picker dialog if no current file
+- [x] Show file picker dialog if no current file
 - [x] Write YAML to file using `serde_yaml`
-- [ ] Add error handling for file write failures
-- [ ] Clear scene dirty flag after successful save
-- [ ] Show confirmation message on successful save
+- [x] Add error handling for file write failures
+- [x] Clear scene dirty flag after successful save
+- [x] Show confirmation message on successful save
 
 **Implementation Notes:**
 - Created extensible component-based serialization in `editor/persistence/`

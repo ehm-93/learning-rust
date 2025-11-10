@@ -4,7 +4,7 @@ use bevy_egui::{egui, EguiContexts};
 use crate::editor::persistence::CurrentFile;
 use crate::editor::persistence::scene::{save_scene, load_scene};
 use crate::editor::core::types::EditorEntity;
-use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, PendingAction};
+use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, ErrorDialog, PendingAction};
 
 /// Event to trigger a new file
 #[derive(Event)]
@@ -99,6 +99,7 @@ pub fn handle_new_file(
 pub fn handle_save(
     mut events: EventReader<SaveEvent>,
     mut current_file: ResMut<CurrentFile>,
+    mut error_dialog: ResMut<ErrorDialog>,
     editor_entities: Query<(
         Entity,
         &Transform,
@@ -124,6 +125,10 @@ pub fn handle_save(
         if let Some(parent) = path.parent() {
             if let Err(e) = std::fs::create_dir_all(parent) {
                 error!("Failed to create directory {}: {}", parent.display(), e);
+                error_dialog.show_error(
+                    "Save Failed",
+                    format!("Failed to create directory {}:\n{}", parent.display(), e)
+                );
                 return;
             }
         }
@@ -136,6 +141,10 @@ pub fn handle_save(
             }
             Err(e) => {
                 error!("Failed to save scene: {}", e);
+                error_dialog.show_error(
+                    "Save Failed",
+                    format!("Failed to save scene:\n{}", e)
+                );
             }
         }
     }
@@ -147,6 +156,7 @@ pub fn handle_open_file(
     mut events: EventReader<OpenFileEvent>,
     mut commands: Commands,
     mut current_file: ResMut<CurrentFile>,
+    mut error_dialog: ResMut<ErrorDialog>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     editor_entities: Query<Entity, With<EditorEntity>>,
@@ -171,6 +181,10 @@ pub fn handle_open_file(
                 }
                 Err(e) => {
                     error!("Failed to load scene: {}", e);
+                    error_dialog.show_error(
+                        "Load Failed",
+                        format!("Failed to load scene from {}:\n{}", path.display(), e)
+                    );
                 }
             }
         }
@@ -182,6 +196,7 @@ pub fn handle_open_file(
 pub fn handle_save_as(
     mut events: EventReader<SaveAsEvent>,
     mut current_file: ResMut<CurrentFile>,
+    mut error_dialog: ResMut<ErrorDialog>,
     editor_entities: Query<(
         Entity,
         &Transform,
@@ -203,6 +218,10 @@ pub fn handle_save_as(
             if let Some(parent) = path.parent() {
                 if let Err(e) = std::fs::create_dir_all(parent) {
                     error!("Failed to create directory {}: {}", parent.display(), e);
+                    error_dialog.show_error(
+                        "Save Failed",
+                        format!("Failed to create directory {}:\n{}", parent.display(), e)
+                    );
                     return;
                 }
             }
@@ -215,6 +234,10 @@ pub fn handle_save_as(
                 }
                 Err(e) => {
                     error!("Failed to save scene: {}", e);
+                    error_dialog.show_error(
+                        "Save Failed",
+                        format!("Failed to save scene:\n{}", e)
+                    );
                 }
             }
         }

@@ -54,7 +54,7 @@ use viewport::{
 };
 use ui::{
     asset_browser::asset_browser_ui,
-    confirmation_dialog::{ConfirmationDialog, confirmation_dialog_ui},
+    confirmation_dialog::{ConfirmationDialog, ErrorDialog, confirmation_dialog_ui, error_dialog_ui},
     inspector::{inspector_ui, InspectorState},
     menu_bar::{
         menu_bar_ui,
@@ -99,6 +99,7 @@ impl Plugin for EditorPlugin {
             .init_resource::<InspectorState>()
             .init_resource::<CurrentFile>()
             .init_resource::<ConfirmationDialog>()
+            .init_resource::<ErrorDialog>()
 
             // Observers for picking events and component changes
             .add_observer(handle_selection)
@@ -155,6 +156,7 @@ impl Plugin for EditorPlugin {
             .add_systems(EguiPrimaryContextPass, (
                 menu_bar_ui,
                 confirmation_dialog_ui,
+                error_dialog_ui,
                 status_bar_ui,
                 asset_browser_ui,
                 inspector_ui,

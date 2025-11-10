@@ -32,6 +32,28 @@ impl ConfirmationDialog {
     }
 }
 
+/// Resource to track error messages that need to be displayed
+#[derive(Resource, Default)]
+pub struct ErrorDialog {
+    pub show: bool,
+    pub title: String,
+    pub message: String,
+}
+
+impl ErrorDialog {
+    pub fn show_error(&mut self, title: impl Into<String>, message: impl Into<String>) {
+        self.show = true;
+        self.title = title.into();
+        self.message = message.into();
+    }
+
+    pub fn close(&mut self) {
+        self.show = false;
+        self.title.clear();
+        self.message.clear();
+    }
+}
+
 /// System to render the confirmation dialog
 pub fn confirmation_dialog_ui(
     mut contexts: EguiContexts,
@@ -88,7 +110,7 @@ pub fn confirmation_dialog_ui(
             // Trigger save - if file has path, save it, otherwise use Save As
             save_events.write(SaveEvent);
         }
-        
+
         if should_save || should_discard {
             // Proceed with the pending action (either after saving or discarding)
             if let Some(action) = dialog.pending_action {
@@ -103,7 +125,40 @@ pub fn confirmation_dialog_ui(
             }
         }
         // If cancelled, just close without doing anything
-        
+
+        dialog.close();
+    }
+}
+
+/// System to render error dialogs
+pub fn error_dialog_ui(
+    mut contexts: EguiContexts,
+    mut dialog: ResMut<ErrorDialog>,
+) {
+    if !dialog.show {
+        return;
+    }
+
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+
+    let mut should_close = false;
+
+    egui::Window::new(&dialog.title)
+        .collapsible(false)
+        .resizable(false)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(ctx, |ui| {
+            ui.label(&dialog.message);
+            ui.add_space(10.0);
+
+            if ui.button("OK").clicked() {
+                should_close = true;
+            }
+        });
+
+    if should_close {
         dialog.close();
     }
 }

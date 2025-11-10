@@ -455,6 +455,7 @@ fn on_gizmo_drag(
     mut selected_query: Query<&mut Transform, With<Selected>>,
     grid_config: Res<GridConfig>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
+    keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     info!("Gizmo drag event: {:?}", drag.event());
 
@@ -484,7 +485,21 @@ fn on_gizmo_drag(
 
     // Calculate drag scale based on distance from camera (farther = larger movements)
     let distance = (camera_transform.translation() - transform.translation).length();
-    let drag_scale = distance * 0.002; // Tune this value for feel
+    let base_drag_scale = distance * 0.001; // Reduced from 0.002 for slower default speed
+
+    // Apply speed modifiers based on keyboard input
+    let ctrl = keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
+    let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
+
+    let speed_multiplier = if ctrl {
+        0.25 // 1/4 speed when holding Ctrl
+    } else if shift {
+        4.0  // 4x speed when holding Shift
+    } else {
+        1.0  // Normal speed
+    };
+
+    let drag_scale = base_drag_scale * speed_multiplier;
 
     // Apply drag based on current mode and axis
     match gizmo_state.mode {

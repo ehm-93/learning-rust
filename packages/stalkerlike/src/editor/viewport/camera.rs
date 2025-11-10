@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
-use bevy::picking::prelude::Pickable;
 
-use crate::editor::core::types::EditorEntity;
 use crate::editor::input::mouse::EditorMouseMotion;
 
 /// Editor camera controller with fly-around controls

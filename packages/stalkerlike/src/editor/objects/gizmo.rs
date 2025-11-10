@@ -1,70 +1,9 @@
 use bevy::prelude::*;
 use bevy::picking::events::{Pointer, Drag, Over, Out};
-use bevy::pbr::{Material, MaterialPipeline, MaterialPipelineKey};
-use bevy::render::render_resource::{
-    AsBindGroup, RenderPipelineDescriptor, ShaderRef, CompareFunction,
-    SpecializedMeshPipelineError,
-};
 
+use crate::editor::core::materials::GizmoMaterial;
 use crate::editor::objects::selection::{SelectedEntity, Selected};
 use crate::editor::viewport::grid::GridConfig;
-
-/// Custom material for gizmo that always renders on top
-#[derive(Asset, TypePath, AsBindGroup, Clone)]
-pub struct GizmoMaterial {
-    #[uniform(0)]
-    pub color_r: f32,
-    #[uniform(0)]
-    pub color_b: f32,
-    #[uniform(0)]
-    pub color_g: f32,
-    #[uniform(0)]
-    pub color_a: f32,
-    #[uniform(0)]
-    pub emissive_r: f32,
-    #[uniform(0)]
-    pub emissive_g: f32,
-    #[uniform(0)]
-    pub emissive_b: f32,
-    #[uniform(0)]
-    pub emissive_a: f32,
-}
-
-impl Material for GizmoMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/gizmo_material.wgsl".into()
-    }
-
-    fn specialize(
-        _pipeline: &MaterialPipeline<Self>,
-        descriptor: &mut RenderPipelineDescriptor,
-        _layout: &bevy::render::mesh::MeshVertexBufferLayoutRef,
-        _key: MaterialPipelineKey<Self>,
-    ) -> Result<(), SpecializedMeshPipelineError> {
-        // Disable depth testing so gizmo always renders on top
-        if let Some(depth_stencil) = &mut descriptor.depth_stencil {
-            depth_stencil.depth_compare = CompareFunction::Always;
-            depth_stencil.depth_write_enabled = false;
-        }
-        Ok(())
-    }
-}
-
-impl GizmoMaterial {
-    /// Create a new gizmo material with given colors
-    pub fn new(color: LinearRgba, emissive: LinearRgba) -> Self {
-        Self {
-            color_r: color.red,
-            color_g: color.green,
-            color_b: color.blue,
-            color_a: color.alpha,
-            emissive_r: emissive.red,
-            emissive_g: emissive.green,
-            emissive_b: emissive.blue,
-            emissive_a: emissive.alpha,
-        }
-    }
-}
 
 // GIZMO LIFECYCLE:
 // - spawn_gizmo() triggers on OnAdd<Selected> - creates gizmo when entity selected
@@ -545,8 +484,7 @@ fn on_gizmo_drag(
         }
         TransformMode::Rotate => {
             // Rotation: use drag distance as angle delta
-            let rotation_speed = 0.02; // Radians per pixel
-            let angle_delta = delta.length() * rotation_speed * if delta.x + delta.y < 0.0 { -1.0 } else { 1.0 };
+            let angle_delta = delta.length() * drag_scale * if delta.x + delta.y < 0.0 { -1.0 } else { 1.0 };
 
             // Build rotation quaternion around the selected axis
             let axis_rotation = match axis {
@@ -582,9 +520,7 @@ fn on_gizmo_drag(
             }
         }
         TransformMode::Scale => {
-            // Scale: vertical drag increases/decreases scale
-            let scale_speed = 0.01;
-            let scale_delta = -delta.y * scale_speed;
+            let scale_delta = -delta.y * drag_scale;
 
             match axis {
                 GizmoAxis::X => transform.scale.x = (transform.scale.x + scale_delta).max(0.01),

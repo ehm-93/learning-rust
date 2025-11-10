@@ -34,11 +34,11 @@ mod ui;
 mod viewport;
 
 // Import types and systems from domains
-use core::materials::GridMaterial;
+use core::materials::{GridMaterial, GizmoMaterial, OutlineMaterial};
 use input::mouse::EditorMouseMotion;
 use objects::{
-    gizmo::{GizmoState, GizmoMaterial, spawn_gizmo, despawn_gizmo, update_gizmo_position, toggle_transform_mode},
-    outline::{OutlineMaterial, spawn_outlines, despawn_outlines, sync_outline_transforms},
+    gizmo::{GizmoState, spawn_gizmo, despawn_gizmo, update_gizmo_position, toggle_transform_mode},
+    outline::{spawn_outlines, despawn_outlines, sync_outline_transforms},
     placement::{PlacementState, update_preview_position, place_object},
     primitives::AssetCatalog,
     selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected},

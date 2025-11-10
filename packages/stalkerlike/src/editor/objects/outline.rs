@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::mesh::VertexAttributeValues;
-use bevy::render::render_resource::Face;
+
+use crate::editor::core::materials::OutlineMaterial;
 
 /// Marker component - add to entities to outline them
 #[derive(Component)]
@@ -18,27 +19,6 @@ impl Default for Outlined {
 #[derive(Component)]
 pub struct OutlineMarker {
     pub parent: Entity,
-}
-
-/// Resource holding the outline material handle
-#[derive(Resource)]
-pub struct OutlineMaterial {
-    pub handle: Handle<StandardMaterial>,
-}
-
-impl FromWorld for OutlineMaterial {
-    fn from_world(world: &mut World) -> Self {
-        let mut materials = world.resource_mut::<Assets<StandardMaterial>>();
-        let handle = materials.add(StandardMaterial {
-            base_color: Color::srgba(0.95, 0.95, 0.9, 1.0), // Off-white
-            unlit: true,
-            alpha_mode: AlphaMode::Opaque,
-            cull_mode: Some(Face::Front), // Cull front faces so only back faces show
-            ..default()
-        });
-
-        OutlineMaterial { handle }
-    }
 }
 
 /// Create an outline mesh by inverting normals

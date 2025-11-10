@@ -37,7 +37,7 @@ mod viewport;
 use core::materials::GridMaterial;
 use input::mouse::EditorMouseMotion;
 use objects::{
-    gizmo::{GizmoState, spawn_gizmo, despawn_gizmo, update_gizmo_position, toggle_transform_mode},
+    gizmo::{GizmoState, GizmoMaterial, spawn_gizmo, despawn_gizmo, update_gizmo_position, toggle_transform_mode},
     outline::{OutlineMaterial, spawn_outlines, despawn_outlines, sync_outline_transforms},
     placement::{PlacementState, update_preview_position, place_object},
     primitives::AssetCatalog,
@@ -67,8 +67,9 @@ impl Plugin for EditorPlugin {
             // Picking plugin (mesh raycasting backend)
             .add_plugins(MeshPickingPlugin)
 
-            // Custom material for grid
+            // Custom materials
             .add_plugins(MaterialPlugin::<GridMaterial>::default())
+            .add_plugins(MaterialPlugin::<GizmoMaterial>::default())
 
             // Resources
             .init_resource::<EditorMouseMotion>()

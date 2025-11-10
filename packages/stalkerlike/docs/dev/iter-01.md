@@ -512,11 +512,11 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [x] Render Z-axis arrow (green sphere) at selected object position
 - [x] Implement ray-cast intersection with gizmo handles (using Bevy's picking)
 - [x] Add hover highlighting for gizmo handles (built-in from emissive material)
-- [ ] Implement click-and-drag logic for handles
-- [ ] Constrain movement to selected axis only
-- [ ] Apply grid snapping during drag (if enabled)
-- [ ] Update object transform in real-time during drag
-- [ ] Release on mouse-up to finalize transform
+- [x] Implement click-and-drag logic for handles
+- [x] Constrain movement to selected axis only
+- [x] Apply grid snapping during drag (if enabled)
+- [x] Update object transform in real-time during drag
+- [x] Release on mouse-up to finalize transform
 - [ ] Add visual feedback showing drag axis constraint (RGB color coding)
 
 **Implementation Notes:**

@@ -2,26 +2,11 @@
 
 use bevy::prelude::*;
 use std::path::PathBuf;
-use std::env;
 
-use crate::editor::persistence::scene::{save_scene, load_scene};
+use crate::editor::persistence::scene::save_scene;
 use crate::editor::core::types::EditorEntity;
-
-/// Get the base directory for stalkerlike data
-/// Checks STALKERLIKE_HOME environment variable, falls back to current working directory
-fn get_stalkerlike_home() -> PathBuf {
-    if let Ok(home) = env::var("STALKERLIKE_HOME") {
-        PathBuf::from(home)
-    } else {
-        env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-    }
-}
-
-/// Get the default scene path relative to STALKERLIKE_HOME
-fn get_default_scene_path() -> PathBuf {
-    let home = get_stalkerlike_home();
-    home.join("assets").join("levels").join("test_scene.yaml")
-}
+use crate::editor::ui::menu_bar::{SaveAsEvent, OpenFileEvent};
+use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, PendingAction};
 
 /// Resource tracking the current scene file
 #[derive(Resource, Default)]
@@ -32,8 +17,8 @@ pub struct CurrentFile {
 
 impl CurrentFile {
     /// Get the current file path or the default path
-    pub fn get_path(&self) -> PathBuf {
-        self.path.clone().unwrap_or_else(get_default_scene_path)
+    pub fn get_path(&self) -> Option<PathBuf> {
+        self.path.clone()
     }
 
     /// Set the current file path
@@ -76,6 +61,7 @@ impl CurrentFile {
 pub fn save_scene_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut current_file: ResMut<CurrentFile>,
+    mut save_as_events: EventWriter<SaveAsEvent>,
     editor_entities: Query<(
         Entity,
         &Transform,
@@ -89,14 +75,17 @@ pub fn save_scene_system(
     // Check for Ctrl+S
     if keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight) {
         if keyboard.just_pressed(KeyCode::KeyS) {
-            // Skip save if no file is open
+            // If no file is open, trigger Save As dialog instead
             if !current_file.has_path() {
-                warn!("No file open, cannot save. Use Save As... instead.");
+                info!("No file open, opening Save As dialog...");
+                save_as_events.write(SaveAsEvent);
                 return;
             }
 
-            // Use current path or default relative to STALKERLIKE_HOME
-            let path = current_file.get_path();
+            // Get the current file path (we know it exists from has_path check)
+            let Some(path) = current_file.get_path() else {
+                return;
+            };
 
             // Ensure the directory exists
             if let Some(parent) = path.parent() {
@@ -121,40 +110,23 @@ pub fn save_scene_system(
 }
 
 /// System to handle load scene keyboard shortcut (Ctrl+O)
+/// Opens the file picker dialog to select a scene file
 pub fn load_scene_system(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut commands: Commands,
-    mut current_file: ResMut<CurrentFile>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    editor_entities: Query<Entity, With<EditorEntity>>,
+    current_file: Res<CurrentFile>,
+    mut dialog: ResMut<ConfirmationDialog>,
+    mut open_file_events: EventWriter<OpenFileEvent>,
 ) {
     // Check for Ctrl+O
     if keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight) {
         if keyboard.just_pressed(KeyCode::KeyO) {
-            // Use current path or default relative to STALKERLIKE_HOME
-            let path = current_file.get_path();
-
-            // Check if file exists
-            if !path.exists() {
-                warn!("Scene file does not exist: {}", path.display());
-                return;
-            }
-
-            // Clear existing scene entities
-            for entity in editor_entities.iter() {
-                commands.entity(entity).despawn();
-            }
-
-            match load_scene(path.clone(), &mut commands, &mut meshes, &mut materials) {
-                Ok(()) => {
-                    info!("Scene loaded from {}", path.display());
-                    current_file.set_path(path);
-                    current_file.mark_clean();
-                }
-                Err(e) => {
-                    error!("Failed to load scene: {}", e);
-                }
+            // Check for unsaved changes
+            if current_file.is_dirty() {
+                dialog.request(PendingAction::OpenFile);
+            } else {
+                // Trigger the Open File dialog
+                info!("Opening file picker dialog...");
+                open_file_events.write(OpenFileEvent);
             }
         }
     }
@@ -178,13 +150,4 @@ pub fn mark_scene_dirty(
     if !changed_entities.is_empty() {
         current_file.mark_dirty();
     }
-}
-
-/// Startup system to log the STALKERLIKE_HOME directory
-pub fn log_stalkerlike_home() {
-    let home = get_stalkerlike_home();
-    info!("STALKERLIKE_HOME: {}", home.display());
-
-    let default_path = get_default_scene_path();
-    info!("Default scene path: {}", default_path.display());
 }

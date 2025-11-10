@@ -6,9 +6,9 @@ entities:
 - name: null
   transform:
     position:
-    - 1.2392687
-    - 0.6147915
-    - 1.3317595
+    - 3.3198073
+    - 0.0
+    - -2.781416
     rotation:
     - 0.0
     - 0.0
@@ -16,7 +16,7 @@ entities:
     - 1.0
     scale:
     - 1.0
-    - 0.8717131
+    - 1.0
     - 1.0
   components:
   - type: Mesh
@@ -30,24 +30,72 @@ entities:
 - name: null
   transform:
     position:
-    - 1.561037
-    - 0.2657572
-    - 1.6373987
+    - -1.5623951
+    - 0.0
+    - -1.8762484
     rotation:
     - 0.0
     - 0.0
     - 0.0
     - 1.0
     scale:
-    - 0.1509817
-    - 0.13265312
-    - 0.22885169
+    - 1.0
+    - 1.0
+    - 1.0
   components:
   - type: Mesh
-    primitive_type: Sphere
+    primitive_type: Cube
   - type: Material
     base_color:
     - 0.7
-    - 0.6
-    - 0.5
+    - 0.7
+    - 0.7
+    - 1.0
+- name: null
+  transform:
+    position:
+    - 1.6000519
+    - 0.0
+    - 1.4368844
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Cube
+  - type: Material
+    base_color:
+    - 0.7
+    - 0.7
+    - 0.7
+    - 1.0
+- name: null
+  transform:
+    position:
+    - -1.1634622
+    - 0.0
+    - 1.7237575
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Cube
+  - type: Material
+    base_color:
+    - 0.7
+    - 0.7
+    - 0.7
     - 1.0

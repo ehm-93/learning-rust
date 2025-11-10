@@ -5,9 +5,11 @@
 //! - Asset browser (primitive selection)
 //! - Inspector (property editing for selected objects)
 //! - Status bar (editor state indicators)
+//! - Confirmation dialog (unsaved changes prompt)
 //! - Future: Hierarchy panel, toolbar, settings
 
 pub mod asset_browser;
+pub mod confirmation_dialog;
 pub mod inspector;
 pub mod menu_bar;
 pub mod status_bar;

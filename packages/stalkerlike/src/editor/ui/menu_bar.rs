@@ -4,6 +4,7 @@ use bevy_egui::{egui, EguiContexts};
 use crate::editor::persistence::CurrentFile;
 use crate::editor::persistence::scene::{save_scene, load_scene};
 use crate::editor::core::types::EditorEntity;
+use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, PendingAction};
 
 /// Event to trigger a new file
 #[derive(Event)]
@@ -25,6 +26,7 @@ pub struct SaveAsEvent;
 pub fn menu_bar_ui(
     mut contexts: EguiContexts,
     current_file: Res<CurrentFile>,
+    mut dialog: ResMut<ConfirmationDialog>,
     mut new_file_events: EventWriter<NewFileEvent>,
     mut open_file_events: EventWriter<OpenFileEvent>,
     mut save_events: EventWriter<SaveEvent>,
@@ -38,12 +40,20 @@ pub fn menu_bar_ui(
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("New File").clicked() {
-                    new_file_events.write(NewFileEvent);
+                    if current_file.is_dirty() {
+                        dialog.request(PendingAction::NewFile);
+                    } else {
+                        new_file_events.write(NewFileEvent);
+                    }
                     ui.close();
                 }
 
                 if ui.button("Open File...").clicked() {
-                    open_file_events.write(OpenFileEvent);
+                    if current_file.is_dirty() {
+                        dialog.request(PendingAction::OpenFile);
+                    } else {
+                        open_file_events.write(OpenFileEvent);
+                    }
                     ui.close();
                 }
 
@@ -106,7 +116,9 @@ pub fn handle_save(
             continue;
         }
 
-        let path = current_file.get_path();
+        let Some(path) = current_file.get_path() else {
+            continue;
+        };
 
         // Ensure the directory exists
         if let Some(parent) = path.parent() {

@@ -642,9 +642,25 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - ComponentData enum allows adding new component types in future
 - TransformData stores position, rotation (quaternion), and scale
 - PrimitiveTypeSerde enum maps to PrimitiveType for serialization
-- Saves to `assets/levels/test_scene.yaml` by default (MVP)
+- CurrentFile resource with Option<PathBuf> - defaults to None (unset)
 - Status bar shows filename with asterisk (*) when dirty
 - Uses serde_yaml for human-readable YAML output
+- **File Menu Integration**:
+  - Top menu bar with File > New, Open, Save, Save As
+  - Save button greyed out when no file is open (visual feedback)
+  - Ctrl+S triggers Save As dialog when no file is set (user-friendly)
+- **Native File Dialogs**: rfd crate provides OS-native file pickers
+  - Open File: Filters for .yaml/.yml files
+  - Save As: Save dialog with .yaml/.yml filter
+  - Ctrl+O always opens file picker (consistent workflow)
+- **Unsaved Changes Protection**:
+  - ConfirmationDialog system prompts before New/Open if dirty
+  - Three-button dialog: "Save", "Don't Save", "Cancel"
+  - Prevents accidental data loss
+- **Error Handling**:
+  - ErrorDialog resource displays save/load failures
+  - Centered modal with error details and OK button
+  - Handles directory creation, file I/O, and YAML parsing errors
 
 #### 13. Scene deserialization from YAML (load) ✅ COMPLETE
 - [x] Implement Ctrl+O keybinding for open
@@ -662,15 +678,11 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - Iterates through SceneData.entities and spawns with correct components
 - Primitive type restoration uses PrimitiveType::create_mesh()
 - Material base_color restored from YAML
-- Loads from `assets/levels/test_scene.yaml` by default (MVP)
+- Native file picker integrated via rfd crate
 - Proper error propagation with Result type
 - Status bar updates to show loaded filename
-
-**Future Enhancements:**
-- File picker dialog for selecting YAML files
-- Prompt to save if current scene is dirty before loading
-- Restore editor camera position from saved metadata
-- Scene version validation for backward compatibility
+- ErrorDialog shows user-friendly error messages on load failure
+- Ctrl+O always triggers file picker (no default path assumptions)
 
 #### 14. Group/ungroup operations (Ctrl+G / Ctrl+Shift+G)
 - [ ] Add Ctrl+G keybinding for group
@@ -829,26 +841,34 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 
 #### What's Working Well
 1. **Velocity-based camera movement**: Feels natural and responsive without being twitchy
-2. **Resource pattern for editor state**: GridConfig, PlacementState, SelectedEntity are clean and queryable
+2. **Resource pattern for editor state**: GridConfig, PlacementState, SelectedEntity, CurrentFile are clean and queryable
 3. **Component markers**: EditorEntity, Selected, PreviewEntity make entity filtering trivial
 4. **EGUI for rapid prototyping**: Fast to iterate on UI without fighting with styling
 5. **Continuous placement mode**: Users can place multiple objects efficiently
 6. **Middle-mouse temporary lock**: Blender-like workflow without disrupting mouse-unlocked state
+7. **Native file dialogs (rfd)**: OS-native look provides familiar UX without custom UI work
+8. **Modal dialog pattern**: ConfirmationDialog and ErrorDialog provide clear user feedback
+9. **Option<PathBuf> for file state**: Makes "no file" explicit vs implicit default path
+10. **Extensible serialization**: ComponentData enum makes adding new component types straightforward
 
 #### Areas for Improvement
 1. **Hover feedback**: No visual hint before clicking
    - Bevy picking provides `Pointer<Over>` events out of the box
    - Could add subtle highlight on hover easily with observer
    - Low priority - outline on selection is sufficient for MVP
-2. **Inspector completeness**: Only shows position, missing rotation/scale
-   - Deferred to editable inspector (Week 2)
-   - Consider adding mesh type and material color for context
-3. **Grid shader requires custom WGSL**: Had to learn material system
-   - Worth it for distance fade effect
-   - Could simplify with solid-color lines if performance becomes issue
-4. **Outline component verification needed**: Used in code but not thoroughly tested
-   - Appears to work with Bevy 0.16
-   - May need fallback if issues arise
+2. **No undo/redo yet**: Deferred to Iteration 2
+   - Foundation must be solid before adding history system
+   - Current workflow: test frequently, save often
+   - Half-working undo is worse than none
+3. **Single file format only**: Only YAML supported
+   - Future: Binary format for production builds
+   - Current YAML is human-readable and version-control friendly
+4. **No scene versioning**: Format changes could break old files
+   - Future: Add version field to SceneData
+   - Migration system for backward compatibility
+5. **Limited component support**: Only Transform, Mesh3d, MeshMaterial3d
+   - Extensible design makes adding more straightforward
+   - Physics components, lights, etc. coming in future iterations
 
 #### System Architecture Observations
 1. **Startup vs Update separation works cleanly**:
@@ -998,6 +1018,41 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
    - `MaterialPlugin::<GridMaterial>::default()`
    - `MaterialPlugin::<GizmoMaterial>::default()`
    - No need for OutlineMaterial plugin (uses StandardMaterial resource)
+
+### Scene Persistence System (Week 3)
+1. **Option<PathBuf> for CurrentFile**: Defaults to None (unset) instead of always having a path
+   - Cleaner mental model: "untitled" truly means no file yet
+   - Enables proper "Save As" flow when no file is open
+   - has_path() helper method makes intent clear in code
+2. **File menu as single source of truth**: Menu UI checks dirty state before triggering events
+   - Simpler than event interception (avoids loops)
+   - ConfirmationDialog shows on dirty state detection
+   - Menu bar has access to all resources it needs
+3. **Native file dialogs via rfd crate**: OS-native look and feel
+   - Familiar UX for users (matches OS conventions)
+   - Built-in file type filtering (.yaml/.yml)
+   - No need to build custom file browser UI
+4. **Separate dialog resources**: ConfirmationDialog and ErrorDialog as independent systems
+   - ConfirmationDialog: Handles unsaved changes workflow
+   - ErrorDialog: Displays save/load failures
+   - Both render in EguiPrimaryContextPass schedule
+   - Modal windows block interaction until dismissed
+5. **CurrentFile helper methods provide clean API**:
+   - `get_path()` returns Option<PathBuf> (explicit about "no file" state)
+   - `has_path()` for boolean checks
+   - `get_filename()` returns "untitled" when path is None
+   - `mark_dirty()`/`mark_clean()` for change tracking
+   - `is_dirty()` for status queries
+6. **Keyboard shortcuts integrate with dialogs**:
+   - Ctrl+S: Opens Save As dialog when no file is open
+   - Ctrl+O: Always opens file picker, checks for unsaved changes first
+   - No assumptions about "default" file paths
+   - User always in control of file locations
+7. **Error handling with user feedback**:
+   - Console logging for developers (info!/error! macros)
+   - ErrorDialog for users (friendly messages with context)
+   - Both directory creation and file I/O errors handled
+   - YAML parsing errors show file path in message
 
 ## References
 - Blender's transform gizmo system (industry standard UX)

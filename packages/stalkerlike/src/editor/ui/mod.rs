@@ -12,4 +12,7 @@ pub mod asset_browser;
 pub mod confirmation_dialog;
 pub mod inspector;
 pub mod menu_bar;
+pub mod plugin;
 pub mod status_bar;
+
+pub use plugin::UiPlugin;

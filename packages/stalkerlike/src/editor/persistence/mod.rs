@@ -21,8 +21,12 @@
 //! 2. Implementing `ComponentSerializer` trait
 //! 3. Registering in `SerializerRegistry`
 
+pub mod events;
+pub mod plugin;
 pub mod scene;
 pub mod systems;
 
-// Re-export for use in editor plugin
+// Re-export plugin and commonly used types
+pub use events::{NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
+pub use plugin::PersistencePlugin;
 pub use systems::CurrentFile;

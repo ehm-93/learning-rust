@@ -6,9 +6,9 @@ entities:
 - name: null
   transform:
     position:
-    - 3.3198073
+    - 5.178149
     - 0.0
-    - -2.781416
+    - -6.472641
     rotation:
     - 0.0
     - 0.0
@@ -30,9 +30,9 @@ entities:
 - name: null
   transform:
     position:
-    - -1.5623951
+    - 0.5768337
     - 0.0
-    - -1.8762484
+    - -1.3668394
     rotation:
     - 0.0
     - 0.0
@@ -54,9 +54,9 @@ entities:
 - name: null
   transform:
     position:
-    - 1.6000519
+    - -1.8283877
     - 0.0
-    - 1.4368844
+    - 2.048675
     rotation:
     - 0.0
     - 0.0
@@ -78,9 +78,81 @@ entities:
 - name: null
   transform:
     position:
-    - -1.1634622
+    - -2.0304236
     - 0.0
-    - 1.7237575
+    - -4.5715523
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Cube
+  - type: Material
+    base_color:
+    - 0.7
+    - 0.7
+    - 0.7
+    - 1.0
+- name: null
+  transform:
+    position:
+    - -1.5412722
+    - 0.0
+    - -1.2409754
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Cube
+  - type: Material
+    base_color:
+    - 0.7
+    - 0.7
+    - 0.7
+    - 1.0
+- name: null
+  transform:
+    position:
+    - 2.201313
+    - 0.0
+    - 2.6979795
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Cube
+  - type: Material
+    base_color:
+    - 0.7
+    - 0.7
+    - 0.7
+    - 1.0
+- name: null
+  transform:
+    position:
+    - 0.335783
+    - 0.0
+    - 4.17088
     rotation:
     - 0.0
     - 0.0

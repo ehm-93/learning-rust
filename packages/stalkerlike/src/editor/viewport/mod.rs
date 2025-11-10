@@ -7,4 +7,7 @@
 
 pub mod camera;
 pub mod grid;
+pub mod plugin;
 pub mod raycasting;
+
+pub use plugin::ViewportPlugin;

@@ -10,5 +10,8 @@
 pub mod gizmo;
 pub mod outline;
 pub mod placement;
+pub mod plugin;
 pub mod primitives;
 pub mod selection;
+
+pub use plugin::ObjectsPlugin;

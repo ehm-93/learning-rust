@@ -3,8 +3,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
-use crate::editor::persistence::CurrentFile;
-use crate::editor::ui::menu_bar::{NewFileEvent, OpenFileEvent, SaveEvent};
+use crate::editor::persistence::{CurrentFile, NewFileEvent, OpenFileEvent, SaveEvent};
 
 /// Pending action that requires confirmation
 #[derive(Clone, Copy, PartialEq, Eq)]

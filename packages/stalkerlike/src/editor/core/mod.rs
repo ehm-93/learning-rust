@@ -6,4 +6,7 @@
 //! - Future: Common utilities, editor configuration
 
 pub mod materials;
+pub mod plugin;
 pub mod types;
+
+pub use plugin::CorePlugin;

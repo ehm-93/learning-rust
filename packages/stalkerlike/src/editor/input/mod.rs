@@ -7,3 +7,6 @@
 //! - Future: High-level editor actions (e.g., "ToggleGridSnap", "Delete")
 
 pub mod mouse;
+pub mod plugin;
+
+pub use plugin::InputPlugin;

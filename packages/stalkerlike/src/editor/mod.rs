@@ -3,11 +3,12 @@
 //! This module provides a complete 3D editor for level design and prototyping.
 //! The editor is organized into domain-based modules:
 //!
+//! - [`core`] - Shared fundamentals (types, materials)
 //! - [`viewport`] - 3D scene viewing (camera, grid, raycasting)
 //! - [`objects`] - Object lifecycle (primitives, placement, selection)
 //! - [`ui`] - User interface panels (asset browser, inspector, status bar)
 //! - [`input`] - Input handling (mouse, keyboard shortcuts)
-//! - [`core`] - Shared fundamentals (types, materials)
+//! - [`persistence`] - Scene save/load system
 //!
 //! # Usage
 //!
@@ -21,10 +22,8 @@
 //! ```
 
 use bevy::prelude::*;
-use bevy::pbr::MaterialPlugin;
 use bevy::picking::mesh_picking::MeshPickingPlugin;
 use bevy::winit::WinitWindows;
-use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 // Domain modules
 mod core;
@@ -34,36 +33,15 @@ mod persistence;
 mod ui;
 mod viewport;
 
-// Import types and systems from domains
-use core::materials::{GridMaterial, GizmoMaterial, OutlineMaterial};
-use input::mouse::EditorMouseMotion;
-use objects::{
-    gizmo::{GizmoState, spawn_gizmo, despawn_gizmo, update_gizmo_position, toggle_transform_mode},
-    outline::{spawn_outlines, despawn_outlines, sync_outline_transforms},
-    placement::{PlacementState, update_preview_position, place_object},
-    primitives::AssetCatalog,
-    selection::{SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected, delete_selected},
-};
-use persistence::{
-    CurrentFile,
-    systems::{save_scene_system, load_scene_system, mark_scene_dirty},
-};
-use viewport::{
-    camera::{setup_editor_camera, toggle_mouse_lock, camera_look, camera_movement, lock_cursor_on_start},
-    grid::{GridConfig, setup_grid, toggle_snap},
-};
-use ui::{
-    asset_browser::asset_browser_ui,
-    confirmation_dialog::{ConfirmationDialog, ErrorDialog, confirmation_dialog_ui, error_dialog_ui},
-    inspector::{inspector_ui, InspectorState},
-    menu_bar::{
-        menu_bar_ui,
-        NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent,
-        handle_new_file, handle_save, handle_open_file, handle_save_as,
-    },
-    status_bar::status_bar_ui,
-};
+// Import domain plugins
+use core::CorePlugin;
+use input::InputPlugin;
+use objects::ObjectsPlugin;
+use persistence::PersistencePlugin;
+use ui::UiPlugin;
+use viewport::ViewportPlugin;
 
+/// Main editor plugin that aggregates all domain plugins
 pub struct EditorPlugin;
 
 impl Plugin for EditorPlugin {
@@ -72,95 +50,19 @@ impl Plugin for EditorPlugin {
             // Bevy default plugins
             .add_plugins(DefaultPlugins)
 
-            // Third-party plugins
-            .add_plugins(EguiPlugin::default())
-
             // Picking plugin (mesh raycasting backend)
             .add_plugins(MeshPickingPlugin)
 
-            // Custom materials
-            .add_plugins(MaterialPlugin::<GridMaterial>::default())
-            .add_plugins(MaterialPlugin::<GizmoMaterial>::default())
-
-            // Events
-            .add_event::<NewFileEvent>()
-            .add_event::<OpenFileEvent>()
-            .add_event::<SaveEvent>()
-            .add_event::<SaveAsEvent>()
-
-            // Resources
-            .init_resource::<EditorMouseMotion>()
-            .init_resource::<AssetCatalog>()
-            .init_resource::<PlacementState>()
-            .init_resource::<SelectedEntity>()
-            .init_resource::<GridConfig>()
-            .init_resource::<GizmoState>()
-            .init_resource::<OutlineMaterial>()
-            .init_resource::<InspectorState>()
-            .init_resource::<CurrentFile>()
-            .init_resource::<ConfirmationDialog>()
-            .init_resource::<ErrorDialog>()
-
-            // Observers for picking events and component changes
-            .add_observer(handle_selection)
-            .add_observer(spawn_gizmo)    // OnAdd<Selected>
-            .add_observer(despawn_gizmo)  // OnRemove<Selected>
+            // Domain plugins (order matters for some dependencies)
+            .add_plugins(CorePlugin)         // Materials and shared types
+            .add_plugins(InputPlugin)        // Input abstraction
+            .add_plugins(ViewportPlugin)     // Camera and grid
+            .add_plugins(ObjectsPlugin)      // Object lifecycle
+            .add_plugins(PersistencePlugin)  // Save/load
+            .add_plugins(UiPlugin)           // UI panels (depends on persistence events)
 
             // Startup systems
-            .add_systems(Startup, (
-                setup_editor_camera,
-                setup_grid,
-                lock_cursor_on_start,
-                maximize_window,
-            ))
-
-            // Update systems - camera
-            .add_systems(Update, (
-                toggle_mouse_lock,
-                camera_look,
-                camera_movement,
-            ))
-            // Update systems - grid
-            .add_systems(Update, toggle_snap)
-            // Update systems - placement
-            .add_systems(Update, (
-                update_preview_position,
-                place_object,
-            ))
-            // Update systems - selection
-            .add_systems(Update, (
-                handle_deselection,
-                delete_selected,
-                highlight_selected,
-                remove_outline_from_deselected,
-                spawn_outlines,
-                despawn_outlines,
-                sync_outline_transforms,
-            ))
-            // Update systems - gizmo
-            .add_systems(Update, (
-                update_gizmo_position,
-                toggle_transform_mode,
-            ))
-            // Update systems - persistence
-            .add_systems(Update, (
-                save_scene_system,
-                load_scene_system,
-                mark_scene_dirty,
-                handle_new_file,
-                handle_save,
-                handle_open_file,
-                handle_save_as,
-            ))
-            // Update systems - UI (must run in EGUI pass)
-            .add_systems(EguiPrimaryContextPass, (
-                menu_bar_ui,
-                confirmation_dialog_ui,
-                error_dialog_ui,
-                status_bar_ui,
-                asset_browser_ui,
-                inspector_ui,
-            ).chain());
+            .add_systems(Startup, maximize_window);
     }
 }
 

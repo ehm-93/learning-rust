@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use crate::editor::persistence::scene::{save_scene, load_scene};
 use crate::editor::persistence::events::{NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
-use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType};
+use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel};
 use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, ErrorDialog, PendingAction};
 
 /// Resource tracking the current scene file
@@ -101,6 +101,7 @@ pub fn save_scene_system(
         Option<&MeshMaterial3d<StandardMaterial>>,
         Option<&PlayerSpawn>,
         Option<&RigidBodyType>,
+        Option<&GlbModel>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
@@ -219,6 +220,7 @@ pub fn handle_save(
         Option<&MeshMaterial3d<StandardMaterial>>,
         Option<&PlayerSpawn>,
         Option<&RigidBodyType>,
+        Option<&GlbModel>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
@@ -296,6 +298,7 @@ pub fn poll_file_open_tasks(
     mut error_dialog: ResMut<ErrorDialog>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
     mut tasks: Query<(Entity, &mut FileOpenTask)>,
     editor_entities: Query<Entity, With<EditorEntity>>,
 ) {
@@ -310,7 +313,7 @@ pub fn poll_file_open_tasks(
                     commands.entity(entity).despawn();
                 }
 
-                match load_scene(path.clone(), &mut commands, &mut meshes, &mut materials) {
+                match load_scene(path.clone(), &mut commands, &mut meshes, &mut materials, &asset_server) {
                     Ok(()) => {
                         info!("Scene loaded from {}", path.display());
                         current_file.set_path(path);
@@ -369,6 +372,7 @@ pub fn poll_save_as_tasks(
         Option<&MeshMaterial3d<StandardMaterial>>,
         Option<&PlayerSpawn>,
         Option<&RigidBodyType>,
+        Option<&GlbModel>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
@@ -507,6 +511,7 @@ pub fn autosave_system(
         Option<&MeshMaterial3d<StandardMaterial>>,
         Option<&PlayerSpawn>,
         Option<&RigidBodyType>,
+        Option<&GlbModel>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,

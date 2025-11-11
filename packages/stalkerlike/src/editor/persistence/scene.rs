@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType};
+use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel};
 use crate::editor::objects::primitives::PrimitiveType;
 
 /// Root scene data structure
@@ -100,6 +100,8 @@ pub enum ComponentData {
     PlayerSpawn,
     /// Rigid body physics type
     RigidBody { body_type: RigidBodyTypeSerde },
+    /// GLB/GLTF model component
+    GlbModel { path: String },
 }
 
 /// Serializable primitive type
@@ -175,13 +177,14 @@ pub fn save_scene(
         Option<&MeshMaterial3d<StandardMaterial>>,
         Option<&PlayerSpawn>,
         Option<&RigidBodyType>,
+        Option<&GlbModel>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut entities = Vec::new();
 
-    for (_entity, transform, name, mesh_handle, material_handle, player_spawn, rigid_body) in editor_entities.iter() {
+    for (_entity, transform, name, mesh_handle, material_handle, player_spawn, rigid_body, glb_model) in editor_entities.iter() {
         let mut components = Vec::new();
 
         // Serialize mesh if present
@@ -218,6 +221,13 @@ pub fn save_scene(
             });
         }
 
+        // Serialize GLB model if present
+        if let Some(glb) = glb_model {
+            components.push(ComponentData::GlbModel {
+                path: glb.path.to_string_lossy().to_string(),
+            });
+        }
+
         entities.push(EntityData {
             name: name.map(|n| n.to_string()),
             transform: transform.into(),
@@ -242,6 +252,7 @@ pub fn load_scene(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
+    asset_server: &Res<AssetServer>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let yaml = fs::read_to_string(path)?;
     let scene_data: SceneData = serde_yaml::from_str(&yaml)?;
@@ -262,6 +273,7 @@ pub fn load_scene(
         let mut base_color: Option<Color> = None;
         let mut is_player_spawn = false;
         let mut rigid_body_type: Option<RigidBodyType> = None;
+        let mut glb_model_path: Option<String> = None;
 
         for component in entity_data.components {
             match component {
@@ -281,6 +293,9 @@ pub fn load_scene(
                 }
                 ComponentData::RigidBody { body_type } => {
                     rigid_body_type = Some(body_type.into());
+                }
+                ComponentData::GlbModel { path } => {
+                    glb_model_path = Some(path);
                 }
             }
         }
@@ -307,6 +322,16 @@ pub fn load_scene(
         // Add RigidBodyType component if present
         if let Some(rb_type) = rigid_body_type {
             entity_commands.insert(rb_type);
+        }
+
+        // Add GLB model if present
+        if let Some(glb_path) = glb_model_path {
+            let scene_handle = asset_server.load(format!("{}#Scene0", glb_path));
+            entity_commands.insert((
+                GlbModel { path: std::path::PathBuf::from(&glb_path) },
+                SceneRoot(scene_handle),
+                Visibility::Inherited,
+            ));
         }
     }
 

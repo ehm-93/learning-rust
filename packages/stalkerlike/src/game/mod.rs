@@ -75,7 +75,7 @@ fn setup_static_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    _asset_server: Res<AssetServer>,
+    asset_server: Res<AssetServer>,
 ) {
     // Load the test scene from YAML
     // Path is relative to the Cargo workspace root when running with cargo run
@@ -84,7 +84,7 @@ fn setup_static_world(
     info!("Attempting to load scene from: {}", scene_path);
     info!("Current directory: {:?}", std::env::current_dir());
 
-    match load_scene_from_yaml(scene_path, &mut commands, &mut meshes, &mut materials) {
+    match load_scene_from_yaml(scene_path, &mut commands, &mut meshes, &mut materials, &asset_server) {
         Ok(_) => {
             info!("✅ Successfully loaded scene from {}", scene_path);
         }
@@ -163,7 +163,7 @@ fn setup_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    _asset_server: Res<AssetServer>,
+    asset_server: Res<AssetServer>,
 ) {
     // Load the test scene from YAML
     let scene_path = "packages/stalkerlike/assets/scenes/test_scene.yaml";
@@ -171,7 +171,7 @@ fn setup_world(
     info!("Attempting to load scene from: {}", scene_path);
     info!("Current directory: {:?}", std::env::current_dir());
 
-    match load_scene_from_yaml(scene_path, &mut commands, &mut meshes, &mut materials) {
+    match load_scene_from_yaml(scene_path, &mut commands, &mut meshes, &mut materials, &asset_server) {
         Ok(_) => {
             info!("✅ Successfully loaded scene from {}", scene_path);
         }
@@ -207,6 +207,7 @@ fn load_scene_from_yaml(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
+    asset_server: &Res<AssetServer>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use serde::{Deserialize, Serialize};
 
@@ -261,6 +262,7 @@ fn load_scene_from_yaml(
         Material { base_color: [f32; 4] },
         PlayerSpawn,
         RigidBody { body_type: RigidBodyTypeSerde },
+        GlbModel { path: String },
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
@@ -333,6 +335,7 @@ fn load_scene_from_yaml(
         let mut base_color: Option<Color> = None;
         let mut is_player_spawn = false;
         let mut rigid_body_type: Option<RigidBodyTypeSerde> = None;
+        let mut glb_model_path: Option<String> = None;
 
         for component in entity_data.components {
             match component {
@@ -353,11 +356,29 @@ fn load_scene_from_yaml(
                 ComponentData::RigidBody { body_type } => {
                     rigid_body_type = Some(body_type);
                 }
+                ComponentData::GlbModel { path } => {
+                    glb_model_path = Some(path);
+                }
             }
         }
 
+        // Handle GLB models first
+        if let Some(glb_path) = glb_model_path {
+            // Spawn GLB entity with physics support
+            let scene_handle = asset_server.load(format!("{}#Scene0", glb_path));
+            let rb = match rigid_body_type.unwrap_or(RigidBodyTypeSerde::Fixed) {
+                RigidBodyTypeSerde::Fixed => RigidBody::Fixed,
+                RigidBodyTypeSerde::Dynamic => RigidBody::Dynamic,
+            };
+
+            entity_commands.insert((
+                SceneRoot(scene_handle),
+                rb,
+                NeedsCollider, // Will add colliders to child meshes
+            ));
+        }
         // Handle player spawn differently - don't render the cone, just mark the spawn point
-        if is_player_spawn {
+        else if is_player_spawn {
             // Only add the marker component, no mesh or collider
             entity_commands.insert(PlayerSpawnMarker);
         } else if let Some(prim_type) = mesh_type {
@@ -396,7 +417,7 @@ fn load_scene_from_yaml(
                 PrimitiveTypeSerde::Plane => {
                     entity_commands.insert((
                         rb,
-                        Collider::cuboid(default_size.x / 2.0, 0.1, default_size.z / 2.0),
+                        Collider::cuboid(default_size.x / 2.0, 0.001, default_size.z / 2.0),
                     ));
                 }
                 PrimitiveTypeSerde::Cylinder => {

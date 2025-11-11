@@ -12,12 +12,15 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use bevy::tasks::{block_on, AsyncComputeTaskPool, Task};
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 use crate::editor::core::types::EditorEntity;
 use crate::editor::objects::selection::{SelectionSet, Selected};
 use crate::editor::objects::grouping::Group;
-use crate::editor::objects::{placement::{start_placement, PlacementState}, primitives::AssetCatalog};
+use crate::editor::objects::placement::{start_placement, start_placement_asset, PlacementState, PlacementAsset};
+use crate::editor::objects::primitives::AssetCatalog;
 
 /// Resource to track which entities have their children expanded in the hierarchy
 #[derive(Resource, Default)]
@@ -78,10 +81,139 @@ pub struct Hidden;
 #[derive(Component)]
 pub struct Locked;
 
+/// Represents a discovered GLB/GLTF asset file
+#[derive(Debug, Clone)]
+pub struct GlbAsset {
+    /// Display name (filename without extension)
+    pub name: String,
+    /// Full path to the asset file
+    pub path: PathBuf,
+    /// Path relative to the selected asset directory
+    pub relative_path: PathBuf,
+}
+
+/// Resource to track asset browser state
+#[derive(Resource)]
+pub struct AssetBrowserState {
+    /// Selected asset directory (if any)
+    pub asset_directory: Option<PathBuf>,
+    /// List of discovered GLB/GLTF files
+    pub glb_assets: Vec<GlbAsset>,
+    /// Whether the GLB section is expanded
+    pub glb_section_expanded: bool,
+    /// Pending directory selection task
+    pub pending_directory_task: bool,
+}
+
+impl Default for AssetBrowserState {
+    fn default() -> Self {
+        let asset_directory = Self::find_asset_directory();
+        let mut state = Self {
+            asset_directory,
+            glb_assets: Vec::new(),
+            glb_section_expanded: true,
+            pending_directory_task: false,
+        };
+        
+        // Automatically scan on startup if we found the directory
+        if state.asset_directory.is_some() {
+            state.scan_glb_files();
+        }
+        
+        state
+    }
+}
+
+impl AssetBrowserState {
+    /// Attempt to find the asset directory automatically
+    fn find_asset_directory() -> Option<PathBuf> {
+        // Try to find the assets directory relative to the current working directory
+        let current_dir = std::env::current_dir().ok()?;
+        
+        // Try common patterns
+        let candidates = vec![
+            current_dir.join("packages/stalkerlike/assets"),
+            current_dir.join("assets"),
+            current_dir.join("../assets"),
+        ];
+        
+        for candidate in candidates {
+            if candidate.exists() && candidate.is_dir() {
+                info!("Found asset directory: {:?}", candidate);
+                return Some(candidate);
+            }
+        }
+        
+        warn!("Could not automatically find asset directory");
+        None
+    }
+    
+    /// Scan the asset directory for GLB/GLTF files
+    pub fn scan_glb_files(&mut self) {
+        self.glb_assets.clear();
+
+        let Some(dir) = &self.asset_directory.clone() else {
+            return;
+        };
+
+        if !dir.exists() || !dir.is_dir() {
+            warn!("Asset directory does not exist or is not a directory: {:?}", dir);
+            return;
+        }
+
+        // Recursively scan for .glb and .gltf files
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                self.scan_directory_recursive(&path, dir);
+            }
+        }
+
+        // Sort by path for consistent display
+        self.glb_assets.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
+
+        info!("Found {} GLB/GLTF files in {:?}", self.glb_assets.len(), dir);
+    }
+
+    fn scan_directory_recursive(&mut self, path: &PathBuf, base_dir: &PathBuf) {
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                let ext_str = ext.to_string_lossy().to_lowercase();
+                if ext_str == "glb" || ext_str == "gltf" {
+                    let name = path
+                        .file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string();
+
+                    let relative_path = path
+                        .strip_prefix(base_dir)
+                        .unwrap_or(path)
+                        .to_path_buf();
+
+                    self.glb_assets.push(GlbAsset {
+                        name,
+                        path: path.clone(),
+                        relative_path,
+                    });
+                }
+            }
+        } else if path.is_dir() {
+            // Recursively scan subdirectories
+            if let Ok(entries) = std::fs::read_dir(path) {
+                for entry in entries.flatten() {
+                    self.scan_directory_recursive(&entry.path(), base_dir);
+                }
+            }
+        }
+    }
+}
+
 /// Render the hierarchy panel
 pub fn hierarchy_ui(
     mut contexts: EguiContexts,
     mut hierarchy_state: ResMut<HierarchyState>,
+    mut asset_browser_state: ResMut<AssetBrowserState>,
     mut selection: ResMut<SelectionSet>,
     mut commands: Commands,
     // Query for all editor entities
@@ -99,6 +231,7 @@ pub fn hierarchy_ui(
     mut placement_state: ResMut<PlacementState>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -156,6 +289,76 @@ pub fn hierarchy_ui(
             ui.heading("Assets");
             ui.separator();
 
+            // Asset directory selection
+            ui.horizontal(|ui| {
+                ui.label("Asset Directory:");
+                if ui.button("Browse...").clicked() {
+                    // Trigger directory picker (will be handled by a system)
+                    asset_browser_state.pending_directory_task = true;
+                }
+            });
+
+            if let Some(dir) = &asset_browser_state.asset_directory {
+                ui.label(format!("📁 {}", dir.display()));
+                ui.horizontal(|ui| {
+                    if ui.button("🔄 Refresh").clicked() ||
+                       (keyboard.just_pressed(KeyCode::F5)) {
+                        asset_browser_state.scan_glb_files();
+                    }
+                    ui.label(format!("{} files", asset_browser_state.glb_assets.len()));
+                });
+            } else {
+                ui.colored_label(egui::Color32::GRAY, "No directory selected");
+            }
+
+            ui.add_space(8.0);
+
+            // GLB/GLTF Models Section
+            if !asset_browser_state.glb_assets.is_empty() {
+                ui.separator();
+                let _header_response = ui.horizontal(|ui| {
+                    let arrow = if asset_browser_state.glb_section_expanded { "▼" } else { "▶" };
+                    if ui.small_button(arrow).clicked() {
+                        asset_browser_state.glb_section_expanded = !asset_browser_state.glb_section_expanded;
+                    }
+                    ui.label("3D Models");
+                });
+
+                if asset_browser_state.glb_section_expanded {
+                    ui.add_space(4.0);
+                    egui::ScrollArea::vertical()
+                        .id_salt("glb_assets_scroll")
+                        .max_height(200.0)
+                        .show(ui, |ui| {
+                            for glb_asset in &asset_browser_state.glb_assets.clone() {
+                                let button_text = format!("🎨 {}", glb_asset.name);
+                                if ui.button(button_text).clicked() {
+                                    info!("Starting placement for GLB: {:?} (relative: {:?})", 
+                                          glb_asset.path, glb_asset.relative_path);
+
+                                    // Use the placement system for GLB models
+                                    // Use relative_path to avoid "unapproved path" errors in Bevy 0.16
+                                    start_placement_asset(
+                                        &mut placement_state,
+                                        PlacementAsset::GlbModel {
+                                            name: glb_asset.name.clone(),
+                                            path: glb_asset.relative_path.clone(),
+                                        },
+                                        &mut commands,
+                                        &mut meshes,
+                                        &mut materials,
+                                        Some(&asset_server),
+                                    );
+                                }
+                            }
+                        });
+                }
+            }
+
+            ui.add_space(8.0);
+            ui.separator();
+
+            // Primitives Section
             ui.label("Primitives");
             ui.add_space(4.0);
 
@@ -180,8 +383,12 @@ pub fn hierarchy_ui(
                 ui.add_space(8.0);
                 ui.separator();
                 ui.colored_label(egui::Color32::YELLOW, "Placement Mode");
-                if let Some(prim) = &placement_state.selected_primitive {
-                    ui.label(format!("Placing: {}", prim.name));
+                if let Some(asset) = &placement_state.selected_asset {
+                    let asset_name = match asset {
+                        PlacementAsset::Primitive(prim) => &prim.name,
+                        PlacementAsset::GlbModel { name, .. } => name,
+                    };
+                    ui.label(format!("Placing: {}", asset_name));
                 }
                 ui.label("Click to place");
                 ui.label("ESC to cancel");
@@ -369,6 +576,53 @@ fn render_entity_node(
                     keyboard,
                     indent_level + 1,
                 );
+            }
+        }
+    }
+}
+
+/// Component to track pending directory picker task
+#[derive(Component)]
+pub struct DirectoryPickerTask(Task<Option<PathBuf>>);
+
+/// System to handle directory picker dialog requests
+pub fn handle_directory_picker(
+    mut commands: Commands,
+    mut asset_browser_state: ResMut<AssetBrowserState>,
+) {
+    if asset_browser_state.pending_directory_task {
+        asset_browser_state.pending_directory_task = false;
+
+        // Spawn async directory picker task
+        let task_pool = AsyncComputeTaskPool::get();
+        let task = task_pool.spawn(async move {
+            rfd::AsyncFileDialog::new()
+                .set_title("Select Asset Directory")
+                .pick_folder()
+                .await
+                .map(|handle| handle.path().to_path_buf())
+        });
+
+        commands.spawn(DirectoryPickerTask(task));
+    }
+}
+
+/// System to poll directory picker tasks
+pub fn poll_directory_picker_tasks(
+    mut commands: Commands,
+    mut asset_browser_state: ResMut<AssetBrowserState>,
+    mut tasks: Query<(Entity, &mut DirectoryPickerTask)>,
+) {
+    for (task_entity, mut task) in tasks.iter_mut() {
+        if let Some(result) = block_on(futures_lite::future::poll_once(&mut task.0)) {
+            // Task is complete, despawn it
+            commands.entity(task_entity).despawn();
+
+            if let Some(path) = result {
+                info!("Selected asset directory: {:?}", path);
+                asset_browser_state.asset_directory = Some(path);
+                asset_browser_state.scan_glb_files();
+                asset_browser_state.glb_section_expanded = true;
             }
         }
     }

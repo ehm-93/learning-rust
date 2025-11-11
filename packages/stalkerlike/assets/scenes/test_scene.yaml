@@ -3,31 +3,6 @@ metadata:
   name: null
   description: null
 entities:
-- name: Player Spawn
-  transform:
-    position:
-    - 0.0
-    - 1.0
-    - 6.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.2
-    - 1.0
-    - 0.2
-    - 1.0
-  - type: PlayerSpawn
 - name: null
   transform:
     position:
@@ -76,32 +51,78 @@ entities:
     - 0.6
     - 0.5
     - 1.0
-- name: null
+- name: pipe_2m_8m_hollow_T
   transform:
     position:
-    - -2.5
+    - -16.0
     - 1.0
-    - 3.0
+    - -8.0
     rotation:
     - 0.0
+    - 1.0
     - 0.0
-    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\pipes\pipe_2m_8m_hollow_T.glb
+- name: pipe_2m_8m_hollow_elbow_90
+  transform:
+    position:
+    - -16.0
+    - 1.0
+    - -16.0
+    rotation:
+    - -0.0
+    - -0.0
+    - -0.0
     - 1.0
     scale:
     - 1.0
     - 1.0
     - 1.0
   components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
+  - type: GlbModel
+    path: models\pipes\pipe_2m_8m_hollow_elbow_90.glb
+- name: pipe_2m_8m_hollow
+  transform:
+    position:
+    - -8.0
     - 1.0
-  - type: RigidBody
-    body_type: Dynamic
+    - -16.0
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\pipes\pipe_2m_8m_hollow.glb
+- name: pipe_2m_8m_hollow
+  transform:
+    position:
+    - -10.5
+    - 1.0
+    - -8.0
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\pipes\pipe_2m_8m_hollow.glb
 - name: null
   transform:
     position:
@@ -180,3 +201,54 @@ entities:
     - 1.0
   - type: RigidBody
     body_type: Dynamic
+- name: null
+  transform:
+    position:
+    - -2.5
+    - 1.0
+    - 3.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.6
+    - 0.7
+    - 0.8
+    - 1.0
+  - type: RigidBody
+    body_type: Dynamic
+- name: Player Spawn
+  transform:
+    position:
+    - 0.0
+    - 1.0
+    - 6.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.2
+    - 1.0
+    - 0.2
+    - 1.0
+  - type: PlayerSpawn

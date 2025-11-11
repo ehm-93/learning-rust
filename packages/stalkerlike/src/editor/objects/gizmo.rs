@@ -423,8 +423,6 @@ fn on_gizmo_drag(
     keyboard: Res<ButtonInput<KeyCode>>,
     gizmo_query: Query<&Transform, (With<GizmoRoot>, Without<Selected>)>,
 ) {
-    info!("Gizmo drag event: {:?}", drag.event());
-
     let handle_entity = drag.target();
 
     // Get the axis of the handle being dragged

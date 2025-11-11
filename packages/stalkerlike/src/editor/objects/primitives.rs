@@ -52,7 +52,7 @@ impl Default for AssetCatalog {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PrimitiveDefinition {
     pub name: String,
     pub primitive_type: PrimitiveType,
@@ -60,7 +60,7 @@ pub struct PrimitiveDefinition {
     pub color: Color,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum PrimitiveType {
     Cube,
     Sphere,

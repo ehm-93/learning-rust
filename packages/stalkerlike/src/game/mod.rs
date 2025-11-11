@@ -25,7 +25,7 @@ impl Plugin for GamePlugin {
             // Third-party plugins
             .add_plugins(EguiPlugin::default())
             .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
-            .add_plugins(RapierDebugRenderPlugin::default())
+            // .add_plugins(RapierDebugRenderPlugin::default())
 
             // Game plugins
             .add_plugins(PlayerPlugin)
@@ -98,6 +98,15 @@ fn spawn_static_content(
         NeedsCollider, // Marker to add colliders to child meshes
         SceneRoot(asset_server.load("models/pipes/pipe_2m_8m_hollow.glb#Scene0")),
         Transform::from_xyz(3.0, 1.0, 0.0),
+        RigidBody::Fixed,
+    ));
+
+    // Load pipe model from GLB file
+    commands.spawn((
+        GameEntity,
+        NeedsCollider, // Marker to add colliders to child meshes
+        SceneRoot(asset_server.load("models/pipes/pipe_2m_8m_hollow_elbow_90.glb#Scene0")),
+        Transform::from_xyz(-10.0, 1.0, -10.0),
         RigidBody::Fixed,
     ));
 

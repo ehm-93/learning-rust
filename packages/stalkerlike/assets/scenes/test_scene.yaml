@@ -3,12 +3,12 @@ metadata:
   name: null
   description: null
 entities:
-- name: null
+- name: Player Spawn
   transform:
     position:
-    - -0.5
-    - 2.0
-    - 3.0
+    - 0.0
+    - 1.0
+    - 6.0
     rotation:
     - 0.0
     - 0.0
@@ -23,34 +23,11 @@ entities:
     primitive_type: Sphere
   - type: Material
     base_color:
-    - 0.6
-    - 0.7
-    - 0.8
+    - 0.2
     - 1.0
-- name: null
-  transform:
-    position:
-    - -2.5
+    - 0.2
     - 1.0
-    - 3.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
-    - 1.0
+  - type: PlayerSpawn
 - name: null
   transform:
     position:
@@ -78,6 +55,56 @@ entities:
 - name: null
   transform:
     position:
+    - 0.0
+    - 0.0
+    - 0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 4.0
+    - 4.0
+    - 4.0
+  components:
+  - type: Mesh
+    primitive_type: Plane
+  - type: Material
+    base_color:
+    - 0.5
+    - 0.6
+    - 0.5
+    - 1.0
+- name: null
+  transform:
+    position:
+    - -2.5
+    - 1.0
+    - 3.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.6
+    - 0.7
+    - 0.8
+    - 1.0
+  - type: RigidBody
+    body_type: Dynamic
+- name: null
+  transform:
+    position:
     - 3.5
     - 8.0
     - 3.0
@@ -99,6 +126,8 @@ entities:
     - 0.7
     - 0.8
     - 1.0
+  - type: RigidBody
+    body_type: Dynamic
 - name: null
   transform:
     position:
@@ -123,52 +152,31 @@ entities:
     - 0.7
     - 0.8
     - 1.0
+  - type: RigidBody
+    body_type: Dynamic
 - name: null
   transform:
     position:
-    - 0.0
-    - 0.0
-    - 0.0
+    - -0.5
+    - 2.0
+    - 3.0
     rotation:
     - 0.0
     - 0.0
     - 0.0
     - 1.0
     scale:
-    - 4.0
-    - 4.0
-    - 4.0
+    - 1.0
+    - 1.0
+    - 1.0
   components:
   - type: Mesh
-    primitive_type: Plane
+    primitive_type: Sphere
   - type: Material
     base_color:
-    - 0.5
     - 0.6
-    - 0.5
+    - 0.7
+    - 0.8
     - 1.0
-- name: Player Spawn
-  transform:
-    position:
-    - 0.0
-    - 1.0
-    - 6.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: Mesh
-    primitive_type: Cylinder
-  - type: Material
-    base_color:
-    - 0.2
-    - 1.0
-    - 0.2
-    - 1.0
-  - type: PlayerSpawn
+  - type: RigidBody
+    body_type: Dynamic

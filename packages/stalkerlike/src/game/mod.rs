@@ -260,6 +260,7 @@ fn load_scene_from_yaml(
         Mesh { primitive_type: PrimitiveTypeSerde },
         Material { base_color: [f32; 4] },
         PlayerSpawn,
+        RigidBody { body_type: RigidBodyTypeSerde },
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
@@ -270,6 +271,12 @@ fn load_scene_from_yaml(
         Cylinder,
         Capsule,
         PlayerSpawn,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+    enum RigidBodyTypeSerde {
+        Fixed,
+        Dynamic,
     }
 
     // Helper to create meshes for each primitive type
@@ -325,6 +332,7 @@ fn load_scene_from_yaml(
         let mut mesh_type: Option<PrimitiveTypeSerde> = None;
         let mut base_color: Option<Color> = None;
         let mut is_player_spawn = false;
+        let mut rigid_body_type: Option<RigidBodyTypeSerde> = None;
 
         for component in entity_data.components {
             match component {
@@ -341,6 +349,9 @@ fn load_scene_from_yaml(
                 }
                 ComponentData::PlayerSpawn => {
                     is_player_spawn = true;
+                }
+                ComponentData::RigidBody { body_type } => {
+                    rigid_body_type = Some(body_type);
                 }
             }
         }
@@ -363,28 +374,34 @@ fn load_scene_from_yaml(
             })));
 
             // Add physics colliders for scene geometry
+            // Default to Fixed if no rigid body type specified
+            let rb = match rigid_body_type.unwrap_or(RigidBodyTypeSerde::Fixed) {
+                RigidBodyTypeSerde::Fixed => RigidBody::Fixed,
+                RigidBodyTypeSerde::Dynamic => RigidBody::Dynamic,
+            };
+
             match prim_type {
                 PrimitiveTypeSerde::Cube => {
                     entity_commands.insert((
-                        RigidBody::Fixed,
+                        rb,
                         Collider::cuboid(default_size.x / 2.0, default_size.y / 2.0, default_size.z / 2.0),
                     ));
                 }
                 PrimitiveTypeSerde::Sphere => {
                     entity_commands.insert((
-                        RigidBody::Fixed,
+                        rb,
                         Collider::ball(default_size.x / 2.0),
                     ));
                 }
                 PrimitiveTypeSerde::Plane => {
                     entity_commands.insert((
-                        RigidBody::Fixed,
+                        rb,
                         Collider::cuboid(default_size.x / 2.0, 0.1, default_size.z / 2.0),
                     ));
                 }
                 PrimitiveTypeSerde::Cylinder => {
                     entity_commands.insert((
-                        RigidBody::Fixed,
+                        rb,
                         Collider::cylinder(default_size.y / 2.0, default_size.x / 2.0),
                     ));
                 }
@@ -392,7 +409,7 @@ fn load_scene_from_yaml(
                     let radius = default_size.x / 2.0;
                     let half_height = (default_size.y / 2.0) - radius;
                     entity_commands.insert((
-                        RigidBody::Fixed,
+                        rb,
                         Collider::capsule_y(half_height.max(0.001), radius),
                     ));
                 }

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
 use crate::editor::objects::selection::SelectionSet;
+use crate::editor::core::types::RigidBodyType;
 
 /// Local UI state for text input buffers
 #[derive(Resource, Default)]
@@ -30,6 +31,8 @@ pub fn inspector_ui(
     mut transform_query: Query<&mut Transform>,
     name_query: Query<&Name>,
     mut inspector_state: ResMut<InspectorState>,
+    mut rigid_body_query: Query<Option<&mut RigidBodyType>>,
+    mut commands: Commands,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -230,6 +233,44 @@ pub fn inspector_ui(
                         update_buffers_from_transform(&mut inspector_state, &transform);
                     }
                 }
+
+            ui.add_space(8.0);
+            ui.separator();
+
+            // Rigid Body Type selector
+            ui.group(|ui| {
+                ui.label("Physics:");
+
+                if let Ok(rigid_body_opt) = rigid_body_query.get_mut(entity) {
+                    let current_type = rigid_body_opt.map(|rb| *rb).unwrap_or_default();
+
+                    ui.horizontal(|ui| {
+                        ui.label("Rigid Body:");
+
+                        egui::ComboBox::from_id_salt("rigid_body_selector")
+                            .selected_text(current_type.display_name())
+                            .show_ui(ui, |ui| {
+                                for &variant in RigidBodyType::variants() {
+                                    let response = ui.selectable_label(
+                                        current_type == variant,
+                                        variant.display_name()
+                                    );
+
+                                    if response.clicked() && current_type != variant {
+                                        // Add or update the component
+                                        commands.entity(entity).insert(variant);
+                                    }
+                                }
+                            });
+                    });
+
+                    ui.add_space(4.0);
+                    ui.label(egui::RichText::new(match current_type {
+                        RigidBodyType::Fixed => "Static - does not move",
+                        RigidBodyType::Dynamic => "Dynamic - affected by physics",
+                    }).weak().small());
+                }
+            });
         });
 }
 

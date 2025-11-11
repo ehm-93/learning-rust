@@ -8,3 +8,29 @@ pub struct EditorEntity;
 /// Game mode can query for this to find where to spawn the player
 #[derive(Component)]
 pub struct PlayerSpawn;
+
+/// Editor representation of rigid body type
+/// Serialized with scenes and converted to actual Rapier RigidBody in game mode
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum RigidBodyType {
+    /// Static body - does not move, good for level geometry
+    #[default]
+    Fixed,
+    /// Dynamic body - moves and is affected by physics
+    Dynamic,
+}
+
+impl RigidBodyType {
+    /// Get all variants for UI display
+    pub fn variants() -> &'static [RigidBodyType] {
+        &[RigidBodyType::Fixed, RigidBodyType::Dynamic]
+    }
+
+    /// Get display name for UI
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            RigidBodyType::Fixed => "Fixed",
+            RigidBodyType::Dynamic => "Dynamic",
+        }
+    }
+}

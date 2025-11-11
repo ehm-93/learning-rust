@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::editor::core::types::{EditorEntity, PlayerSpawn};
+use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType};
 use crate::editor::objects::primitives::PrimitiveType;
 
 /// Root scene data structure
@@ -98,6 +98,8 @@ pub enum ComponentData {
     Material { base_color: [f32; 4] },
     /// Player spawn marker
     PlayerSpawn,
+    /// Rigid body physics type
+    RigidBody { body_type: RigidBodyTypeSerde },
 }
 
 /// Serializable primitive type
@@ -109,6 +111,31 @@ pub enum PrimitiveTypeSerde {
     Cylinder,
     Capsule,
     PlayerSpawn,
+}
+
+/// Serializable rigid body type
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum RigidBodyTypeSerde {
+    Fixed,
+    Dynamic,
+}
+
+impl From<RigidBodyType> for RigidBodyTypeSerde {
+    fn from(rb: RigidBodyType) -> Self {
+        match rb {
+            RigidBodyType::Fixed => RigidBodyTypeSerde::Fixed,
+            RigidBodyType::Dynamic => RigidBodyTypeSerde::Dynamic,
+        }
+    }
+}
+
+impl From<RigidBodyTypeSerde> for RigidBodyType {
+    fn from(rbs: RigidBodyTypeSerde) -> Self {
+        match rbs {
+            RigidBodyTypeSerde::Fixed => RigidBodyType::Fixed,
+            RigidBodyTypeSerde::Dynamic => RigidBodyType::Dynamic,
+        }
+    }
 }
 
 impl From<PrimitiveType> for PrimitiveTypeSerde {
@@ -147,13 +174,14 @@ pub fn save_scene(
         Option<&Mesh3d>,
         Option<&MeshMaterial3d<StandardMaterial>>,
         Option<&PlayerSpawn>,
+        Option<&RigidBodyType>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut entities = Vec::new();
 
-    for (_entity, transform, name, mesh_handle, material_handle, player_spawn) in editor_entities.iter() {
+    for (_entity, transform, name, mesh_handle, material_handle, player_spawn, rigid_body) in editor_entities.iter() {
         let mut components = Vec::new();
 
         // Serialize mesh if present
@@ -181,6 +209,13 @@ pub fn save_scene(
         // Serialize player spawn marker if present
         if player_spawn.is_some() {
             components.push(ComponentData::PlayerSpawn);
+        }
+
+        // Serialize rigid body type if present
+        if let Some(&rb_type) = rigid_body {
+            components.push(ComponentData::RigidBody {
+                body_type: rb_type.into(),
+            });
         }
 
         entities.push(EntityData {
@@ -226,6 +261,7 @@ pub fn load_scene(
         let mut mesh_type: Option<PrimitiveType> = None;
         let mut base_color: Option<Color> = None;
         let mut is_player_spawn = false;
+        let mut rigid_body_type: Option<RigidBodyType> = None;
 
         for component in entity_data.components {
             match component {
@@ -242,6 +278,9 @@ pub fn load_scene(
                 }
                 ComponentData::PlayerSpawn => {
                     is_player_spawn = true;
+                }
+                ComponentData::RigidBody { body_type } => {
+                    rigid_body_type = Some(body_type.into());
                 }
             }
         }
@@ -263,6 +302,11 @@ pub fn load_scene(
         // Add PlayerSpawn component if marked
         if is_player_spawn {
             entity_commands.insert(PlayerSpawn);
+        }
+
+        // Add RigidBodyType component if present
+        if let Some(rb_type) = rigid_body_type {
+            entity_commands.insert(rb_type);
         }
     }
 

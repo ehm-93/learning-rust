@@ -768,28 +768,18 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 ### Week 4: Polish & Stability
 
 #### 18. Scene dirty flag and auto-save (every 5 minutes)
-- [ ] Add `SceneDirty` resource (bool flag)
-- [ ] Set dirty flag on any scene modification
-- [ ] Show asterisk in title bar when dirty
+- [x] Add `SceneDirty` resource (bool flag)
+- [x] Set dirty flag on any scene modification
+- [x] Show asterisk in title bar when dirty
 - [ ] Implement Ctrl+N keybinding for new scene
 - [ ] Prompt to save dirty scene on new/open/exit
-- [ ] Implement auto-save timer (5 minutes)
+- [x] Implement auto-save timer (5 minutes)
 - [ ] Save to temp file on auto-save (e.g., `.autosave`)
 - [ ] Show notification on auto-save
 - [ ] Recover from auto-save on crash/reload
-- [ ] Clear dirty flag after save
+- [x] Clear dirty flag after save
 
-#### 19. Polish gizmo visuals and interactions
-- [ ] Smooth out gizmo handle highlighting
-- [ ] Add subtle animation to gizmo on selection
-- [ ] Improve handle size scaling based on camera distance
-- [ ] Add anti-aliasing to gizmo lines
-- [ ] Polish color scheme for accessibility
-- [ ] Add haptic feedback cues (visual pulse on snap)
-- [ ] Ensure gizmo renders on top of all geometry
-- [ ] Add fade-in/fade-out transitions
-
-#### 20. Bug fixes and edge cases
+#### 19. Bug fixes and edge cases
 - [ ] Test scene load with missing assets
 - [ ] Test save/load with complex hierarchies
 - [ ] Test multi-select with grouped objects
@@ -799,7 +789,7 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [ ] Test grid snapping at chunk boundaries
 - [ ] Fix any reported crashes or data loss
 
-#### 21. Keyboard shortcut refinements
+#### 20. Keyboard shortcut refinements
 - [ ] Add shortcut reference panel (accessible via F1 or ?)
 - [ ] Document all keybindings in UI
 - [ ] Ensure no conflicting keybindings

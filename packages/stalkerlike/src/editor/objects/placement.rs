@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use crate::editor::core::types::EditorEntity;
+use crate::editor::core::types::{EditorEntity, PlayerSpawn};
 use crate::editor::viewport::{camera::EditorCamera, grid::{snap_to_grid, GridConfig}, raycasting::ray_plane_intersection};
-use crate::editor::objects::primitives::{PrimitiveDefinition};
+use crate::editor::objects::primitives::{PrimitiveDefinition, PrimitiveType};
 
 /// Resource tracking the current placement state
 #[derive(Resource, Default)]
@@ -136,7 +136,7 @@ pub fn place_object(
             if let Ok(preview_transform) = preview_query.single() {
                 // Spawn the actual object
                 let mesh = primitive.primitive_type.create_mesh(primitive.default_size);
-                commands.spawn((
+                let mut entity_commands = commands.spawn((
                     EditorEntity,
                     Mesh3d(meshes.add(mesh)),
                     MeshMaterial3d(materials.add(StandardMaterial {
@@ -145,6 +145,12 @@ pub fn place_object(
                     })),
                     *preview_transform,
                 ));
+
+                // Add PlayerSpawn component if this is a player spawn marker
+                if primitive.primitive_type == PrimitiveType::PlayerSpawn {
+                    entity_commands.insert(PlayerSpawn);
+                    entity_commands.insert(Name::new("Player Spawn"));
+                }
 
                 info!("Placed {} at {:?}", primitive.name, preview_transform.translation);
             }

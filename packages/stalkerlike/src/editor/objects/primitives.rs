@@ -41,6 +41,12 @@ impl Default for AssetCatalog {
                     default_size: Vec3::new(0.5, 2.0, 0.5), // 0.5m diameter x 2m height
                     color: Color::srgb(0.6, 0.6, 0.7),
                 },
+                PrimitiveDefinition {
+                    name: "Player Spawn".to_string(),
+                    primitive_type: PrimitiveType::PlayerSpawn,
+                    default_size: Vec3::new(0.5, 2.0, 0.5), // Arrow: 0.5m wide x 2m tall
+                    color: Color::srgb(0.2, 1.0, 0.2), // Bright green for visibility
+                },
             ],
         }
     }
@@ -61,6 +67,7 @@ pub enum PrimitiveType {
     Plane,
     Cylinder,
     Capsule,
+    PlayerSpawn,
 }
 
 impl PrimitiveType {
@@ -86,6 +93,11 @@ impl PrimitiveType {
                 let half_height = (size.y / 2.0) - radius;
                 Capsule3d::new(radius, half_height.max(0.001)).into()
             }
+            PrimitiveType::PlayerSpawn => {
+                // Create a distinctive arrow pointing up (composed of cone + cylinder)
+                // Use a cone for the arrow head and a thin cylinder for the shaft
+                Self::create_arrow_mesh(size)
+            }
         };
 
         // Add vertex colors (white by default, can be modified per-vertex later)
@@ -107,5 +119,20 @@ impl PrimitiveType {
         // Create white vertex colors for all vertices
         let colors: Vec<[f32; 4]> = vec![[1.0, 1.0, 1.0, 1.0]; vertex_count];
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    }
+
+    /// Create an arrow mesh pointing upward (for player spawn marker)
+    fn create_arrow_mesh(size: Vec3) -> Mesh {
+        // Simple cylinder for the shaft with cone on top
+        // We'll use a composite approach: cylinder base + cone tip
+        // For simplicity in MVP, just use a cone pointing up
+        let radius = size.x / 2.0;
+        let height = size.y;
+        
+        // Create an upward-pointing cone
+        Cone {
+            radius,
+            height,
+        }.into()
     }
 }

@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use crate::editor::persistence::scene::{save_scene, load_scene};
 use crate::editor::persistence::events::{NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
-use crate::editor::core::types::EditorEntity;
+use crate::editor::core::types::{EditorEntity, PlayerSpawn};
 use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, ErrorDialog, PendingAction};
 
 /// Resource tracking the current scene file
@@ -99,6 +99,7 @@ pub fn save_scene_system(
         Option<&Name>,
         Option<&Mesh3d>,
         Option<&MeshMaterial3d<StandardMaterial>>,
+        Option<&PlayerSpawn>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
@@ -215,6 +216,7 @@ pub fn handle_save(
         Option<&Name>,
         Option<&Mesh3d>,
         Option<&MeshMaterial3d<StandardMaterial>>,
+        Option<&PlayerSpawn>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
@@ -363,6 +365,7 @@ pub fn poll_save_as_tasks(
         Option<&Name>,
         Option<&Mesh3d>,
         Option<&MeshMaterial3d<StandardMaterial>>,
+        Option<&PlayerSpawn>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
@@ -499,6 +502,7 @@ pub fn autosave_system(
         Option<&Name>,
         Option<&Mesh3d>,
         Option<&MeshMaterial3d<StandardMaterial>>,
+        Option<&PlayerSpawn>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,

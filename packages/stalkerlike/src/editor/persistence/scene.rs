@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::editor::core::types::EditorEntity;
+use crate::editor::core::types::{EditorEntity, PlayerSpawn};
 use crate::editor::objects::primitives::PrimitiveType;
 
 /// Root scene data structure
@@ -96,6 +96,8 @@ pub enum ComponentData {
     Mesh { primitive_type: PrimitiveTypeSerde },
     /// Material component data (base color only for now)
     Material { base_color: [f32; 4] },
+    /// Player spawn marker
+    PlayerSpawn,
 }
 
 /// Serializable primitive type
@@ -106,6 +108,7 @@ pub enum PrimitiveTypeSerde {
     Plane,
     Cylinder,
     Capsule,
+    PlayerSpawn,
 }
 
 impl From<PrimitiveType> for PrimitiveTypeSerde {
@@ -116,6 +119,7 @@ impl From<PrimitiveType> for PrimitiveTypeSerde {
             PrimitiveType::Plane => PrimitiveTypeSerde::Plane,
             PrimitiveType::Cylinder => PrimitiveTypeSerde::Cylinder,
             PrimitiveType::Capsule => PrimitiveTypeSerde::Capsule,
+            PrimitiveType::PlayerSpawn => PrimitiveTypeSerde::PlayerSpawn,
         }
     }
 }
@@ -128,6 +132,7 @@ impl From<PrimitiveTypeSerde> for PrimitiveType {
             PrimitiveTypeSerde::Plane => PrimitiveType::Plane,
             PrimitiveTypeSerde::Cylinder => PrimitiveType::Cylinder,
             PrimitiveTypeSerde::Capsule => PrimitiveType::Capsule,
+            PrimitiveTypeSerde::PlayerSpawn => PrimitiveType::PlayerSpawn,
         }
     }
 }
@@ -141,13 +146,14 @@ pub fn save_scene(
         Option<&Name>,
         Option<&Mesh3d>,
         Option<&MeshMaterial3d<StandardMaterial>>,
+        Option<&PlayerSpawn>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut entities = Vec::new();
 
-    for (_entity, transform, name, mesh_handle, material_handle) in editor_entities.iter() {
+    for (_entity, transform, name, mesh_handle, material_handle, player_spawn) in editor_entities.iter() {
         let mut components = Vec::new();
 
         // Serialize mesh if present
@@ -170,6 +176,11 @@ pub fn save_scene(
                     base_color: material.base_color.to_srgba().to_f32_array(),
                 });
             }
+        }
+
+        // Serialize player spawn marker if present
+        if player_spawn.is_some() {
+            components.push(ComponentData::PlayerSpawn);
         }
 
         entities.push(EntityData {
@@ -214,6 +225,7 @@ pub fn load_scene(
         // Process components
         let mut mesh_type: Option<PrimitiveType> = None;
         let mut base_color: Option<Color> = None;
+        let mut is_player_spawn = false;
 
         for component in entity_data.components {
             match component {
@@ -227,6 +239,9 @@ pub fn load_scene(
                         color[2],
                         color[3],
                     ));
+                }
+                ComponentData::PlayerSpawn => {
+                    is_player_spawn = true;
                 }
             }
         }
@@ -244,6 +259,11 @@ pub fn load_scene(
                 base_color: color,
                 ..default()
             })));
+        }
+
+        // Add PlayerSpawn component if marked
+        if is_player_spawn {
+            entity_commands.insert(PlayerSpawn);
         }
     }
 

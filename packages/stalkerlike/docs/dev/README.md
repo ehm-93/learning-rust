@@ -27,7 +27,12 @@ Archived specifications that have been replaced by newer approaches or abandoned
 ### `/uncommitted/`
 Forward-looking design documents and architectural specifications for future iterations. These represent planned systems that haven't been committed to a specific iteration yet.
 
+- **`component-set-01.md`** - MVP gameplay components (Interactable, Container, Door, Switch, etc.) - 15 core components for interactive environments
 - **`editor-inspector.md`** - Extensible inspector panel architecture with component-driven sub-panels
+- **`enhanced-gizmos.md`** - Advanced gizmo system (multi-select, snapping, constraints)
+- **`glb-support.md`** - GLB/GLTF model loading, animation support, material handling
+- **`lua-scripting.md`** - Embedded Lua scripting for prefabs and levels (event callbacks, designer empowerment)
+- **`model-set-01.md`** - MVP Corporate asset pack (31 models for 2 demo rooms + liminal hallway)
 - **`persistence.md`** - Two-database persistence system (static DB for immutable content, dynamic DB for save states)
 - **`world_architecture.md`** - Chunk streaming system, LOD, floating origin for large world support
 

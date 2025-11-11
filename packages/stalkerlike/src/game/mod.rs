@@ -58,7 +58,10 @@ impl Plugin for GamePlugin {
 
             // Paused state
             .add_systems(OnEnter(GameState::Paused), pause_physics)
-            .add_systems(OnExit(GameState::Paused), resume_physics);
+            .add_systems(OnExit(GameState::Paused), resume_physics)
+
+            // Add colliders to loaded scene meshes
+            .add_systems(Update, add_colliders_to_scene_children);
     }
 }
 
@@ -68,8 +71,9 @@ fn setup_static_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
-    spawn_static_content(&mut commands, &mut meshes, &mut materials);
+    spawn_static_content(&mut commands, &mut meshes, &mut materials, &asset_server);
 }
 
 /// Helper function to spawn static content
@@ -77,6 +81,7 @@ fn spawn_static_content(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
+    asset_server: &Res<AssetServer>,
 ) {
     // Ground plane with physics collider
     commands.spawn((
@@ -85,6 +90,15 @@ fn spawn_static_content(
         MeshMaterial3d(materials.add(Color::srgb(0.3, 0.3, 0.3))),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Collider::cuboid(25.0, 0.1, 25.0),
+    ));
+
+    // Load pipe model from GLB file
+    commands.spawn((
+        GameEntity,
+        NeedsCollider, // Marker to add colliders to child meshes
+        SceneRoot(asset_server.load("models/pipes/pipe_2m_8m_hollow.glb#Scene0")),
+        Transform::from_xyz(3.0, 1.0, 0.0),
+        RigidBody::Fixed,
     ));
 
     // Static object (cube) with physics
@@ -122,9 +136,10 @@ fn setup_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     // Setup static world first
-    spawn_static_content(&mut commands, &mut meshes, &mut materials);
+    spawn_static_content(&mut commands, &mut meshes, &mut materials, &asset_server);
 
     // Add some dynamic physics objects for testing
     for i in 0..5 {
@@ -181,5 +196,46 @@ fn pause_physics(mut query: Query<&mut RapierConfiguration>) {
 fn resume_physics(mut query: Query<&mut RapierConfiguration>) {
     if let Ok(mut config) = query.single_mut() {
         config.physics_pipeline_active = true;
+    }
+}
+
+/// Marker component for scene roots that need colliders on their children
+/// Used because AsyncCollider can't be added directly to SceneRoot -
+/// it needs to be on the actual mesh entities which spawn as children
+#[derive(Component)]
+struct NeedsCollider;
+
+/// Add trimesh colliders to all mesh children of scenes marked with NeedsCollider
+fn add_colliders_to_scene_children(
+    mut commands: Commands,
+    needs_collider_query: Query<(Entity, &Children), With<NeedsCollider>>,
+    children_query: Query<&Children>,
+    mesh_query: Query<Entity, (With<Mesh3d>, Without<Collider>)>,
+) {
+    for (parent_entity, children) in needs_collider_query.iter() {
+        let mut found_any = false;
+
+        // Recursively check all descendants for meshes
+        let mut to_check = children.to_vec();
+
+        while let Some(entity) = to_check.pop() {
+            // Check if this entity has a mesh
+            if mesh_query.get(entity).is_ok() {
+                commands.entity(entity).insert(
+                    AsyncCollider(ComputedColliderShape::TriMesh(TriMeshFlags::default()))
+                );
+                found_any = true;
+            }
+
+            // Add this entity's children to the check list
+            if let Ok(grandchildren) = children_query.get(entity) {
+                to_check.extend(grandchildren.iter());
+            }
+        }
+
+        // Remove marker once we've processed all children
+        if found_any {
+            commands.entity(parent_entity).remove::<NeedsCollider>();
+        }
     }
 }

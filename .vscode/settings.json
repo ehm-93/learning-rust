@@ -1,2 +1,8 @@
 {
+  "colorize.languages": [
+    "markdown",
+    "css",
+    "sass",
+    "less"
+  ]
 }

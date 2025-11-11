@@ -71,6 +71,18 @@ pub enum PrimitiveType {
 }
 
 impl PrimitiveType {
+    /// Get the default size for this primitive type
+    pub fn default_size(&self) -> Vec3 {
+        match self {
+            PrimitiveType::Cube => Vec3::ONE,
+            PrimitiveType::Sphere => Vec3::splat(1.0),
+            PrimitiveType::Plane => Vec3::new(10.0, 0.1, 10.0),
+            PrimitiveType::Cylinder => Vec3::new(1.0, 2.0, 1.0),
+            PrimitiveType::Capsule => Vec3::new(0.5, 2.0, 0.5),
+            PrimitiveType::PlayerSpawn => Vec3::new(0.5, 2.0, 0.5),
+        }
+    }
+
     pub fn create_mesh(&self, size: Vec3) -> Mesh {
         let mut mesh = match self {
             PrimitiveType::Cube => Cuboid::new(size.x, size.y, size.z).into(),
@@ -128,7 +140,7 @@ impl PrimitiveType {
         // For simplicity in MVP, just use a cone pointing up
         let radius = size.x / 2.0;
         let height = size.y;
-        
+
         // Create an upward-pointing cone
         Cone {
             radius,

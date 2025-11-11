@@ -248,9 +248,8 @@ pub fn load_scene(
 
         // Spawn mesh and material if we have the data
         if let Some(prim_type) = mesh_type {
-            // Use default size from the transform scale
-            let size = entity_data.transform.scale.into();
-            let mesh = prim_type.create_mesh(size);
+            // Create mesh at the primitive's default size - Transform.scale handles any scaling
+            let mesh = prim_type.create_mesh(prim_type.default_size());
             entity_commands.insert(Mesh3d(meshes.add(mesh)));
 
             // Add material

@@ -17,12 +17,12 @@ pub fn spawn_player_at_marker(
     let spawn_transform = spawn_query
         .get_single()
         .expect("Scene should have exactly one PlayerSpawn marker");
-    
+
     let spawn_position = spawn_transform.translation;
     let spawn_rotation = spawn_transform.rotation;
-    
+
     info!("Spawning player at position: {:?}", spawn_position);
-    
+
     // Spawn the player entity at the marked position
     commands.spawn((
         // Player component
@@ -44,7 +44,7 @@ pub fn spawn_player_at_marker_flexible(
 ) {
     // Default spawn if no marker is found
     let default_spawn = Transform::from_xyz(0.0, 1.0, 0.0);
-    
+
     // Try to find a spawn marker
     let spawn_transform = if let Ok(transform) = spawn_query.get_single() {
         // Found exactly one spawn marker - use it
@@ -58,9 +58,9 @@ pub fn spawn_player_at_marker_flexible(
         warn!("Multiple PlayerSpawn markers found, using the first one");
         *spawn_query.iter().next().unwrap()
     };
-    
+
     info!("Spawning player at: {:?}", spawn_transform.translation);
-    
+
     // Spawn player
     commands.spawn((
         Player,
@@ -100,7 +100,7 @@ pub fn spawn_player_at_named_point(
             .map(|(transform, _)| *transform)
             .unwrap_or_else(|| Transform::from_xyz(0.0, 1.0, 0.0))
     };
-    
+
     commands.spawn((Player, spawn_transform));
 }
 

@@ -32,14 +32,14 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-pub fn setup_player(mut commands: Commands) {
+pub fn setup_player(mut commands: Commands, spawn_position: Vec3) {
     // Player physics body at capsule center (1.8m tall human)
     commands.spawn((
         Player,
         Saveable,
         GameEntity,
         Health::default(),
-        Transform::from_xyz(0.0, 0.9, 0.0),  // Capsule center height (half of 1.8m)
+        Transform::from_translation(spawn_position),  // Use provided spawn position
         PlayerCamera {
             sensitivity: 0.002,
             pitch: 0.0,

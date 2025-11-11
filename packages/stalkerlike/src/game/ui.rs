@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use super::resources::*;
-use super::player;
 
 pub struct UiPlugin;
 
@@ -26,10 +25,6 @@ impl Plugin for UiPlugin {
                 handle_resume_input.run_if(in_state(GameState::Paused)))
 
             // State transition handlers
-            .add_systems(OnTransition {
-                exited: GameState::NewGame,
-                entered: GameState::InGame,
-            }, player::setup_player)
             .add_systems(OnEnter(GameState::NewGame), transition_to_ingame);
     }
 }

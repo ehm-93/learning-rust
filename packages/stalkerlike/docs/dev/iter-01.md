@@ -780,14 +780,14 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [x] Clear dirty flag after save
 
 #### 19. Bug fixes and edge cases
-- [ ] Test scene load with missing assets
-- [ ] Test save/load with complex hierarchies
-- [ ] Test multi-select with grouped objects
-- [ ] Test gizmo interaction at extreme scales
-- [ ] Test camera collision with scene bounds
-- [ ] Test rapid mode switching (editor ↔ play)
-- [ ] Test grid snapping at chunk boundaries
-- [ ] Fix any reported crashes or data loss
+- [x] Test scene load with missing assets
+- [x] Test save/load with complex hierarchies
+- [x] Test multi-select with grouped objects
+- [x] Test gizmo interaction at extreme scales
+- [x] Test camera collision with scene bounds
+- [ ] Test rapid mode switching (editor ↔ play) (deferred)
+- [x] Test grid snapping at chunk boundaries
+- [x] Fix any reported crashes or data loss
 
 #### 20. Keyboard shortcut refinements
 - [ ] Add shortcut reference panel (accessible via F1 or ?)

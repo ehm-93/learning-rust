@@ -114,12 +114,12 @@ impl Default for AssetBrowserState {
             glb_section_expanded: true,
             pending_directory_task: false,
         };
-        
+
         // Automatically scan on startup if we found the directory
         if state.asset_directory.is_some() {
             state.scan_glb_files();
         }
-        
+
         state
     }
 }
@@ -129,25 +129,25 @@ impl AssetBrowserState {
     fn find_asset_directory() -> Option<PathBuf> {
         // Try to find the assets directory relative to the current working directory
         let current_dir = std::env::current_dir().ok()?;
-        
+
         // Try common patterns
         let candidates = vec![
             current_dir.join("packages/stalkerlike/assets"),
             current_dir.join("assets"),
             current_dir.join("../assets"),
         ];
-        
+
         for candidate in candidates {
             if candidate.exists() && candidate.is_dir() {
                 info!("Found asset directory: {:?}", candidate);
                 return Some(candidate);
             }
         }
-        
+
         warn!("Could not automatically find asset directory");
         None
     }
-    
+
     /// Scan the asset directory for GLB/GLTF files
     pub fn scan_glb_files(&mut self) {
         self.glb_assets.clear();
@@ -333,7 +333,7 @@ pub fn hierarchy_ui(
                             for glb_asset in &asset_browser_state.glb_assets.clone() {
                                 let button_text = format!("🎨 {}", glb_asset.name);
                                 if ui.button(button_text).clicked() {
-                                    info!("Starting placement for GLB: {:?} (relative: {:?})", 
+                                    info!("Starting placement for GLB: {:?} (relative: {:?})",
                                           glb_asset.path, glb_asset.relative_path);
 
                                     // Use the placement system for GLB models

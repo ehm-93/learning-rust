@@ -5,80 +5,28 @@ metadata:
 global:
   lighting:
     directional:
-      illuminance: 12000.0
+      illuminance: 10000.0
       color:
       - 1.0
-      - 0.54901963
-      - 0.3137255
+      - 1.0
+      - 1.0
       - 1.0
       position:
       - 4.0
       - 8.0
       - 4.0
       look_at:
-      - 3.1317592
-      - 7.128443
-      - -5.924039
+      - -1.0
+      - 0.9289317
+      - -0.9999995
     ambient:
       color:
       - 1.0
-      - 0.54901963
-      - 0.3137255
+      - 1.0
+      - 1.0
       - 1.0
       brightness: 40.0
 entities:
-- name: null
-  transform:
-    position:
-    - 3.5
-    - 8.0
-    - 3.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
-    - 1.0
-  - type: RigidBody
-    body_type: Dynamic
-- name: null
-  transform:
-    position:
-    - -0.5
-    - 2.0
-    - 3.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
-    - 1.0
-  - type: RigidBody
-    body_type: Dynamic
 - name: null
   transform:
     position:
@@ -105,31 +53,30 @@ entities:
     - 1.0
   - type: RigidBody
     body_type: Dynamic
-- name: Player Spawn
+- name: null
   transform:
     position:
     - 0.0
     - 1.0
-    - 6.0
+    - 0.0
     rotation:
     - 0.0
     - 0.0
     - 0.0
     - 1.0
     scale:
-    - 1.0
-    - 1.0
-    - 1.0
+    - 2.0
+    - 2.0
+    - 2.0
   components:
   - type: Mesh
-    primitive_type: Sphere
+    primitive_type: Cube
   - type: Material
     base_color:
-    - 0.2
+    - 0.7
+    - 0.7
+    - 0.7
     - 1.0
-    - 0.2
-    - 1.0
-  - type: PlayerSpawn
 - name: pipe_2m_8m_hollow_T
   transform:
     position:
@@ -206,30 +153,6 @@ entities:
   transform:
     position:
     - 0.0
-    - 1.0
-    - 0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 2.0
-    - 2.0
-    - 2.0
-  components:
-  - type: Mesh
-    primitive_type: Cube
-  - type: Material
-    base_color:
-    - 0.7
-    - 0.7
-    - 0.7
-    - 1.0
-- name: null
-  transform:
-    position:
-    - 0.0
     - 0.0
     - 0.0
     rotation:
@@ -250,6 +173,32 @@ entities:
     - 0.6
     - 0.5
     - 1.0
+- name: null
+  transform:
+    position:
+    - -0.5
+    - 2.0
+    - 3.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.6
+    - 0.7
+    - 0.8
+    - 1.0
+  - type: RigidBody
+    body_type: Dynamic
 - name: null
   transform:
     position:
@@ -276,3 +225,54 @@ entities:
     - 1.0
   - type: RigidBody
     body_type: Dynamic
+- name: null
+  transform:
+    position:
+    - 3.5
+    - 8.0
+    - 3.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.6
+    - 0.7
+    - 0.8
+    - 1.0
+  - type: RigidBody
+    body_type: Dynamic
+- name: Player Spawn
+  transform:
+    position:
+    - 0.0
+    - 1.0
+    - 6.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.2
+    - 1.0
+    - 0.2
+    - 1.0
+  - type: PlayerSpawn

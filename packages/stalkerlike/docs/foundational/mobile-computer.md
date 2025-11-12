@@ -12,7 +12,7 @@ Ruggedized smartphone-like device that pairs with all your equipment, authentica
 
 **Network**: Wireless connection to colony infrastructure (doors, terminals, trade) and mesh networking to other MCs.
 
-## Interface
+## Diegetic Interface
 
 The MC exists in the game world - you hold it, others can see you using it.
 
@@ -121,9 +121,9 @@ Creates paranoia - info is inconsistently accurate, NPCs notice weird behavior, 
 
 **Hacking**: Install modules for doors/terminals/cameras/turrets, failed hacks trigger alarms and traces, stealth gameplay
 
-**Identity Spoofing**: Extremely illegal, temporary cloning of nearby MC, very short duration, high detection risk, severe consequences. Automatic "impossible travel" detection? NPC ID activates two doors 100m away from each other = instant lockdown?
+**Identity Spoofing**: Extremely illegal, temporary cloning of nearby MC, very short duration, high detection risk, severe consequences. Automatic "impossible travel" detection? NPC ID activates two doors 1km away from each other = instant lockdown?
 
-**Equipment Plugins**: Certain gear requires specific modules (Military, Medical, Engineering, Scientific). Can't carry all simultaneously, faction-specific, reputation-gated. Questions: Plugin bays limited by MC tier? CPU/memory requirements?
+**Equipment Plugins**: Certain gear requires specific modules (Military, Medical, Engineering, Scientific, Faction DRM [multiple levels?]). Can't carry all simultaneously, faction-specific, reputation-gated. Questions: Plugin bays limited by MC tier? CPU/memory requirements?
 
 **Data Storage**: Finite 2TB, logs/maps/intel consume space, forces deletion choices, external storage option, Old Company maps are huge
 
@@ -143,9 +143,9 @@ Creates paranoia - info is inconsistently accurate, NPCs notice weird behavior, 
 
 ## Reference
 
-- Stalker PDA (pause, time dilation, info gathering)
+- Stalker PDA (diegetic pause, time dilation, info gathering)
 - Fallout Pip-Boy (equipment hub, status tracking)
-- Dead Space RIG (UI, health/resource display)
+- Dead Space RIG (diegetic UI, health/resource display)
 - Metro 2033 wrist computer (physical device, light source risk)
 - Prey (2017) TranScribe (audio logs, environmental scanning)
 - Subnautica PDA (survival data, crafting blueprints)

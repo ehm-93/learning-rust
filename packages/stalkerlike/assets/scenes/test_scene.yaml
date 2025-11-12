@@ -68,7 +68,7 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\pipes\pipe_2m_8m_hollow_T.glb
+    path: models/pipes/pipe_2m_8m_hollow_T.glb
 - name: pipe_2m_8m_hollow_elbow_90
   transform:
     position:
@@ -86,7 +86,7 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\pipes\pipe_2m_8m_hollow_elbow_90.glb
+    path: models/pipes/pipe_2m_8m_hollow_elbow_90.glb
 - name: pipe_2m_8m_hollow
   transform:
     position:
@@ -104,7 +104,7 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\pipes\pipe_2m_8m_hollow.glb
+    path: models/pipes/pipe_2m_8m_hollow.glb
 - name: pipe_2m_8m_hollow
   transform:
     position:
@@ -122,7 +122,7 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\pipes\pipe_2m_8m_hollow.glb
+    path: models/pipes/pipe_2m_8m_hollow.glb
 - name: null
   transform:
     position:

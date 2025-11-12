@@ -400,7 +400,7 @@ fn poll_load_task(
                                 Flashlight::default(),
                                 SpotLight {
                                     intensity: 0.0,
-                                    range: 20.0,
+                                    range: 50.0,
                                     radius: 0.50,
                                     shadows_enabled: true,
                                     outer_angle: 0.3,

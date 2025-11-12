@@ -25,7 +25,6 @@ impl Plugin for PlayerPlugin {
                     player_movement,
                     camera_look,
                     toggle_flashlight,
-                    update_flashlight_transform,
                 )
                     .run_if(in_state(GameState::InGame)),
             );
@@ -63,8 +62,8 @@ pub fn setup_player(mut commands: Commands, spawn_position: Vec3) {
                 Flashlight::default(),
                 SpotLight {
                     intensity: 0.0,
-                    range: 20.0,
-                    radius: 0.50,  // Larger radius = softer shadows
+                    range: 50.0,
+                    radius: 0.50,
                     shadows_enabled: true,
                     outer_angle: 0.3,
                     inner_angle: 0.2,
@@ -180,15 +179,6 @@ fn toggle_flashlight(
                 0.0
             };
             light.intensity = new_intensity;
-            info!("Flashlight toggled: enabled={}, intensity={}", flashlight.enabled, new_intensity);
         }
     }
-}
-
-fn update_flashlight_transform(
-    _camera_query: Query<&Transform, (With<Player>, Without<Flashlight>)>,
-    _flashlight_query: Query<&Transform, With<Flashlight>>,
-) {
-    // Flashlight is a child, so it inherits parent transform automatically
-    // This system is here for future expansion if needed
 }

@@ -35,8 +35,8 @@ impl Default for Flashlight {
     fn default() -> Self {
         Self {
             enabled: false,
-            intensity: 100000.0,  // Much higher for Bevy 0.16 lux units
-            range: 20.0,
+            intensity: 1_000_000.0,
+            range: 50.0,
         }
     }
 }

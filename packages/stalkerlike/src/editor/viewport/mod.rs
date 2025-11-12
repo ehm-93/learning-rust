@@ -11,7 +11,7 @@ pub mod plugin;
 pub mod raycasting;
 
 // Re-export plugin
-pub use plugin::ViewportPlugin;
+pub use plugin::{ViewportPlugin, LightingEnabled, SavedLightingState};
 
 // Re-export commonly used types for other modules
 pub use camera::EditorCamera;

@@ -132,6 +132,8 @@ pub fn save_scene_system(
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
+    directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
+    ambient_light: Res<AmbientLight>,
 ) {
     // Check for Ctrl+S
     if keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight) {
@@ -156,7 +158,7 @@ pub fn save_scene_system(
                 }
             }
 
-            match save_scene(path.clone(), editor_entities, meshes, materials) {
+            match save_scene(path.clone(), editor_entities, meshes, materials, directional_light, ambient_light) {
                 Ok(()) => {
                     info!("Scene saved to {}", path.display());
                     current_file.set_path(path.clone());
@@ -231,12 +233,34 @@ pub fn handle_new_file(
     mut current_file: ResMut<CurrentFile>,
     mut commands: Commands,
     editor_entities: Query<Entity, With<EditorEntity>>,
+    existing_lights: Query<Entity, With<DirectionalLight>>,
 ) {
     for _ in events.read() {
         // Clear the scene
         for entity in editor_entities.iter() {
             commands.entity(entity).despawn();
         }
+
+        // Clear existing directional lights
+        for entity in existing_lights.iter() {
+            commands.entity(entity).despawn();
+        }
+
+        // Spawn default lighting
+        commands.spawn((
+            DirectionalLight {
+                illuminance: 10000.0,
+                shadows_enabled: true,
+                ..default()
+            },
+            Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ));
+
+        commands.insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 400.0,
+            ..default()
+        });
 
         // Reset current file
         current_file.path = None;
@@ -263,6 +287,8 @@ pub fn handle_save(
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
+    directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
+    ambient_light: Res<AmbientLight>,
 ) {
     for _ in events.read() {
         // Skip save if no file is open - should not happen since button is disabled
@@ -287,7 +313,7 @@ pub fn handle_save(
             }
         }
 
-        match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials)) {
+        match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials), directional_light, Res::clone(&ambient_light)) {
             Ok(()) => {
                 info!("Scene saved to {}", path.display());
                 current_file.set_path(path);
@@ -341,6 +367,7 @@ pub fn poll_file_open_tasks(
     asset_server: Res<AssetServer>,
     mut tasks: Query<(Entity, &mut FileOpenTask)>,
     editor_entities: Query<Entity, With<EditorEntity>>,
+    existing_lights: Query<Entity, With<DirectionalLight>>,
 ) {
     // First, check if we have a pending autosave dialog with a user choice
     if autosave_dialog.show && autosave_dialog.user_choice.is_some() {
@@ -364,6 +391,11 @@ pub fn poll_file_open_tasks(
 
         // Clear existing scene entities
         for entity in editor_entities.iter() {
+            commands.entity(entity).despawn();
+        }
+
+        // Clear existing directional lights (load_scene will create new ones)
+        for entity in existing_lights.iter() {
             commands.entity(entity).despawn();
         }
 
@@ -416,6 +448,11 @@ pub fn poll_file_open_tasks(
                 // No autosave - proceed with loading immediately
                 // Clear existing scene entities
                 for entity in editor_entities.iter() {
+                    commands.entity(entity).despawn();
+                }
+
+                // Clear existing directional lights (load_scene will create new ones)
+                for entity in existing_lights.iter() {
                     commands.entity(entity).despawn();
                 }
 
@@ -482,6 +519,8 @@ pub fn poll_save_as_tasks(
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
+    directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
+    ambient_light: Res<AmbientLight>,
 ) {
     for (task_entity, mut task) in tasks.iter_mut() {
         if let Some(result) = block_on(futures_lite::future::poll_once(&mut task.0)) {
@@ -501,7 +540,7 @@ pub fn poll_save_as_tasks(
                     }
                 }
 
-                match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials)) {
+                match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials), directional_light, Res::clone(&ambient_light)) {
                     Ok(()) => {
                         info!("Scene saved as {}", path.display());
                         current_file.set_path(path.clone());
@@ -634,6 +673,8 @@ pub fn autosave_system(
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
+    directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
+    ambient_light: Res<AmbientLight>,
 ) {
     // Tick the timer
     timer.timer.tick(time.delta());
@@ -670,7 +711,7 @@ pub fn autosave_system(
             }
         }
 
-        match save_scene(autosave_path.clone(), editor_entities, meshes, materials) {
+        match save_scene(autosave_path.clone(), editor_entities, meshes, materials, directional_light, ambient_light) {
             Ok(()) => {
                 info!("Autosaved scene to {}", autosave_path.display());
                 notification.show(format!("Autosaved to {}", autosave_path.file_name().unwrap_or_default().to_string_lossy()));

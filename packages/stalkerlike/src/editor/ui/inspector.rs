@@ -5,7 +5,7 @@ use crate::editor::objects::selection::SelectionSet;
 use crate::editor::core::types::RigidBodyType;
 
 /// Local UI state for text input buffers
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct InspectorState {
     // Position buffers
     pub pos_x: String,
@@ -21,6 +21,43 @@ pub struct InspectorState {
     pub scale_z: String,
     // Track last selected entity to detect changes
     pub last_entity: Option<Entity>,
+
+    // Lighting buffers
+    pub lighting_enabled: bool,
+    pub dir_light_illuminance: String,
+    pub dir_light_color: [f32; 3],
+    pub dir_light_color_hex: String,
+    pub dir_light_rotation_x: String, // Pitch (up/down)
+    pub dir_light_rotation_y: String, // Yaw (left/right)
+    pub ambient_brightness: String,
+    pub ambient_color: [f32; 3],
+    pub ambient_color_hex: String,
+}
+
+impl Default for InspectorState {
+    fn default() -> Self {
+        Self {
+            pos_x: String::new(),
+            pos_y: String::new(),
+            pos_z: String::new(),
+            rot_x: String::new(),
+            rot_y: String::new(),
+            rot_z: String::new(),
+            scale_x: String::new(),
+            scale_y: String::new(),
+            scale_z: String::new(),
+            last_entity: None,
+            lighting_enabled: true, // Start with lighting enabled
+            dir_light_illuminance: String::new(),
+            dir_light_color: [1.0, 1.0, 1.0],
+            dir_light_color_hex: String::from("ffffff"),
+            dir_light_rotation_x: String::new(),
+            dir_light_rotation_y: String::new(),
+            ambient_brightness: String::new(),
+            ambient_color: [1.0, 1.0, 1.0],
+            ambient_color_hex: String::from("ffffff"),
+        }
+    }
 }
 
 /// Render the inspector panel with editable numeric fields
@@ -28,11 +65,14 @@ pub struct InspectorState {
 pub fn inspector_ui(
     mut contexts: EguiContexts,
     selection: Res<SelectionSet>,
-    mut transform_query: Query<&mut Transform>,
+    mut transform_query: Query<&mut Transform, With<crate::editor::core::types::EditorEntity>>,
     name_query: Query<&Name>,
     mut inspector_state: ResMut<InspectorState>,
     mut rigid_body_query: Query<Option<&mut RigidBodyType>>,
     mut commands: Commands,
+    mut directional_light: Query<(&mut DirectionalLight, &mut Transform), Without<crate::editor::core::types::EditorEntity>>,
+    mut ambient_light: ResMut<AmbientLight>,
+    mut lighting_enabled: ResMut<crate::editor::viewport::LightingEnabled>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -47,10 +87,173 @@ pub fn inspector_ui(
 
             if selection.is_empty() {
                 inspector_state.last_entity = None;
-                ui.label("No selection");
+
+                // Show global lighting controls
+                ui.label("Global Lighting");
                 ui.separator();
-                ui.label("Click an object to select");
-                ui.label("Ctrl+Click to multi-select");
+
+                // Lighting mode toggle
+                ui.horizontal(|ui| {
+                    ui.label("Mode:");
+                    let mut enabled = lighting_enabled.0;
+                    if ui.checkbox(&mut enabled, "Custom Lighting").changed() {
+                        lighting_enabled.0 = enabled;
+                        inspector_state.lighting_enabled = enabled;
+                    }
+                });
+
+                ui.add_space(4.0);
+
+                if !lighting_enabled.0 {
+                    ui.label(egui::RichText::new("Simple mode: 10000 white ambient, no directional").weak().small());
+                } else {
+                    ui.label(egui::RichText::new("Custom mode: Configure lights below").weak().small());
+                }
+
+                ui.add_space(8.0);
+
+                // Initialize lighting buffers if needed
+                if inspector_state.dir_light_illuminance.is_empty() {
+                    if let Ok((dir_light, transform)) = directional_light.single() {
+                        inspector_state.dir_light_illuminance = format!("{:.0}", dir_light.illuminance);
+                        let color = dir_light.color.to_srgba();
+                        inspector_state.dir_light_color = [color.red, color.green, color.blue];
+                        inspector_state.dir_light_color_hex = rgb_to_hex(&inspector_state.dir_light_color);
+                        
+                        // Get rotation as euler angles (pitch and yaw)
+                        let (pitch, yaw, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
+                        inspector_state.dir_light_rotation_x = format!("{:.1}", pitch.to_degrees());
+                        inspector_state.dir_light_rotation_y = format!("{:.1}", yaw.to_degrees());
+                    }
+                    let amb_color = ambient_light.color.to_srgba();
+                    inspector_state.ambient_brightness = format!("{:.0}", ambient_light.brightness);
+                    inspector_state.ambient_color = [amb_color.red, amb_color.green, amb_color.blue];
+                    inspector_state.ambient_color_hex = rgb_to_hex(&inspector_state.ambient_color);
+                    inspector_state.lighting_enabled = lighting_enabled.0;
+                }
+
+                // Only show detailed controls if custom lighting is enabled
+                if lighting_enabled.0 {
+                    // Directional Light controls
+                    ui.group(|ui| {
+                        ui.label("Directional Light:");
+
+                        ui.horizontal(|ui| {
+                            ui.label("Illuminance:");
+                            if edit_float_field_with_steppers(ui, &mut inspector_state.dir_light_illuminance, 60.0, 1000.0) {
+                                if let Ok(value) = inspector_state.dir_light_illuminance.parse::<f32>() {
+                                    if let Ok((mut dir_light, _)) = directional_light.single_mut() {
+                                        dir_light.illuminance = value.max(0.0);
+                                    }
+                                }
+                            }
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Color:");
+                            if ui.color_edit_button_rgb(&mut inspector_state.dir_light_color).changed() {
+                                inspector_state.dir_light_color_hex = rgb_to_hex(&inspector_state.dir_light_color);
+                                if let Ok((mut dir_light, _)) = directional_light.single_mut() {
+                                    dir_light.color = Color::srgb(
+                                        inspector_state.dir_light_color[0],
+                                        inspector_state.dir_light_color[1],
+                                        inspector_state.dir_light_color[2],
+                                    );
+                                }
+                            }
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Hex:");
+                            ui.add(egui::TextEdit::singleline(&mut inspector_state.dir_light_color_hex)
+                                .desired_width(80.0)
+                                .char_limit(6));
+
+                            if ui.small_button("Apply").clicked() {
+                                if let Some(rgb) = hex_to_rgb(&inspector_state.dir_light_color_hex) {
+                                    inspector_state.dir_light_color = rgb;
+                                    if let Ok((mut dir_light, _)) = directional_light.single_mut() {
+                                        dir_light.color = Color::srgb(rgb[0], rgb[1], rgb[2]);
+                                    }
+                                }
+                            }
+                        });
+                        
+                        ui.add_space(4.0);
+                        ui.label(egui::RichText::new("Direction:").small());
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Pitch:");
+                            if edit_float_field_with_steppers(ui, &mut inspector_state.dir_light_rotation_x, 50.0, 5.0) {
+                                if let Ok(pitch_deg) = inspector_state.dir_light_rotation_x.parse::<f32>() {
+                                    if let Ok((_, mut transform)) = directional_light.single_mut() {
+                                        // Get current yaw
+                                        let (_current_pitch, yaw, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
+                                        // Set new rotation with updated pitch
+                                        transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch_deg.to_radians(), 0.0);
+                                    }
+                                }
+                            }
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Yaw:");
+                            if edit_float_field_with_steppers(ui, &mut inspector_state.dir_light_rotation_y, 50.0, 5.0) {
+                                if let Ok(yaw_deg) = inspector_state.dir_light_rotation_y.parse::<f32>() {
+                                    if let Ok((_, mut transform)) = directional_light.single_mut() {
+                                        // Get current pitch
+                                        let (pitch, _current_yaw, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
+                                        // Set new rotation with updated yaw
+                                        transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw_deg.to_radians(), pitch, 0.0);
+                                    }
+                                }
+                            }
+                        });
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Ambient Light controls
+                    ui.group(|ui| {
+                        ui.label("Ambient Light:");
+
+                        ui.horizontal(|ui| {
+                            ui.label("Brightness:");
+                            if edit_float_field_with_steppers(ui, &mut inspector_state.ambient_brightness, 60.0, 50.0) {
+                                if let Ok(value) = inspector_state.ambient_brightness.parse::<f32>() {
+                                    ambient_light.brightness = value.max(0.0);
+                                }
+                            }
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Color:");
+                            if ui.color_edit_button_rgb(&mut inspector_state.ambient_color).changed() {
+                                inspector_state.ambient_color_hex = rgb_to_hex(&inspector_state.ambient_color);
+                                ambient_light.color = Color::srgb(
+                                    inspector_state.ambient_color[0],
+                                    inspector_state.ambient_color[1],
+                                    inspector_state.ambient_color[2],
+                                );
+                            }
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Hex:");
+                            ui.add(egui::TextEdit::singleline(&mut inspector_state.ambient_color_hex)
+                                .desired_width(80.0)
+                                .char_limit(6));
+
+                            if ui.small_button("Apply").clicked() {
+                                if let Some(rgb) = hex_to_rgb(&inspector_state.ambient_color_hex) {
+                                    inspector_state.ambient_color = rgb;
+                                    ambient_light.color = Color::srgb(rgb[0], rgb[1], rgb[2]);
+                                }
+                            }
+                        });
+                    });
+                }
+
                 return;
             }
 
@@ -346,4 +549,26 @@ fn update_buffers_from_transform(state: &mut InspectorState, transform: &Transfo
     state.scale_x = format!("{:.3}", transform.scale.x);
     state.scale_y = format!("{:.3}", transform.scale.y);
     state.scale_z = format!("{:.3}", transform.scale.z);
+}
+
+/// Convert RGB [0-1] to hex string
+fn rgb_to_hex(rgb: &[f32; 3]) -> String {
+    format!("{:02x}{:02x}{:02x}",
+        (rgb[0] * 255.0).round() as u8,
+        (rgb[1] * 255.0).round() as u8,
+        (rgb[2] * 255.0).round() as u8)
+}
+
+/// Parse hex string to RGB [0-1], returns None if invalid
+fn hex_to_rgb(hex: &str) -> Option<[f32; 3]> {
+    let hex = hex.trim_start_matches('#');
+    if hex.len() != 6 {
+        return None;
+    }
+
+    let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+
+    Some([r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0])
 }

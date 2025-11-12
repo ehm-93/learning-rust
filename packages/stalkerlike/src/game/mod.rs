@@ -138,23 +138,8 @@ fn spawn_static_content(
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
 
-    // Directional light
-    commands.spawn((
-        GameEntity,
-        DirectionalLight {
-            illuminance: 0.0001,
-            shadows_enabled: true,
-            ..default()
-        },
-        Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
-
-    // Ambient light (resource, not an entity)
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.0,
-        affects_lightmapped_meshes: true,
-    });
+    // Note: Directional and ambient lighting are now loaded from the scene file
+    // See load_scene_from_yaml for lighting setup
 }
 
 /// Spawns dynamic world content for a new game
@@ -216,6 +201,8 @@ fn load_scene_from_yaml(
     #[derive(Serialize, Deserialize, Debug, Clone)]
     struct SceneData {
         metadata: SceneMetadata,
+        #[serde(default)]
+        global: GlobalData,
         entities: Vec<EntityData>,
     }
 
@@ -224,6 +211,68 @@ fn load_scene_from_yaml(
         version: u32,
         name: Option<String>,
         description: Option<String>,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+    struct GlobalData {
+        lighting: LightingData,
+    }
+
+    impl Default for GlobalData {
+        fn default() -> Self {
+            Self {
+                lighting: LightingData::default(),
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+    struct LightingData {
+        directional: DirectionalLightData,
+        ambient: AmbientLightData,
+    }
+
+    impl Default for LightingData {
+        fn default() -> Self {
+            Self {
+                directional: DirectionalLightData::default(),
+                ambient: AmbientLightData::default(),
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+    struct DirectionalLightData {
+        illuminance: f32,
+        color: [f32; 4],
+        position: [f32; 3],
+        look_at: [f32; 3],
+    }
+
+    impl Default for DirectionalLightData {
+        fn default() -> Self {
+            Self {
+                illuminance: 10000.0,
+                color: [1.0, 1.0, 1.0, 1.0],
+                position: [4.0, 8.0, 4.0],
+                look_at: [0.0, 0.0, 0.0],
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+    struct AmbientLightData {
+        color: [f32; 4],
+        brightness: f32,
+    }
+
+    impl Default for AmbientLightData {
+        fn default() -> Self {
+            Self {
+                color: [1.0, 1.0, 1.0, 1.0],
+                brightness: 400.0,
+            }
+        }
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -440,6 +489,35 @@ fn load_scene_from_yaml(
             }
         }
     }
+
+    // Apply lighting settings from the scene
+    commands.spawn((
+        GameEntity,
+        DirectionalLight {
+            illuminance: scene_data.global.lighting.directional.illuminance,
+            color: Color::srgba(
+                scene_data.global.lighting.directional.color[0],
+                scene_data.global.lighting.directional.color[1],
+                scene_data.global.lighting.directional.color[2],
+                scene_data.global.lighting.directional.color[3],
+            ),
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::from_translation(Vec3::from_array(scene_data.global.lighting.directional.position))
+            .looking_at(Vec3::from_array(scene_data.global.lighting.directional.look_at), Vec3::Y),
+    ));
+
+    commands.insert_resource(AmbientLight {
+        color: Color::srgba(
+            scene_data.global.lighting.ambient.color[0],
+            scene_data.global.lighting.ambient.color[1],
+            scene_data.global.lighting.ambient.color[2],
+            scene_data.global.lighting.ambient.color[3],
+        ),
+        brightness: scene_data.global.lighting.ambient.brightness,
+        ..default()
+    });
 
     Ok(())
 }

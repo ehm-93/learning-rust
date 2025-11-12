@@ -13,6 +13,9 @@ use crate::editor::objects::primitives::PrimitiveType;
 pub struct SceneData {
     /// Scene metadata
     pub metadata: SceneMetadata,
+    /// Global scene properties (lighting, etc.)
+    #[serde(default)]
+    pub global: GlobalData,
     /// List of entities in the scene
     pub entities: Vec<EntityData>,
 }
@@ -34,6 +37,80 @@ impl Default for SceneMetadata {
             version: 1,
             name: None,
             description: None,
+        }
+    }
+}
+
+/// Global scene properties (lighting, fog, etc.)
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct GlobalData {
+    /// Lighting settings
+    pub lighting: LightingData,
+}
+
+impl Default for GlobalData {
+    fn default() -> Self {
+        Self {
+            lighting: LightingData::default(),
+        }
+    }
+}
+
+/// Global lighting data for the scene
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct LightingData {
+    /// Directional light settings
+    pub directional: DirectionalLightData,
+    /// Ambient light settings
+    pub ambient: AmbientLightData,
+}
+
+impl Default for LightingData {
+    fn default() -> Self {
+        Self {
+            directional: DirectionalLightData::default(),
+            ambient: AmbientLightData::default(),
+        }
+    }
+}
+
+/// Directional light data
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct DirectionalLightData {
+    /// Light illuminance in lux
+    pub illuminance: f32,
+    /// Light color (RGBA)
+    pub color: [f32; 4],
+    /// Direction (as transform: position and look-at)
+    pub position: [f32; 3],
+    pub look_at: [f32; 3],
+}
+
+impl Default for DirectionalLightData {
+    fn default() -> Self {
+        Self {
+            illuminance: 10000.0,
+            color: [1.0, 1.0, 1.0, 1.0],
+            position: [4.0, 8.0, 4.0],
+            look_at: [0.0, 0.0, 0.0],
+        }
+    }
+}
+
+/// Ambient light data
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct AmbientLightData {
+    /// Ambient light color (RGBA)
+    pub color: [f32; 4],
+    /// Ambient light brightness
+    pub brightness: f32,
+}
+
+impl Default for AmbientLightData {
+    fn default() -> Self {
+        Self {
+            color: [1.0, 1.0, 1.0, 1.0],
+            brightness: 400.0,
         }
     }
 }
@@ -181,6 +258,8 @@ pub fn save_scene(
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
+    directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
+    ambient_light: Res<AmbientLight>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut entities = Vec::new();
 
@@ -235,8 +314,28 @@ pub fn save_scene(
         });
     }
 
+    // Capture lighting state (always saves the custom lighting values, not the toggle state)
+    let lighting = if let Ok((dir_light, dir_transform)) = directional_light.single() {
+        LightingData {
+            directional: DirectionalLightData {
+                illuminance: dir_light.illuminance,
+                color: dir_light.color.to_srgba().to_f32_array(),
+                position: dir_transform.translation.to_array(),
+                look_at: (dir_transform.translation + dir_transform.forward() * 10.0).to_array(),
+            },
+            ambient: AmbientLightData {
+                color: ambient_light.color.to_srgba().to_f32_array(),
+                brightness: ambient_light.brightness,
+            },
+        }
+    } else {
+        // Use defaults if no directional light exists
+        LightingData::default()
+    };
+
     let scene_data = SceneData {
         metadata: SceneMetadata::default(),
+        global: GlobalData { lighting },
         entities,
     };
 
@@ -256,6 +355,36 @@ pub fn load_scene(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let yaml = fs::read_to_string(path)?;
     let scene_data: SceneData = serde_yaml::from_str(&yaml)?;
+
+    // Apply lighting settings
+    // Spawn or update directional light
+    commands.spawn((
+        DirectionalLight {
+            illuminance: scene_data.global.lighting.directional.illuminance,
+            color: Color::srgba(
+                scene_data.global.lighting.directional.color[0],
+                scene_data.global.lighting.directional.color[1],
+                scene_data.global.lighting.directional.color[2],
+                scene_data.global.lighting.directional.color[3],
+            ),
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::from_translation(Vec3::from_array(scene_data.global.lighting.directional.position))
+            .looking_at(Vec3::from_array(scene_data.global.lighting.directional.look_at), Vec3::Y),
+    ));
+
+    // Update ambient light resource
+    commands.insert_resource(AmbientLight {
+        color: Color::srgba(
+            scene_data.global.lighting.ambient.color[0],
+            scene_data.global.lighting.ambient.color[1],
+            scene_data.global.lighting.ambient.color[2],
+            scene_data.global.lighting.ambient.color[3],
+        ),
+        brightness: scene_data.global.lighting.ambient.brightness,
+        ..default()
+    });
 
     for entity_data in scene_data.entities {
         let mut entity_commands = commands.spawn(EditorEntity);

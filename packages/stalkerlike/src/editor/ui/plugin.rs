@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 // Note: asset_browser_ui is now integrated into hierarchy_ui
-use super::confirmation_dialog::{ConfirmationDialog, ErrorDialog, confirmation_dialog_ui, error_dialog_ui};
+use super::confirmation_dialog::{
+    ConfirmationDialog, ErrorDialog, AutoSaveRecoveryDialog,
+    confirmation_dialog_ui, error_dialog_ui, autosave_recovery_dialog_ui
+};
 use super::hierarchy::{
     hierarchy_ui, HierarchyState, AssetBrowserState,
     handle_directory_picker, poll_directory_picker_tasks
@@ -28,12 +31,14 @@ impl Plugin for UiPlugin {
             .init_resource::<InspectorState>()
             .init_resource::<ConfirmationDialog>()
             .init_resource::<ErrorDialog>()
+            .init_resource::<AutoSaveRecoveryDialog>()
 
             // UI systems (must run in EGUI pass)
             .add_systems(EguiPrimaryContextPass, (
                 menu_bar_ui,
                 confirmation_dialog_ui,
                 error_dialog_ui,
+                autosave_recovery_dialog_ui,
                 status_bar_ui,
                 hierarchy_ui,      // Now includes asset browser
                 inspector_ui,

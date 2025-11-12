@@ -8,7 +8,34 @@ use std::time::{Duration, Instant};
 use crate::editor::persistence::scene::{save_scene, load_scene};
 use crate::editor::persistence::events::{NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
 use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel};
-use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, ErrorDialog, PendingAction};
+use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, ErrorDialog, PendingAction, AutoSaveRecoveryDialog, AutoSaveChoice};
+
+/// Resource for showing autosave notifications
+#[derive(Resource, Default)]
+pub struct AutoSaveNotification {
+    /// Message to display
+    pub message: Option<String>,
+    /// Timer for how long to show the notification
+    pub timer: Timer,
+}
+
+impl AutoSaveNotification {
+    /// Show a notification for 3 seconds
+    pub fn show(&mut self, message: String) {
+        self.message = Some(message);
+        self.timer = Timer::new(Duration::from_secs(3), TimerMode::Once);
+    }
+
+    /// Update the timer and clear message when expired
+    pub fn update(&mut self, delta: Duration) {
+        if self.message.is_some() {
+            self.timer.tick(delta);
+            if self.timer.finished() {
+                self.message = None;
+            }
+        }
+    }
+}
 
 /// Resource tracking the current scene file
 #[derive(Resource)]
@@ -132,8 +159,20 @@ pub fn save_scene_system(
             match save_scene(path.clone(), editor_entities, meshes, materials) {
                 Ok(()) => {
                     info!("Scene saved to {}", path.display());
-                    current_file.set_path(path);
+                    current_file.set_path(path.clone());
                     current_file.mark_clean();
+
+                    // Delete the autosave file after successful save
+                    let autosave_path = path.with_file_name(
+                        format!("{}.autosave", path.file_name().unwrap().to_string_lossy())
+                    );
+                    if autosave_path.exists() {
+                        if let Err(e) = std::fs::remove_file(&autosave_path) {
+                            warn!("Failed to delete autosave file after save: {}", e);
+                        } else {
+                            info!("Deleted autosave file after successful save");
+                        }
+                    }
                 }
                 Err(e) => {
                     error!("Failed to save scene: {}", e);
@@ -296,18 +335,85 @@ pub fn poll_file_open_tasks(
     mut commands: Commands,
     mut current_file: ResMut<CurrentFile>,
     mut error_dialog: ResMut<ErrorDialog>,
+    mut autosave_dialog: ResMut<AutoSaveRecoveryDialog>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
     mut tasks: Query<(Entity, &mut FileOpenTask)>,
     editor_entities: Query<Entity, With<EditorEntity>>,
 ) {
+    // First, check if we have a pending autosave dialog with a user choice
+    if autosave_dialog.show && autosave_dialog.user_choice.is_some() {
+        let choice = autosave_dialog.user_choice.unwrap();
+        let original_path = autosave_dialog.original_path.clone().unwrap();
+        let autosave_path = autosave_dialog.autosave_path.clone().unwrap();
+
+        let load_path = match choice {
+            AutoSaveChoice::RecoverAutosave => {
+                info!("User chose to recover from autosave");
+                autosave_path.clone()
+            }
+            AutoSaveChoice::LoadOriginal => {
+                info!("User chose to load original file");
+                original_path.clone()
+            }
+        };
+
+        // Clear the dialog before loading
+        autosave_dialog.close();
+
+        // Clear existing scene entities
+        for entity in editor_entities.iter() {
+            commands.entity(entity).despawn();
+        }
+
+        match load_scene(load_path.clone(), &mut commands, &mut meshes, &mut materials, &asset_server) {
+            Ok(()) => {
+                info!("Scene loaded from {}", load_path.display());
+                // Always set the current file to the original path, not the autosave
+                current_file.set_path(original_path);
+                current_file.mark_clean();
+
+                // If we loaded from autosave, delete it now
+                if choice == AutoSaveChoice::RecoverAutosave {
+                    if let Err(e) = std::fs::remove_file(&autosave_path) {
+                        warn!("Failed to delete autosave file after recovery: {}", e);
+                    } else {
+                        info!("Deleted autosave file after successful recovery");
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Failed to load scene: {}", e);
+                error_dialog.show_error(
+                    "Load Failed",
+                    format!("Failed to load scene from {}:\n{}", load_path.display(), e)
+                );
+            }
+        }
+        return; // Don't process new tasks this frame
+    }
+
+    // Process new file open tasks
     for (task_entity, mut task) in tasks.iter_mut() {
         if let Some(result) = block_on(futures_lite::future::poll_once(&mut task.0)) {
             // Task is complete, despawn it
             commands.entity(task_entity).despawn();
 
             if let Some(path) = result {
+                // Check if an autosave file exists
+                let autosave_path = path.with_file_name(
+                    format!("{}.autosave", path.file_name().unwrap().to_string_lossy())
+                );
+
+                if autosave_path.exists() {
+                    // Show the autosave recovery dialog and wait for user input
+                    info!("Autosave found at {}, showing recovery dialog", autosave_path.display());
+                    autosave_dialog.request(path, autosave_path);
+                    continue;
+                }
+
+                // No autosave - proceed with loading immediately
                 // Clear existing scene entities
                 for entity in editor_entities.iter() {
                     commands.entity(entity).despawn();
@@ -398,8 +504,20 @@ pub fn poll_save_as_tasks(
                 match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials)) {
                     Ok(()) => {
                         info!("Scene saved as {}", path.display());
-                        current_file.set_path(path);
+                        current_file.set_path(path.clone());
                         current_file.mark_clean();
+
+                        // Delete the autosave file after successful save
+                        let autosave_path = path.with_file_name(
+                            format!("{}.autosave", path.file_name().unwrap().to_string_lossy())
+                        );
+                        if autosave_path.exists() {
+                            if let Err(e) = std::fs::remove_file(&autosave_path) {
+                                warn!("Failed to delete autosave file after save: {}", e);
+                            } else {
+                                info!("Deleted autosave file after successful save");
+                            }
+                        }
                     }
                     Err(e) => {
                         error!("Failed to save scene: {}", e);
@@ -502,7 +620,8 @@ impl AutoSaveTimer {
 pub fn autosave_system(
     time: Res<Time>,
     mut timer: ResMut<AutoSaveTimer>,
-    mut current_file: ResMut<CurrentFile>,
+    current_file: Res<CurrentFile>,
+    mut notification: ResMut<AutoSaveNotification>,
     editor_entities: Query<(
         Entity,
         &Transform,
@@ -533,21 +652,34 @@ pub fn autosave_system(
             return;
         };
 
+        // Create autosave filename by appending .autosave to the original filename
+        let autosave_path = if let Some(filename) = path.file_name() {
+            let autosave_filename = format!("{}.autosave", filename.to_string_lossy());
+            path.with_file_name(autosave_filename)
+        } else {
+            // Fallback: use the parent directory with .autosave extension
+            path.with_extension("autosave")
+        };
+
         // Ensure the directory exists
-        if let Some(parent) = path.parent() {
+        if let Some(parent) = autosave_path.parent() {
             if let Err(e) = std::fs::create_dir_all(parent) {
                 error!("Autosave failed to create directory {}: {}", parent.display(), e);
+                notification.show(format!("Autosave failed: {}", e));
                 return;
             }
         }
 
-        match save_scene(path.clone(), editor_entities, meshes, materials) {
+        match save_scene(autosave_path.clone(), editor_entities, meshes, materials) {
             Ok(()) => {
-                info!("Autosaved scene to {}", path.display());
-                current_file.mark_clean();
+                info!("Autosaved scene to {}", autosave_path.display());
+                notification.show(format!("Autosaved to {}", autosave_path.file_name().unwrap_or_default().to_string_lossy()));
+                // Note: We don't mark the file as clean since autosave is a backup,
+                // not a real save. The user still needs to save manually.
             }
             Err(e) => {
                 error!("Autosave failed: {}", e);
+                notification.show(format!("Autosave failed: {}", e));
             }
         }
     }

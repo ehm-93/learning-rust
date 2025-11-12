@@ -14,15 +14,28 @@ pub fn menu_bar_ui(
     mut open_file_events: EventWriter<OpenFileEvent>,
     mut save_events: EventWriter<SaveEvent>,
     mut save_as_events: EventWriter<SaveAsEvent>,
+    keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
 
+    // Handle keyboard shortcuts
+    let ctrl_held = keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
+
+    if ctrl_held && keyboard.just_pressed(KeyCode::KeyN) {
+        // Ctrl+N: New file
+        if current_file.is_dirty() {
+            dialog.request(PendingAction::NewFile);
+        } else {
+            new_file_events.write(NewFileEvent);
+        }
+    }
+
     egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
-                if ui.button("New File").clicked() {
+                if ui.button("New File (Ctrl+N)").clicked() {
                     if current_file.is_dirty() {
                         dialog.request(PendingAction::NewFile);
                     } else {

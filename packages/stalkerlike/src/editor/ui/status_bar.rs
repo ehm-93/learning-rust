@@ -3,24 +3,35 @@ use bevy_egui::{egui, EguiContexts};
 
 use crate::editor::viewport::grid::GridConfig;
 use crate::editor::objects::gizmo::GizmoState;
-use crate::editor::persistence::{AutoSaveTimer, CurrentFile};
+use crate::editor::persistence::{AutoSaveTimer, AutoSaveNotification, CurrentFile};
 
 /// Render the status bar at the bottom of the screen
 pub fn status_bar_ui(
     mut contexts: EguiContexts,
+    time: Res<Time>,
     grid_config: Res<GridConfig>,
     gizmo_state: Res<GizmoState>,
     current_file: Res<CurrentFile>,
     autosave_timer: Res<AutoSaveTimer>,
+    mut notification: ResMut<AutoSaveNotification>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
 
+    // Update notification timer
+    notification.update(time.delta());
+
     egui::TopBottomPanel::bottom("status_bar")
         .default_height(25.0)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
+                // Autosave notification (if active)
+                if let Some(ref message) = notification.message {
+                    ui.colored_label(egui::Color32::LIGHT_GREEN, message);
+                    ui.separator();
+                }
+
                 // Transform mode indicator
                 let mode_text = format!("Mode: {:?}", gizmo_state.mode);
                 ui.colored_label(egui::Color32::LIGHT_BLUE, mode_text);

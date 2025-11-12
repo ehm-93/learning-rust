@@ -26,3 +26,4 @@ assets/temp/
 *.log
 *.db
 *.blend1
+*.autosave

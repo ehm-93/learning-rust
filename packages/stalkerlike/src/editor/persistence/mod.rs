@@ -29,4 +29,4 @@ pub mod systems;
 // Re-export plugin and commonly used types
 pub use events::{NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
 pub use plugin::PersistencePlugin;
-pub use systems::{AutoSaveInterval, AutoSaveTimer, CurrentFile};
+pub use systems::{AutoSaveInterval, AutoSaveTimer, AutoSaveNotification, CurrentFile};

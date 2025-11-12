@@ -12,6 +12,37 @@ pub enum PendingAction {
     OpenFile,
 }
 
+/// Resource to handle autosave recovery dialog
+#[derive(Resource, Default)]
+pub struct AutoSaveRecoveryDialog {
+    pub show: bool,
+    pub original_path: Option<std::path::PathBuf>,
+    pub autosave_path: Option<std::path::PathBuf>,
+    pub user_choice: Option<AutoSaveChoice>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum AutoSaveChoice {
+    RecoverAutosave,
+    LoadOriginal,
+}
+
+impl AutoSaveRecoveryDialog {
+    pub fn request(&mut self, original: std::path::PathBuf, autosave: std::path::PathBuf) {
+        self.show = true;
+        self.original_path = Some(original);
+        self.autosave_path = Some(autosave);
+        self.user_choice = None;
+    }
+
+    pub fn close(&mut self) {
+        self.show = false;
+        self.original_path = None;
+        self.autosave_path = None;
+        self.user_choice = None;
+    }
+}
+
 /// Resource to track if we need to show a confirmation dialog
 #[derive(Resource, Default)]
 pub struct ConfirmationDialog {
@@ -160,4 +191,43 @@ pub fn error_dialog_ui(
     if should_close {
         dialog.close();
     }
+}
+
+/// System to render the autosave recovery dialog
+pub fn autosave_recovery_dialog_ui(
+    mut contexts: EguiContexts,
+    mut dialog: ResMut<AutoSaveRecoveryDialog>,
+) {
+    if !dialog.show {
+        return;
+    }
+
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+
+    egui::Window::new("Autosave Found")
+        .collapsible(false)
+        .resizable(false)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(ctx, |ui| {
+            ui.label("An autosave file was found for this scene.");
+            ui.add_space(10.0);
+            ui.label("Would you like to recover from the autosave?");
+            ui.add_space(10.0);
+
+            ui.horizontal(|ui| {
+                if ui.button("Recover Autosave").clicked() {
+                    dialog.user_choice = Some(AutoSaveChoice::RecoverAutosave);
+                }
+
+                if ui.button("Load Original").clicked() {
+                    dialog.user_choice = Some(AutoSaveChoice::LoadOriginal);
+                }
+
+                if ui.button("Cancel").clicked() {
+                    dialog.close();
+                }
+            });
+        });
 }

@@ -771,12 +771,12 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [x] Add `SceneDirty` resource (bool flag)
 - [x] Set dirty flag on any scene modification
 - [x] Show asterisk in title bar when dirty
-- [ ] Implement Ctrl+N keybinding for new scene
-- [ ] Prompt to save dirty scene on new/open/exit
+- [x] Implement Ctrl+N keybinding for new scene
+- [x] Prompt to save dirty scene on new/open/exit
 - [x] Implement auto-save timer (5 minutes)
-- [ ] Save to temp file on auto-save (e.g., `.autosave`)
-- [ ] Show notification on auto-save
-- [ ] Recover from auto-save on crash/reload
+- [x] Save to temp file on auto-save (`.autosave` suffix)
+- [x] Show notification on auto-save
+- [x] Recover from auto-save on crash/reload (prompts user on file open)
 - [x] Clear dirty flag after save
 
 #### 19. Bug fixes and edge cases

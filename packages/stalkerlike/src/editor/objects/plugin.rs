@@ -68,7 +68,7 @@ impl Plugin for ObjectsPlugin {
                 handle_group,
                 handle_ungroup,
             ))
-            
+
             // Update systems - duplication
             .add_systems(Update, handle_duplicate);
     }

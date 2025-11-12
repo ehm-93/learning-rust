@@ -39,7 +39,7 @@ pub fn handle_duplicate(
 
     // Check for Ctrl+D
     let ctrl_held = keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
-    
+
     if ctrl_held && keyboard.just_pressed(KeyCode::KeyD) {
         if selection.is_empty() {
             info!("Cannot duplicate: no entities selected");
@@ -52,7 +52,7 @@ pub fn handle_duplicate(
 
         // Map from original entity to cloned entity (for parent-child relationships)
         let mut entity_map: HashMap<Entity, Entity> = HashMap::new();
-        
+
         // Collect selected entities into a vec to avoid borrow conflicts
         let selected_entities: Vec<Entity> = selected_query.iter().collect();
 

@@ -15,6 +15,7 @@ pub mod hierarchy;
 pub mod inspector;
 pub mod menu_bar;
 pub mod plugin;
+pub mod shortcuts;
 pub mod status_bar;
 
 pub use plugin::UiPlugin;

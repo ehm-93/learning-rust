@@ -289,8 +289,8 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 
 ## Success Criteria
 
-### Progress Summary (Week 3)
-**Completed**: 12/9 core systems ✅ (exceeded original scope!)
+### Progress Summary - Iteration 1 COMPLETE! 🎉
+**Completed**: 13/9 core systems ✅ (exceeded original scope!)
 - ✅ Camera controller with fly-around controls
 - ✅ Primitive spawning with placement system
 - ✅ Grid display with snapping and status bar
@@ -303,9 +303,11 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - ✅ Multi-select (Ctrl+click) - already working!
 - ✅ Hierarchy panel (tree view with inline editing, visibility/lock toggles)
 - ✅ Duplicate/delete operations (Ctrl+D / Del with proper parent-child handling)
+- ✅ Autosave system with recovery (5-minute intervals, .autosave files, recovery prompt)
+- ✅ Keyboard shortcuts reference panel (F1 to open)
 - ❌ Play mode entry/exit (deferred pending game mode integration)
 
-**Status**: Week 3 complete with full object lifecycle management! Duplicate/delete now available alongside hierarchy navigation and scene organization.
+**Status**: Week 4 complete! Full editor MVP with autosave, keyboard shortcuts, and robust object lifecycle management.
 
 ### Core Functionality
 - [x] Can launch editor with `--editor` flag
@@ -790,13 +792,12 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [x] Fix any reported crashes or data loss
 
 #### 20. Keyboard shortcut refinements
-- [ ] Add shortcut reference panel (accessible via F1 or ?)
-- [ ] Document all keybindings in UI
-- [ ] Ensure no conflicting keybindings
-- [ ] Add customizable keybinding config (optional)
-- [ ] Test shortcuts on different keyboard layouts
-- [ ] Add visual feedback when shortcut is pressed
-- [ ] Consider adding toolbar buttons for key actions
+- [x] Add shortcut reference panel (accessible via F1 or Help menu)
+- [x] Document all keybindings in UI
+- [x] Ensure no conflicting keybindings
+- [ ] Add customizable keybinding config (deferred)
+- [ ] Add visual feedback when shortcut is pressed (deferred)
+- [ ] Consider adding toolbar buttons for key actions (deferred)
 
 ---
 

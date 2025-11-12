@@ -3,6 +3,7 @@ use bevy_egui::{egui, EguiContexts};
 
 use crate::editor::persistence::{AutoSaveInterval, AutoSaveTimer, CurrentFile, NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
 use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, PendingAction};
+use crate::editor::ui::shortcuts::ShortcutsPanel;
 
 /// Render the top menu bar
 pub fn menu_bar_ui(
@@ -10,6 +11,7 @@ pub fn menu_bar_ui(
     current_file: Res<CurrentFile>,
     mut autosave_timer: ResMut<AutoSaveTimer>,
     mut dialog: ResMut<ConfirmationDialog>,
+    mut shortcuts_panel: ResMut<ShortcutsPanel>,
     mut new_file_events: EventWriter<NewFileEvent>,
     mut open_file_events: EventWriter<OpenFileEvent>,
     mut save_events: EventWriter<SaveEvent>,
@@ -85,6 +87,13 @@ pub fn menu_bar_ui(
                         }
                     }
                 });
+            });
+
+            ui.menu_button("Help", |ui| {
+                if ui.button("Keyboard Shortcuts (F1)").clicked() {
+                    shortcuts_panel.toggle();
+                    ui.close();
+                }
             });
         });
     });

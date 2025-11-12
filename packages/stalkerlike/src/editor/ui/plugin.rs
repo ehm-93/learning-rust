@@ -14,6 +14,7 @@ use super::hierarchy::{
 };
 use super::inspector::{inspector_ui, InspectorState};
 use super::menu_bar::menu_bar_ui;
+use super::shortcuts::{shortcuts_panel_ui, handle_shortcuts_key, ShortcutsPanel};
 use super::status_bar::status_bar_ui;
 
 /// Plugin for all editor UI panels (menu bar, hierarchy+assets, inspector, etc.)
@@ -32,6 +33,7 @@ impl Plugin for UiPlugin {
             .init_resource::<ConfirmationDialog>()
             .init_resource::<ErrorDialog>()
             .init_resource::<AutoSaveRecoveryDialog>()
+            .init_resource::<ShortcutsPanel>()
 
             // UI systems (must run in EGUI pass)
             .add_systems(EguiPrimaryContextPass, (
@@ -39,6 +41,7 @@ impl Plugin for UiPlugin {
                 confirmation_dialog_ui,
                 error_dialog_ui,
                 autosave_recovery_dialog_ui,
+                shortcuts_panel_ui,
                 status_bar_ui,
                 hierarchy_ui,      // Now includes asset browser
                 inspector_ui,
@@ -48,6 +51,7 @@ impl Plugin for UiPlugin {
             .add_systems(Update, (
                 handle_directory_picker,
                 poll_directory_picker_tasks,
+                handle_shortcuts_key,
             ));
     }
 }

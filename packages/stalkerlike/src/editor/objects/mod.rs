@@ -7,9 +7,10 @@
 //! - Box selection system (multi-select via drag)
 //! - Transform manipulation (gizmos)
 //! - Grouping/ungrouping (hierarchical organization)
-//! - Future: duplication, deletion
+//! - Duplication/deletion operations
 
 pub mod box_select;
+pub mod duplication;
 pub mod gizmo;
 pub mod grouping;
 pub mod outline;

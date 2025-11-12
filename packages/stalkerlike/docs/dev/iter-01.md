@@ -290,7 +290,7 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 ## Success Criteria
 
 ### Progress Summary (Week 3)
-**Completed**: 11/9 core systems ✅ (exceeded original scope!)
+**Completed**: 12/9 core systems ✅ (exceeded original scope!)
 - ✅ Camera controller with fly-around controls
 - ✅ Primitive spawning with placement system
 - ✅ Grid display with snapping and status bar
@@ -302,9 +302,10 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - ✅ Group/ungroup operations (Ctrl+G / Ctrl+Shift+G)
 - ✅ Multi-select (Ctrl+click) - already working!
 - ✅ Hierarchy panel (tree view with inline editing, visibility/lock toggles)
+- ✅ Duplicate/delete operations (Ctrl+D / Del with proper parent-child handling)
 - ❌ Play mode entry/exit (deferred pending game mode integration)
 
-**Status**: Week 3 complete with hierarchy panel! Full scene management, tree view navigation, and entity organization now available.
+**Status**: Week 3 complete with full object lifecycle management! Duplicate/delete now available alongside hierarchy navigation and scene organization.
 
 ### Core Functionality
 - [x] Can launch editor with `--editor` flag
@@ -325,7 +326,7 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - [x] Can group objects (Ctrl+G) and ungroup (Ctrl+Shift+G)
 - [x] Can multi-select with Ctrl+click (already implemented with SelectionSet!)
 - [ ] Can box-select multiple objects (in progress)
-- [ ] Can duplicate objects with Ctrl+D (offset +1m on X-axis)
+- [x] Can duplicate objects with Ctrl+D (offset +1m on X-axis)
 - [x] Can delete objects with Del key
 
 ### Quality Checks
@@ -335,7 +336,7 @@ See `uncommitted/persistence.md` for the full two-database architecture and `unc
 - [ ] **Play mode works by end of week 1 (tight iteration loops)** - DEFERRED
 - [ ] No crashes when switching between editor and play mode (not yet testable)
 - [x] Camera movement feels smooth and controllable
-- [ ] Duplicate offset (+1m X) is consistent and predictable (not yet implemented)
+- [x] Duplicate offset (+1m X) is consistent and predictable
 - [x] Multi-select only available after grouping is implemented (correctly deferred)
 
 ## Out of Scope (Future Iterations)
@@ -724,15 +725,14 @@ Deferred, will revisit with a better defined game mode. Current solution is a pl
 - [x] Duplicate/delete operations work on selection set
 
 #### 16. Duplicate/delete operations (with defined +1m X-axis offset)
-- [ ] Add Ctrl+D keybinding for duplicate
-- [ ] Clone all components of selected entities
-- [ ] Offset duplicates by +1m on X-axis (or dominant horizontal)
-- [ ] Maintain parent-child relationships in duplicates
-- [ ] Auto-select duplicated objects after creation
+- [x] Add Ctrl+D keybinding for duplicate
+- [x] Clone all components of selected entities
+- [x] Offset duplicates by +1m on X-axis (or dominant horizontal)
+- [x] Maintain parent-child relationships in duplicates
+- [x] Auto-select duplicated objects after creation
 - [x] Add Del keybinding for delete
 - [x] Remove selected entities from scene
 - [x] Clean up orphaned children on parent delete
-- [ ] Show confirmation dialog for delete if preferred
 - [x] Clear selection after delete
 
 #### 17. Hierarchy panel ✅ COMPLETE

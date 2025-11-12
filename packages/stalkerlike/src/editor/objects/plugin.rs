@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use super::box_select::{BoxSelectState, start_box_select, update_box_select, complete_box_select, cancel_box_select, render_box_select};
+use super::duplication::handle_duplicate;
 use super::gizmo::{GizmoState, spawn_gizmo, despawn_gizmo, update_gizmo_position, toggle_transform_mode};
 use super::grouping::{GroupCounter, handle_group, handle_ungroup};
 use super::outline::{spawn_outlines, despawn_outlines, sync_outline_transforms};
@@ -66,6 +67,9 @@ impl Plugin for ObjectsPlugin {
             .add_systems(Update, (
                 handle_group,
                 handle_ungroup,
-            ));
+            ))
+            
+            // Update systems - duplication
+            .add_systems(Update, handle_duplicate);
     }
 }

@@ -1,3 +1,24 @@
+//! Editor camera system with fly controls
+//!
+//! This module provides a free-flying camera controller for navigating the 3D viewport.
+//! The camera uses WASD+QE for movement and mouse look for rotation, similar to
+//! game editors like Unity, Unreal, and Blender.
+//!
+//! # Controls
+//!
+//! - **WASD**: Move forward/left/back/right
+//! - **QE**: Move down/up
+//! - **Mouse**: Look around (when mouse is locked)
+//! - **Left Alt**: Toggle mouse lock (permanent)
+//! - **Middle Mouse Button**: Temporarily enable mouse look while held
+//! - **Shift**: Hold for 4x speed boost
+//!
+//! # Mouse Lock Modes
+//!
+//! - **Unlocked** (default): Cursor visible, can interact with UI
+//! - **Locked**: Cursor hidden/confined, camera responds to mouse movement
+//! - **Temporary**: Middle mouse button provides temporary lock without toggling state
+
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
 

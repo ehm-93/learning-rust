@@ -1,3 +1,24 @@
+//! Grid rendering and snapping system
+//!
+//! This module provides a visual reference grid on the ground plane and utilities
+//! for snapping object positions and rotations to the grid.
+//!
+//! # Features
+//!
+//! - **Infinite grid**: Renders a grid on the XZ plane (Y=0)
+//! - **Distance fade**: Grid lines fade out at distance using custom shader
+//! - **Configurable spacing**: Grid spacing can be adjusted (default 1 unit)
+//! - **Snap toggle**: G key toggles grid snapping on/off
+//! - **Position snapping**: Rounds positions to nearest grid point
+//! - **Rotation snapping**: Snaps rotations to 15° increments
+//!
+//! # Implementation
+//!
+//! Uses a custom `GridMaterial` shader that:
+//! - Draws grid lines in shader (no mesh geometry)
+//! - Fades based on distance from camera
+//! - Supports major/minor grid lines
+
 use bevy::prelude::*;
 
 use crate::editor::core::materials::GridMaterial;
@@ -159,10 +180,4 @@ pub fn snap_to_grid(position: Vec3, spacing: f32) -> Vec3 {
         (position.y / spacing).round() * spacing,
         (position.z / spacing).round() * spacing,
     )
-}
-
-/// Snap a rotation to 15° increments
-pub fn snap_rotation(angle: f32) -> f32 {
-    let increment = 15.0_f32.to_radians();
-    (angle / increment).round() * increment
 }

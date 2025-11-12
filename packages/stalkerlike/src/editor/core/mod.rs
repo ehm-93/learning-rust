@@ -9,4 +9,9 @@ pub mod materials;
 pub mod plugin;
 pub mod types;
 
+// Re-export plugin
 pub use plugin::CorePlugin;
+
+// Re-export commonly used types for other modules
+pub use types::{EditorEntity, PlayerSpawn, GlbModel, RigidBodyType};
+pub use materials::{GridMaterial, GizmoMaterial, OutlineMaterial};

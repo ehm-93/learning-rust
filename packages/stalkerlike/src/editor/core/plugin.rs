@@ -1,5 +1,10 @@
 //! Core plugin providing shared editor fundamentals
 
+//! Core plugin providing shared editor fundamentals
+//!
+//! Registers custom materials and initializes core resources that are
+//! used across multiple editor domains.
+
 use bevy::prelude::*;
 use bevy::pbr::MaterialPlugin;
 

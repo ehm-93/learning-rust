@@ -1,3 +1,24 @@
+//! Object placement system
+//!
+//! This module handles the interactive placement of new objects in the editor viewport.
+//! Users can select a primitive or GLB model from the asset browser, and a semi-transparent
+//! preview follows their cursor. Clicking places the object at that location.
+//!
+//! # Features
+//!
+//! - **Preview entity**: Semi-transparent ghost of object follows cursor
+//! - **Grid snapping**: Automatically aligns placement to grid when enabled
+//! - **Ray-plane intersection**: Uses viewport raycasting to determine placement position
+//! - **Multiple asset types**: Supports both primitive shapes and GLB models
+//!
+//! # Workflow
+//!
+//! 1. User selects asset from asset browser/hierarchy panel
+//! 2. `start_placement()` creates a preview entity
+//! 3. `update_preview_position()` runs each frame to position preview under cursor
+//! 4. `place_object()` creates final entity on click, removes preview
+//! 5. ESC cancels placement mode
+
 use bevy::prelude::*;
 use std::path::PathBuf;
 

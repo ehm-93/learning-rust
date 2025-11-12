@@ -1,3 +1,23 @@
+//! Gizmo system functions
+//!
+//! This module contains all the systems that operate on gizmo entities:
+//! - `toggle_transform_mode`: Handle keyboard input to cycle gizmo modes
+//! - `spawn_gizmo`: Create gizmo visualization when entity selected
+//! - `despawn_gizmo`: Clean up gizmo when entity deselected
+//! - `update_gizmo_position`: Update gizmo transform to follow selection
+//! - `on_gizmo_drag`: Handle drag events to transform selected objects
+//! - `on_gizmo_hover`: Visual feedback when hovering over gizmo handles
+//! - `on_gizmo_hover_end`: Reset visual feedback when hover ends
+//!
+//! # Gizmo Lifecycle
+//!
+//! - `spawn_gizmo()` triggers on OnAdd<Selected> - creates gizmo when entity selected
+//! - `update_gizmo_position()` runs every frame - syncs gizmo to selected object
+//! - `despawn_gizmo()` triggers on OnRemove<Selected> - cleans up when deselected
+//! - Entity-specific observers (on_gizmo_*) handle all interaction events:
+//!   * on_gizmo_drag: Update transform during Drag
+//!   * on_gizmo_hover/on_gizmo_hover_end: Visual feedback on Over/Out
+
 use bevy::prelude::*;
 use bevy::picking::events::{Pointer, Drag, Over, Out};
 
@@ -5,66 +25,7 @@ use crate::editor::core::materials::GizmoMaterial;
 use crate::editor::objects::selection::{SelectionSet, Selected};
 use crate::editor::viewport::grid::GridConfig;
 
-// GIZMO LIFECYCLE:
-// - spawn_gizmo() triggers on OnAdd<Selected> - creates gizmo when entity selected
-// - update_gizmo_position() runs every frame - syncs gizmo to selected object
-// - despawn_gizmo() triggers on OnRemove<Selected> - cleans up when deselected
-// - Entity-specific observers (on_gizmo_*) handle all interaction events:
-//   * on_gizmo_click: Start drag on Click
-//   * on_gizmo_drag: Update transform during Drag
-//   * on_gizmo_drag_end: End drag on DragEnd
-//   * on_gizmo_hover/on_gizmo_hover_end: Visual feedback on Over/Out
-
-/// Transform mode for the gizmo
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TransformMode {
-    #[default]
-    Translate,
-    Rotate,
-    Scale,
-}
-
-/// Transform orientation (coordinate space) for the gizmo
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TransformOrientation {
-    /// Gizmo aligns with world axes (XYZ)
-    #[default]
-    Global,
-    /// Gizmo aligns with object's local axes
-    Local,
-}
-
-/// Resource tracking current transform mode and orientation
-#[derive(Resource)]
-pub struct GizmoState {
-    pub mode: TransformMode,
-    pub orientation: TransformOrientation,
-}
-
-impl Default for GizmoState {
-    fn default() -> Self {
-        Self {
-            mode: TransformMode::Translate,
-            orientation: TransformOrientation::Global,
-        }
-    }
-}
-
-/// Axis identifier for gizmo handles
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
-pub enum GizmoAxis {
-    X,
-    Y,
-    Z,
-}
-
-/// Marker component for gizmo entities
-#[derive(Component)]
-pub struct GizmoHandle;
-
-/// Marker component for the gizmo root entity
-#[derive(Component)]
-pub struct GizmoRoot;
+use super::types::{GizmoState, TransformMode, TransformOrientation, GizmoAxis, GizmoHandle, GizmoRoot};
 
 /// Toggle transform mode with F key (forward) and Shift+F (backward)
 pub fn toggle_transform_mode(
@@ -412,7 +373,7 @@ pub fn update_gizmo_position(
 
 /// Handle drag on gizmo handle (entity observer) - fires continuously while dragging
 /// For multi-select, applies transform to all selected entities
-fn on_gizmo_drag(
+pub fn on_gizmo_drag(
     drag: Trigger<Pointer<Drag>>,
     gizmo_state: Res<GizmoState>,
     handle_query: Query<&GizmoAxis, With<GizmoHandle>>,
@@ -575,7 +536,7 @@ fn on_gizmo_drag(
 }
 
 /// Highlight gizmo handle on hover (entity observer)
-fn on_gizmo_hover(
+pub fn on_gizmo_hover(
     trigger: Trigger<Pointer<Over>>,
     handle_query: Query<&Children, With<GizmoHandle>>,
     material_query: Query<&MeshMaterial3d<GizmoMaterial>>,
@@ -599,7 +560,7 @@ fn on_gizmo_hover(
 }
 
 /// Remove highlight from gizmo handle when hover ends (entity observer)
-fn on_gizmo_hover_end(
+pub fn on_gizmo_hover_end(
     trigger: Trigger<Pointer<Out>>,
     handle_query: Query<&Children, With<GizmoHandle>>,
     material_query: Query<&MeshMaterial3d<GizmoMaterial>>,

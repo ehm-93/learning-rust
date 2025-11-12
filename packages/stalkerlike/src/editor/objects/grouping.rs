@@ -6,6 +6,25 @@
 //! - Automatic group naming with incrementing numbers
 //! - Transform hierarchy management (world ↔ local space conversion)
 
+//! Object grouping and hierarchy system
+//!
+//! This module provides grouping functionality to organize objects hierarchically.
+//! Groups are represented as parent-child relationships in the ECS, allowing
+//! grouped objects to move together and be organized in the hierarchy panel.
+//!
+//! # Features
+//!
+//! - **Group creation**: Ctrl+G groups selected objects under a new parent entity
+//! - **Ungroup**: Ctrl+Shift+G ungroups, reparenting children to world root
+//! - **Transform inheritance**: Grouped objects inherit parent transforms
+//! - **Automatic naming**: Groups are named "Group 1", "Group 2", etc.
+//!
+//! # Implementation
+//!
+//! Groups are standard entities with a `Name` component and children. They appear
+//! in the hierarchy panel like any other entity, but are purely organizational
+//! (no mesh, collider, etc.).
+
 use bevy::prelude::*;
 use crate::editor::objects::selection::SelectionSet;
 use crate::editor::objects::placement::PlacementState;
@@ -52,7 +71,7 @@ pub fn handle_group(
     // Check for Ctrl+G (without Shift)
     let ctrl_held = keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
     let shift_held = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
-    
+
     if ctrl_held && keyboard.just_pressed(KeyCode::KeyG) && !shift_held {
         // Need at least 2 entities to group
         if selection.len() < 2 {
@@ -63,7 +82,7 @@ pub fn handle_group(
         // Calculate the center position of all selected entities (for group origin)
         let mut center = Vec3::ZERO;
         let mut valid_count = 0;
-        
+
         for &entity in &selection.entities {
             if let Ok(global_transform) = entity_query.get(entity) {
                 center += global_transform.translation();
@@ -103,9 +122,9 @@ pub fn handle_group(
                 let world_pos = global_transform.translation();
                 let world_rot = global_transform.to_scale_rotation_translation().1;
                 let world_scale = global_transform.to_scale_rotation_translation().0;
-                
+
                 let local_pos = world_pos - center;
-                
+
                 // Update the entity's transform to be local and set parent
                 commands.entity(entity).insert(ChildOf(group_entity));
                 commands.entity(entity).insert(Transform {
@@ -139,7 +158,7 @@ pub fn handle_ungroup(
     // Check for Ctrl+Shift+G
     let ctrl_held = keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
     let shift_held = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
-    
+
     if ctrl_held && shift_held && keyboard.just_pressed(KeyCode::KeyG) {
         if selection.is_empty() {
             info!("Cannot ungroup: no entities selected");
@@ -180,18 +199,18 @@ pub fn handle_ungroup(
                 // If selected entity is a child of a group, ungroup it individually
                 // This allows ungrouping specific children without selecting the parent
                 commands.entity(entity).remove::<ChildOf>();
-                
+
                 // Get the world transform and apply it
                 if let Ok((global_transform, _)) = child_query.get(entity) {
                     let world_pos = global_transform.translation();
                     let (world_scale, world_rot, _) = global_transform.to_scale_rotation_translation();
-                    
+
                     commands.entity(entity).insert(Transform {
                         translation: world_pos,
                         rotation: world_rot,
                         scale: world_scale,
                     });
-                    
+
                     info!("Promoted single entity {:?} to root (world pos: {:?})", entity, world_pos);
                     ungrouped_count += 1;
                 }

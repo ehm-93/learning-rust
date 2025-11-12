@@ -1,3 +1,12 @@
+//! Core editor types and components
+//!
+//! This module defines fundamental types shared across all editor systems:
+//!
+//! - **EditorEntity**: Marker component for entities managed by the editor
+//! - **PlayerSpawn**: Marker for player spawn points (used by game mode)
+//! - **GlbModel**: Component storing GLB/GLTF model file path
+//! - **RigidBodyType**: Editor representation of physics body types
+
 use bevy::prelude::*;
 use std::path::PathBuf;
 

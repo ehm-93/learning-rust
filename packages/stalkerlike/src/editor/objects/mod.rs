@@ -19,4 +19,12 @@ pub mod plugin;
 pub mod primitives;
 pub mod selection;
 
+// Re-export plugin
 pub use plugin::ObjectsPlugin;
+
+// Re-export commonly used types for other modules
+pub use selection::{SelectionSet, Selected};
+pub use gizmo::GizmoState;
+pub use placement::{PlacementState, PlacementAsset};
+pub use primitives::{AssetCatalog, PrimitiveDefinition, PrimitiveType};
+pub use outline::Outlined;

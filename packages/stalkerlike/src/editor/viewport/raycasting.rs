@@ -1,3 +1,15 @@
+//! Raycasting utilities for viewport interaction
+//!
+//! This module provides raycasting functions used for determining where the cursor
+//! points in 3D space. This is essential for object placement and other viewport
+//! interactions.
+//!
+//! # Primary Use Case
+//!
+//! When placing objects, we need to know where on the ground plane (Y=0) the user
+//! is pointing. This module provides `ray_plane_intersection()` to calculate that
+//! intersection point from screen coordinates.
+
 use bevy::prelude::*;
 
 /// Ray-plane intersection helper

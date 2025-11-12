@@ -1,5 +1,7 @@
 //! Input plugin for input handling and action mapping
 
+//! Input plugin for editor input handling
+
 use bevy::prelude::*;
 
 use super::mouse::EditorMouseMotion;

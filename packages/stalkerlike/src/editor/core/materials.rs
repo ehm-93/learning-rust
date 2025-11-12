@@ -1,3 +1,14 @@
+//! Custom shader materials for editor visualization
+//!
+//! This module defines custom materials used by the editor for various visual effects:
+//!
+//! - **GridMaterial**: Infinite grid with distance-based fade
+//! - **GizmoMaterial**: Colored materials for transform gizmo handles
+//! - **OutlineMaterial**: Material for selection outlines
+//!
+//! These materials use custom shaders to achieve effects not possible with
+//! standard PBR materials.
+
 use bevy::prelude::*;
 use bevy::pbr::{Material, MaterialPipeline, MaterialPipelineKey};
 use bevy::render::render_resource::{

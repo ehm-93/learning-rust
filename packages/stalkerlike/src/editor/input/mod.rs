@@ -9,4 +9,8 @@
 pub mod mouse;
 pub mod plugin;
 
+// Re-export plugin
 pub use plugin::InputPlugin;
+
+// Re-export commonly used types for other modules
+pub use mouse::EditorMouseMotion;

@@ -6,6 +6,24 @@
 //! - Clones all components (Transform, Mesh3d, MeshMaterial3d, Name, etc.)
 //! - Auto-selects duplicated objects after creation
 
+//! Object duplication system
+//!
+//! This module handles duplicating selected objects. It creates exact copies
+//! of selected entities with all their components, slightly offset from the
+//! original position for visibility.
+//!
+//! # Features
+//!
+//! - **Component cloning**: Copies all serializable components (Transform, Mesh, Material, etc.)
+//! - **Automatic offset**: New objects appear slightly offset (+1 unit on X axis)
+//! - **Multi-select support**: Can duplicate multiple objects at once
+//! - **Keyboard shortcut**: Ctrl+D to duplicate selection
+//!
+//! # Limitations
+//!
+//! Currently uses a manual list of components to copy. Future improvement:
+//! use Bevy reflection system for automatic component cloning.
+
 use bevy::prelude::*;
 use crate::editor::objects::selection::{SelectionSet, Selected};
 use crate::editor::objects::placement::PlacementState;

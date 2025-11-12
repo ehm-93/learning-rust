@@ -1,3 +1,22 @@
+//! Object outline system for visual selection feedback
+//!
+//! This module provides visual highlighting for selected objects by rendering
+//! a wireframe outline around them. The outline is implemented as a separate
+//! entity parented to the target object, allowing it to follow transforms.
+//!
+//! # Architecture
+//!
+//! - **Outlined component**: Marker indicating an entity should have an outline
+//! - **Outline entity**: Child entity with wireframe mesh matching parent shape
+//! - **Automatic sync**: Outline transforms update to match parent
+//!
+//! # Lifecycle
+//!
+//! 1. Selection system adds `Outlined` component to selected entities
+//! 2. `spawn_outlines()` observer creates outline mesh child
+//! 3. `sync_outline_transforms()` keeps outline in sync with parent
+//! 4. `despawn_outlines()` removes outline when `Outlined` component removed
+
 use bevy::prelude::*;
 use bevy::render::mesh::VertexAttributeValues;
 

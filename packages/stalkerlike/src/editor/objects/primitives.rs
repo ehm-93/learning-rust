@@ -1,3 +1,23 @@
+//! Primitive object catalog
+//!
+//! This module defines the set of primitive shapes that can be placed in the editor.
+//! Each primitive has a type (cube, sphere, etc.), default size, and color.
+//!
+//! # Primitive Types
+//!
+//! - **Cube**: Box mesh with configurable dimensions
+//! - **Sphere**: UV sphere mesh
+//! - **Cylinder**: Cylinder mesh
+//! - **Plane**: Flat plane (useful for floors, walls)
+//! - **Capsule**: Capsule mesh (good for characters, pillars)
+//! - **Torus**: Donut-shaped mesh
+//! - **Cone**: Cone mesh
+//!
+//! # Asset Catalog
+//!
+//! The `AssetCatalog` resource holds the list of all available primitives.
+//! UI panels use this to display the asset browser and allow selection.
+
 use bevy::prelude::*;
 use bevy::render::mesh::VertexAttributeValues;
 

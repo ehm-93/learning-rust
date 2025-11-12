@@ -1,3 +1,25 @@
+//! Box selection system for multi-select via drag
+//!
+//! This module provides a visual box selection tool (like in Blender, Photoshop, etc.)
+//! that allows users to select multiple objects by clicking and dragging to define
+//! a rectangular selection region.
+//!
+//! # Features
+//!
+//! - **Visual feedback**: Renders a semi-transparent blue box showing selection area
+//! - **Screen-space selection**: Uses 2D screen coordinates for intuitive interaction
+//! - **3D object picking**: Checks which 3D objects fall within the selection box
+//! - **Additive selection**: Hold Shift to add to existing selection
+//! - **Cancel**: Right-click or ESC to cancel box select
+//!
+//! # Workflow
+//!
+//! 1. User clicks and drags (not on an object) to start box select
+//! 2. `start_box_select()` captures start position
+//! 3. `update_box_select()` tracks mouse position, updates visual box
+//! 4. `complete_box_select()` on mouse release - selects all objects in box
+//! 5. `cancel_box_select()` on right-click or ESC - aborts selection
+
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 

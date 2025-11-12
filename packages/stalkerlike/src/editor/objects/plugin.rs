@@ -11,33 +11,45 @@ use super::placement::{PlacementState, update_preview_position, place_object};
 use super::primitives::AssetCatalog;
 use super::selection::{SelectionSet, SelectedEntity, handle_selection, handle_deselection, highlight_selected, remove_outline_from_deselected, delete_selected};
 
-/// Plugin for object lifecycle management (primitives, placement, selection, gizmos, grouping)
+/// Plugin for object lifecycle management
+///
+/// Manages the complete lifecycle of objects in the editor:
+/// - Primitives catalog (what can be placed)
+/// - Placement system (creating new objects)
+/// - Selection system (picking and multi-select)
+/// - Gizmo system (transform manipulation)
+/// - Grouping/ungrouping (hierarchical organization)
+/// - Duplication/deletion operations
+/// - Visual feedback (outlines, highlights)
 pub struct ObjectsPlugin;
 
 impl Plugin for ObjectsPlugin {
     fn build(&self, app: &mut App) {
         app
-            // Resources
+            // ===== Resources =====
             .init_resource::<AssetCatalog>()
             .init_resource::<PlacementState>()
             .init_resource::<SelectionSet>()
-            .init_resource::<SelectedEntity>() // Legacy - kept for backward compatibility during migration
+            .init_resource::<SelectedEntity>() // Legacy - kept for backward compatibility
             .init_resource::<GizmoState>()
             .init_resource::<BoxSelectState>()
             .init_resource::<GroupCounter>()
 
-            // Observers for selection and gizmos
+            // ===== Observers =====
+            // Selection events trigger gizmo spawn/despawn
             .add_observer(handle_selection)
             .add_observer(spawn_gizmo)
             .add_observer(despawn_gizmo)
 
-            // Update systems - placement
+            // ===== Update Systems =====
+
+            // Placement systems - creating new objects
             .add_systems(Update, (
                 update_preview_position,
                 place_object,
             ))
 
-            // Update systems - selection
+            // Selection systems - picking and highlighting
             .add_systems(Update, (
                 handle_deselection,
                 delete_selected,
@@ -48,7 +60,7 @@ impl Plugin for ObjectsPlugin {
                 sync_outline_transforms,
             ))
 
-            // Update systems - box select
+            // Box selection - multi-select via drag
             .add_systems(Update, (
                 start_box_select,
                 update_box_select,
@@ -57,19 +69,19 @@ impl Plugin for ObjectsPlugin {
                 render_box_select,
             ))
 
-            // Update systems - gizmo
+            // Gizmo systems - transform manipulation
             .add_systems(Update, (
                 update_gizmo_position,
                 toggle_transform_mode,
             ))
 
-            // Update systems - grouping
+            // Grouping systems - hierarchical organization
             .add_systems(Update, (
                 handle_group,
                 handle_ungroup,
             ))
 
-            // Update systems - duplication
+            // Duplication system
             .add_systems(Update, handle_duplicate);
     }
 }

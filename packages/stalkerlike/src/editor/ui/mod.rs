@@ -18,5 +18,8 @@ pub mod plugin;
 pub mod shortcuts;
 pub mod status_bar;
 
+// Re-export plugin
 pub use plugin::UiPlugin;
+
+// Re-export commonly used components/types for other modules
 pub use hierarchy::{Locked, Hidden};

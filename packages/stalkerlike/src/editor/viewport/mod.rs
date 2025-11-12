@@ -10,4 +10,10 @@ pub mod grid;
 pub mod plugin;
 pub mod raycasting;
 
+// Re-export plugin
 pub use plugin::ViewportPlugin;
+
+// Re-export commonly used types for other modules
+pub use camera::EditorCamera;
+pub use grid::{GridConfig, snap_to_grid};
+pub use raycasting::ray_plane_intersection;

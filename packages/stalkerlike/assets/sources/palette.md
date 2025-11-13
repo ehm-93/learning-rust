@@ -224,6 +224,168 @@ This palette captures the oppressive, claustrophobic atmosphere of a dying under
 
 ---
 
+## Human Skin Tones
+
+### Healthy Colonists
+**Very Light** (European descent, vitamin D deficient)
+- `#F5E6D8` - Lightest natural (pale, rarely sees sun equivalent)
+- `#EDD9C8` - Light-fair (typical Corporate upper levels)
+- `#E5CCB8` - Fair (standard light tone)
+- `#DCC0A8` - Light-medium (slightly warm)
+
+**Light-Medium** (Mediterranean, East Asian, mixed descent)
+- `#D4B396` - Medium-light (beige, common)
+- `#CCA587` - Medium (warm beige)
+- `#C49977` - Medium-tan (olive undertones)
+- `#B88D6B` - Medium-deep (golden brown)
+
+**Medium-Dark** (South Asian, Latin American descent)
+- `#A8755C` - Deep medium (rich brown)
+- `#9C6B52` - Deep tan (warm brown)
+- `#8C5E47` - Deep brown (strong undertones)
+- `#7A533D` - Dark brown (deep warm)
+
+**Dark** (African descent)
+- `#6B4733` - Deep brown (rich)
+- `#5C3D2B` - Very deep brown
+- `#4D3324` - Dark brown (cool undertones)
+- `#3D291C` - Darkest natural (deep cool)
+
+### Underground Effects (all tones affected by colony life)
+**Pallor Modifiers** (lack of sunlight, poor nutrition)
+- Add grey: Mix base skin with `#A8A8A8` @ 10-15%
+- Reduced vitality: Desaturate by 10-20%
+- Sickly tinge: Add slight green `#B8C4B3` @ 5% for malnourished
+
+**Dust/Grime Overlay** (workers, frontier)
+- `#6B5F54` @ 20-30% - Industrial dust coating
+- `#4A423D` @ 15-25% - Deep mine grime
+- `#7A6B5C` @ 10-20% - Light dirt/sweat
+
+**Heat Exposure** (deep levels, 80°C+)
+- Reddened: Add `#CC6B5C` @ 15-25% to natural tone
+- Flushed: Add `#B85C4D` @ 20-30% (extreme heat)
+- Heat exhaustion: Add `#A84D3D` @ 30% (danger)
+
+### Occupation-Specific Variations
+
+**Corporate Officers** (levels 0-2km, best conditions)
+- Closest to natural healthy tones
+- Slight pallor: Mix with `#E6E6E6` @ 5%
+- Well-fed, maintained
+
+**Union Workers** (levels 4-6km, hard labor)
+- Sweat/dirt overlay: `#6B5F54` @ 20%
+- Reddened from exertion: `#A85C4D` @ 10%
+- Calloused/worn appearance
+
+**Frontier Scavengers** (all levels, poor nutrition)
+- Malnourished grey: `#9C9C9C` @ 15%
+- Sickly green tinge: `#A8B3A3` @ 8%
+- Dehydrated/gaunt
+
+**University Researchers** (levels 0-2km, sedentary)
+- Extreme pallor: `#E6E6E6` @ 12%
+- Lab lighting blue tint: `#C4D4E0` @ 5%
+- Sleep-deprived grey: `#B3B3B3` @ 8%
+
+**Crystalline Faithful** (levels 6-8km, ascetic)
+- Severe malnutrition: `#9C9C9C` @ 20%
+- Dehydration: Desaturate by 25%
+- Heat exposure (deep): `#B85C4D` @ 15%
+
+### Injury & Distress
+**Fresh Injuries**
+- `#CC5C4D` - Fresh wounds (bright red)
+- `#A84D3D` - Bleeding (darker red)
+- `#8C3D2E` - Deep wounds (dark blood)
+
+**Bruising** (by age)
+- `#6B4D5C` - Fresh bruise (purple-red)
+- `#5C4D4A` - Healing bruise (brown-purple)
+- `#7A6B52` - Old bruise (yellow-green)
+- `#4A3D3D` - Ancient bruise (dark brown)
+
+**Burns** (thermal, electrical)
+- `#D9A38C` - First degree (reddened)
+- `#B8856B` - Second degree (blistered)
+- `#8C5E47` - Third degree (charred)
+- `#4D342E` - Severe burns (blackened)
+
+### Disease & Malnutrition
+**Radiation Exposure** (reactor proximity)
+- `#D9CCC4` - Pale/ashen (mild)
+- `#C4B3A8` - Grey-white (moderate)
+- `#A89C8C` - Sickly grey (severe)
+- Add red irritation: `#CC6B5C` @ 10% (radiation burns)
+
+**Starvation** (common in Frontier)
+- Extreme pallor: Mix with `#D4D4D4` @ 20%
+- Yellow tinge: Add `#D9CC8C` @ 10%
+- Sunken/gaunt: Darken crevices by 30%
+
+**Hypothermia** (abandoned zones, 0°C)
+- `#C4D4E6` - Blue-pale (early)
+- `#A8BCD4` - Deep blue tinge (moderate)
+- `#8CA3B8` - Grey-blue (severe)
+- `#6B8599` - Nearly frozen (critical)
+
+**Hyperthermia** (deep zones, 80°C+)
+- `#E6A38C` - Flushed red (early)
+- `#CC8C73` - Deep red (moderate)
+- `#B8735C` - Brick red (severe)
+- `#A85C47` - Heat stroke (critical)
+
+### C-7 Corruption Progression (on all skin tones)
+**Stage 1: Exposure** (0-6 months)
+- Green tinge: Add `#A8C4B3` @ 5-10% to base
+- Subtle discoloration around eyes/hands
+- Still recognizably human
+
+**Stage 2: Early Infection** (6-18 months)
+- Grey-green: Add `#8CA399` @ 15-25%
+- Visible veins take teal color: `#5CCCBD`
+- Skin texture begins to harden
+
+**Stage 3: Transformation** (18-36 months)
+- Base becomes: `#6B9C8C` (grey-green dominant)
+- Crystal formations emerge: `#47D9C4`
+- Patches of hardened skin: `#5A8C7A`
+
+**Stage 4: Advanced** (36+ months)
+- Nearly crystalline: `#7AB8A3`
+- Large crystal protrusions: `#33B8A8`
+- Minimal flesh remains
+
+**Stage 5: Complete** (The Touched)
+- Fully transformed: `#4A6B5C`
+- Stone-like appearance
+- Barely recognizable as human
+
+### Age Variations
+**Children** (rare births, under 18)
+- Smoother, slightly lighter than adult base
+- Less weathering/damage
+- Reduces grime overlay by 50%
+
+**Young Adults** (18-35, majority of workers)
+- Standard base tones
+- Full environmental effects apply
+- Most resilient to conditions
+
+**Middle Age** (35-55, experienced survivors)
+- Add weathering: Increase roughness 20%
+- Age spots: Add `#8C7A6B` patches @ 40% opacity
+- Deeper lines/creases
+
+**Elderly** (55+, very rare, mostly Corporate/University)
+- Age spots: `#9C8C7A` @ 50-70% opacity
+- Thinner skin: Lighter by 10%
+- More translucent: Reduce opacity 5%
+- Deep wrinkles: Shadow with base darkened 40%
+
+---
+
 ## Power & Technology
 
 ### Reactor Status (Corporate's Dying Heart)

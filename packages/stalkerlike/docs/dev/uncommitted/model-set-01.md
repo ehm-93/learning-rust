@@ -505,8 +505,9 @@ After Corporate MVP works:
 - **Frontier Makeshift**: Scavenged materials, personal touches, chaos
 - **Abandoned Zones**: Ice/frost, darkness, emptiness, failure
 - **C-7 Infected**: Crystal growth, impossible geometry, horror
+- **Surface Ruins**: Ross 154 skybox, giant spaceport hangars, maintenance bays
 But for now: **32 models, 2 rooms + liminal hallway, dual lighting modes, Corporate style. Ship it.**
-But for now: **31 models, 2 rooms + liminal hallway, dual lighting modes, Corporate style. Ship it.**
+
 ---
 
 ## Design Notes: Liminal Space Psychology
@@ -521,7 +522,7 @@ But for now: **31 models, 2 rooms + liminal hallway, dual lighting modes, Corpor
 - **Purposeless Duration**: 16m feels longer due to lack of variation
 - **Fluorescent Oppression**: Cool white light washing out detail
 - **Acoustic Void**: Hard surfaces echo footsteps unnaturally
-- **NEW - Dual Lighting**: Toggle creates two distinct psychological states from same geometry
+- **Dual Lighting**: Toggle creates two distinct psychological states from same geometry
 
 ### The Lighting Toggle
 
@@ -549,9 +550,7 @@ But for now: **31 models, 2 rooms + liminal hallway, dual lighting modes, Corpor
 - Makes populated rooms feel like relief (control checkpoint = safety?)
 - Establishes colony's ghost-town nature without text
 - 5 simple models create huge psychological impact through repetition
-- **NEW**: Lighting switch creates replayability - "Did you try it in emergency mode?"
 
-**Cost/Benefit**:
 **Cost/Benefit**:
 - Only ~430 extra polygons for all 6 liminal models (reusing lever for toggle)
 - Instance heavily (4 fluorescent, 4 red emergency, 4 vents, 4 pipes, 2 junction boxes, 2 stripe sections, 1 lever)

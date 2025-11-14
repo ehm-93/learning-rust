@@ -5,7 +5,7 @@ metadata:
 global:
   lighting:
     directional:
-      illuminance: 10000.0
+      illuminance: 1000.0
       color:
       - 1.0
       - 1.0
@@ -16,8 +16,8 @@ global:
       - 8.0
       - 4.0
       look_at:
-      - -0.9999995
-      - 0.92893314
+      - -1.0000005
+      - 0.9289322
       - -0.9999995
     ambient:
       color:
@@ -27,6 +27,131 @@ global:
       - 1.0
       brightness: 40.0
 entities:
+- name: null
+  transform:
+    position:
+    - 3.5
+    - 8.0
+    - 3.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.6
+    - 0.7
+    - 0.8
+    - 1.0
+  - type: RigidBody
+    body_type: Dynamic
+- name: null
+  transform:
+    position:
+    - -2.5
+    - 1.0
+    - 3.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.6
+    - 0.7
+    - 0.8
+    - 1.0
+  - type: RigidBody
+    body_type: Dynamic
+- name: Player Spawn
+  transform:
+    position:
+    - 0.0
+    - 1.0
+    - 6.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.2
+    - 1.0
+    - 0.2
+    - 1.0
+  - type: PlayerSpawn
+- name: null
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - 0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 4.0
+    - 4.0
+    - 4.0
+  components:
+  - type: Mesh
+    primitive_type: Plane
+  - type: Material
+    base_color:
+    - 0.5
+    - 0.6
+    - 0.5
+    - 1.0
+- name: null
+  transform:
+    position:
+    - 0.0
+    - 1.0
+    - 0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 2.0
+    - 2.0
+    - 2.0
+  components:
+  - type: Mesh
+    primitive_type: Cube
+  - type: Material
+    base_color:
+    - 0.7
+    - 0.7
+    - 0.7
+    - 1.0
 - name: pipe_2m_8m_hollow_T
   transform:
     position:
@@ -297,36 +422,12 @@ entities:
   components:
   - type: GlbModel
     path: models\character_m.glb
-- name: null
+- name: corp_tunnel
   transform:
     position:
+    - 7.0
     - 0.0
-    - 1.0
-    - 0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 2.0
-    - 2.0
-    - 2.0
-  components:
-  - type: Mesh
-    primitive_type: Cube
-  - type: Material
-    base_color:
-    - 0.7
-    - 0.7
-    - 0.7
-    - 1.0
-- name: null
-  transform:
-    position:
-    - 3.5
-    - 8.0
-    - 3.0
+    - -22.0
     rotation:
     - 0.0
     - 0.0
@@ -337,47 +438,103 @@ entities:
     - 1.0
     - 1.0
   components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 7.0
+    - 0.0
+    - -30.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
     - 1.0
-  - type: RigidBody
-    body_type: Dynamic
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 7.0
+    - 0.0
+    - -26.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - 5.5
+    - 2.5
+    - -30.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - 5.5
+    - 2.5
+    - -26.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - 5.5
+    - 2.5
+    - -22.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
 - name: null
   transform:
     position:
     - 1.5
     - 4.0
-    - 3.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
-    - 1.0
-  - type: RigidBody
-    body_type: Dynamic
-- name: null
-  transform:
-    position:
-    - -2.5
-    - 1.0
     - 3.0
     rotation:
     - 0.0
@@ -425,52 +582,3 @@ entities:
     - 1.0
   - type: RigidBody
     body_type: Dynamic
-- name: Player Spawn
-  transform:
-    position:
-    - 0.0
-    - 1.0
-    - 6.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.2
-    - 1.0
-    - 0.2
-    - 1.0
-  - type: PlayerSpawn
-- name: null
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - 0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 4.0
-    - 4.0
-    - 4.0
-  components:
-  - type: Mesh
-    primitive_type: Plane
-  - type: Material
-    base_color:
-    - 0.5
-    - 0.6
-    - 0.5
-    - 1.0

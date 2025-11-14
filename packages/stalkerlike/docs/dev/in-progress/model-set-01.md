@@ -313,7 +313,6 @@ Details:
 15. `container_crate.glb`
 
 ### Phase 4 - Scene Dressing (2-3 days)
-### Phase 4 - Scene Dressing (2-3 days)
 15-25. Furniture set (tables, chairs, desk, bench, shelf)
 26-31. Props & liminal fillers (posters, clutter, pipes, lights)
 ### Phase 5 - Polish (1 day)

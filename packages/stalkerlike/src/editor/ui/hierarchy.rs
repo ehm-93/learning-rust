@@ -23,7 +23,7 @@ use crate::editor::objects::placement::{start_placement, start_placement_asset, 
 use crate::editor::objects::primitives::AssetCatalog;
 
 /// Resource to track which entities have their children expanded in the hierarchy
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct HierarchyState {
     /// Set of entity IDs that are expanded (showing children)
     pub expanded: HashSet<Entity>,
@@ -31,6 +31,19 @@ pub struct HierarchyState {
     pub renaming: Option<Entity>,
     /// Text buffer for name editing
     pub name_buffer: String,
+    /// Height of the hierarchy section (resizable)
+    pub hierarchy_height: f32,
+}
+
+impl Default for HierarchyState {
+    fn default() -> Self {
+        Self {
+            expanded: HashSet::default(),
+            renaming: None,
+            name_buffer: String::new(),
+            hierarchy_height: 400.0, // Default height
+        }
+    }
 }
 
 impl HierarchyState {
@@ -260,12 +273,10 @@ pub fn hierarchy_ui(
                 ui.separator();
                 ui.label("Add objects from Assets below");
             } else {
-                // Render each root entity and its children recursively
-                // Calculate available height for hierarchy (leave space for assets)
-                let available_height = ui.available_height() - 200.0; // Reserve 200px for assets
+                // Render each root entity and its children recursively in a resizable scroll area
                 egui::ScrollArea::vertical()
                     .id_salt("hierarchy_scroll")
-                    .max_height(available_height)
+                    .max_height(hierarchy_state.hierarchy_height)
                     .show(ui, |ui| {
                         for entity in root_entities {
                             render_entity_node(
@@ -282,6 +293,38 @@ pub fn hierarchy_ui(
                         }
                     });
             }
+
+            // Resize handle for hierarchy section
+            ui.add_space(4.0);
+            let resize_id = ui.id().with("hierarchy_resize");
+            let response = ui.allocate_response(
+                egui::vec2(ui.available_width(), 8.0),
+                egui::Sense::drag(),
+            );
+
+            if response.dragged() {
+                hierarchy_state.hierarchy_height += response.drag_delta().y;
+                hierarchy_state.hierarchy_height = hierarchy_state.hierarchy_height.clamp(100.0, 800.0);
+            }
+
+            // Visual feedback for resize handle
+            let color = if response.hovered() || response.dragged() {
+                egui::Color32::from_rgb(100, 150, 200)
+            } else {
+                egui::Color32::from_rgb(60, 60, 60)
+            };
+
+            ui.painter().hline(
+                response.rect.x_range(),
+                response.rect.center().y,
+                egui::Stroke::new(2.0, color),
+            );
+
+            if response.hovered() {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+            }
+
+            ui.add_space(4.0);
 
             // === ASSET BROWSER SECTION ===
             ui.add_space(8.0);

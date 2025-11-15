@@ -25,13 +25,13 @@ global:
       - 0.99999994
       - 0.99999994
       - 1.0
-      brightness: 100.0
+      brightness: 40.0
 entities:
 - name: Point Light
   transform:
     position:
     - 0.0
-    - 2.85
+    - 2.75
     - 0.0
     rotation:
     - 0.0
@@ -44,19 +44,19 @@ entities:
     - 1.0
   components:
   - type: PointLight
-    intensity: 1000000.0
+    intensity: 10000.0
     color:
     - 0.8509804
     - 0.9098039
     - 0.9098039
     - 1.0
     shadows_enabled: true
-    range: 100.0
+    range: 20.0
 - name: Point Light
   transform:
     position:
     - 0.0
-    - 2.85
+    - 2.75
     - -8.0
     rotation:
     - 0.0
@@ -69,14 +69,39 @@ entities:
     - 1.0
   components:
   - type: PointLight
-    intensity: 1000000.0
+    intensity: 10000.0
     color:
     - 0.8509804
     - 0.9098039
     - 0.9098039
     - 1.0
     shadows_enabled: true
-    range: 100.0
+    range: 20.0
+- name: Player Spawn
+  transform:
+    position:
+    - 0.03576374
+    - 1.1510487
+    - -3.9562483
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.2
+    - 1.0
+    - 0.2
+    - 1.0
+  - type: PlayerSpawn
 - name: corp_tunnel
   transform:
     position:
@@ -95,12 +120,12 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_tunnel_doorway_half
+- name: corp_tunnel
   transform:
     position:
     - 0.0
     - 0.0
-    - -10.1
+    - -4.0
     rotation:
     - 0.0
     - 0.0
@@ -112,7 +137,7 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+    path: models\corporate\tunnel\corp_tunnel.glb
 - name: corp_pipe_1m
   transform:
     position:
@@ -167,30 +192,12 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\corp_pipe_1m.glb
-- name: corp_door
-  transform:
-    position:
-    - 1.4
-    - 0.0
-    - -10.1
-    rotation:
-    - 0.0
-    - 1.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\door\corp_door.glb
 - name: corp_tunnel_doorway_half
   transform:
     position:
     - 0.0
     - 0.0
-    - 2.1
+    - -10.1
     rotation:
     - 0.0
     - 0.0
@@ -203,24 +210,6 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
-- name: corp_door
-  transform:
-    position:
-    - 1.4
-    - 0.0
-    - 2.1
-    rotation:
-    - 0.0
-    - 1.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\door\corp_door.glb
 - name: corp_tunnel
   transform:
     position:
@@ -239,12 +228,66 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_tunnel
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - 2.1
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - -10.1
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_light_fluor
+  transform:
+    position:
+    - 0.0
+    - 3.0
+    - -8.0
+    rotation:
+    - 1.0
+    - -0.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
+- name: corp_tunnel_doorway_half
   transform:
     position:
     - 0.0
     - 0.0
-    - -4.0
+    - 2.1
     rotation:
     - 0.0
     - 0.0
@@ -256,29 +299,22 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
-- name: Player Spawn
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+- name: corp_light_fluor
   transform:
     position:
-    - 0.03576374
-    - 1.1510487
-    - -3.9562483
+    - 0.0
+    - 3.0
+    - 0.0
     rotation:
-    - 0.0
-    - 0.0
-    - 0.0
     - 1.0
+    - -0.0
+    - 0.0
+    - -4.371139e-8
     scale:
     - 1.0
     - 1.0
     - 1.0
   components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.2
-    - 1.0
-    - 0.2
-    - 1.0
-  - type: PlayerSpawn
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb

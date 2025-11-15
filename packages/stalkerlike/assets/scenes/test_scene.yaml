@@ -77,6 +77,258 @@ entities:
     - 1.0
     shadows_enabled: true
     range: 20.0
+- name: corp_tunnel_doorway_half
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - 2.1
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+- name: corp_light_fluor
+  transform:
+    position:
+    - 0.0
+    - 3.0
+    - 0.0
+    rotation:
+    - 1.0
+    - -0.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -4.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -8.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_tunnel_doorway_half
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - -10.1
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - -8.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - 2.1
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - -10.1
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_light_fluor
+  transform:
+    position:
+    - 0.0
+    - 3.0
+    - -8.0
+    rotation:
+    - 1.0
+    - -0.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - -4.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: button_wall
+  transform:
+    position:
+    - -0.3
+    - 1.0
+    - 1.9239672
+    rotation:
+    - -4.3711385e-8
+    - 1.0
+    - -4.3711385e-8
+    - -4.3711392e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\button_wall.glb
+- name: conduit
+  transform:
+    position:
+    - -0.3
+    - 0.5
+    - 1.98
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\pipes\conduit.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - 0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
 - name: Player Spawn
   transform:
     position:
@@ -102,219 +354,3 @@ entities:
     - 0.2
     - 1.0
   - type: PlayerSpawn
-- name: corp_tunnel
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - 0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_tunnel
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - -4.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_pipe_1m
-  transform:
-    position:
-    - -1.5
-    - 2.5
-    - -0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\corp_pipe_1m.glb
-- name: corp_pipe_1m
-  transform:
-    position:
-    - -1.5
-    - 2.5
-    - -4.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\corp_pipe_1m.glb
-- name: corp_pipe_1m
-  transform:
-    position:
-    - -1.5
-    - 2.5
-    - -8.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\corp_pipe_1m.glb
-- name: corp_tunnel_doorway_half
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - -10.1
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
-- name: corp_tunnel
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - -8.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_door
-  transform:
-    position:
-    - 1.4
-    - 0.0
-    - 2.1
-    rotation:
-    - 0.0
-    - 1.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\door\corp_door.glb
-- name: corp_door
-  transform:
-    position:
-    - 1.4
-    - 0.0
-    - -10.1
-    rotation:
-    - 0.0
-    - 1.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\door\corp_door.glb
-- name: corp_light_fluor
-  transform:
-    position:
-    - 0.0
-    - 3.0
-    - -8.0
-    rotation:
-    - 1.0
-    - -0.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\light\corp_light_fluor.glb
-- name: corp_tunnel_doorway_half
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - 2.1
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
-- name: corp_light_fluor
-  transform:
-    position:
-    - 0.0
-    - 3.0
-    - 0.0
-    rotation:
-    - 1.0
-    - -0.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\light\corp_light_fluor.glb

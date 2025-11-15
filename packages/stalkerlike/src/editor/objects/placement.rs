@@ -22,7 +22,7 @@
 use bevy::prelude::*;
 use std::path::PathBuf;
 
-use crate::editor::core::types::{EditorEntity, PlayerSpawn, GlbModel};
+use crate::editor::core::types::{EditorEntity, PlayerSpawn, GlbModel, EditorLight, LightType, EditorVisualization};
 use crate::editor::viewport::{camera::EditorCamera, grid::{snap_to_grid, GridConfig}, raycasting::ray_plane_intersection};
 use crate::editor::objects::primitives::{PrimitiveDefinition, PrimitiveType};
 
@@ -221,25 +221,82 @@ pub fn place_object(
             if let Ok(preview_transform) = preview_query.single() {
                 match asset {
                     PlacementAsset::Primitive(primitive) => {
-                        // Spawn the actual primitive
-                        let mesh = primitive.primitive_type.create_mesh(primitive.default_size);
-                        let mut entity_commands = commands.spawn((
-                            EditorEntity,
-                            Mesh3d(meshes.add(mesh)),
-                            MeshMaterial3d(materials.add(StandardMaterial {
-                                base_color: primitive.color,
-                                ..default()
-                            })),
-                            *preview_transform,
-                        ));
+                        // Check if this is a light primitive - lights need special handling
+                        let is_light = matches!(primitive.primitive_type, PrimitiveType::PointLight | PrimitiveType::SpotLight);
 
-                        // Add PlayerSpawn component if this is a player spawn marker
-                        if primitive.primitive_type == PrimitiveType::PlayerSpawn {
-                            entity_commands.insert(PlayerSpawn);
-                            entity_commands.insert(Name::new("Player Spawn"));
+                        if is_light {
+                            // For lights, spawn without mesh/material initially
+                            let light_entity = match primitive.primitive_type {
+                                PrimitiveType::PointLight => {
+                                    commands.spawn((
+                                        EditorEntity,
+                                        EditorLight { light_type: LightType::Point },
+                                        PointLight {
+                                            intensity: 1000.0,
+                                            color: Color::srgb(1.0, 1.0, 0.9),
+                                            shadows_enabled: true,
+                                            ..default()
+                                        },
+                                        Name::new("Point Light"),
+                                        *preview_transform,
+                                    )).id()
+                                }
+                                PrimitiveType::SpotLight => {
+                                    commands.spawn((
+                                        EditorEntity,
+                                        EditorLight { light_type: LightType::Spot },
+                                        SpotLight {
+                                            intensity: 1000.0,
+                                            color: Color::srgb(1.0, 1.0, 0.9),
+                                            shadows_enabled: true,
+                                            inner_angle: 0.6,
+                                            outer_angle: 0.8,
+                                            ..default()
+                                        },
+                                        Name::new("Spot Light"),
+                                        *preview_transform,
+                                    )).id()
+                                }
+                                _ => Entity::PLACEHOLDER,
+                            };
+
+                            // Spawn visualization mesh as a separate child entity
+                            let viz_mesh = primitive.primitive_type.create_mesh(primitive.default_size);
+                            let viz_entity = commands.spawn((
+                                EditorVisualization,
+                                Mesh3d(meshes.add(viz_mesh)),
+                                MeshMaterial3d(materials.add(StandardMaterial {
+                                    base_color: primitive.color,
+                                    ..default()
+                                })),
+                                Transform::default(),
+                            )).id();
+
+                            // Make visualization a child of the light
+                            commands.entity(light_entity).add_child(viz_entity);
+
+                            info!("Placed {} at {:?}", primitive.name, preview_transform.translation);
+                        } else {
+                            // Non-light primitives: spawn normally with mesh
+                            let mesh = primitive.primitive_type.create_mesh(primitive.default_size);
+                            let mut entity_commands = commands.spawn((
+                                EditorEntity,
+                                Mesh3d(meshes.add(mesh)),
+                                MeshMaterial3d(materials.add(StandardMaterial {
+                                    base_color: primitive.color,
+                                    ..default()
+                                })),
+                                *preview_transform,
+                            ));
+
+                            // Add PlayerSpawn component if this is a player spawn marker
+                            if primitive.primitive_type == PrimitiveType::PlayerSpawn {
+                                entity_commands.insert(PlayerSpawn);
+                                entity_commands.insert(Name::new("Player Spawn"));
+                            }
+
+                            info!("Placed {} at {:?}", primitive.name, preview_transform.translation);
                         }
-
-                        info!("Placed {} at {:?}", primitive.name, preview_transform.translation);
                     }
                     PlacementAsset::GlbModel { name, path } => {
                         // Spawn the actual GLB model

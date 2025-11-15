@@ -312,6 +312,20 @@ fn load_scene_from_yaml(
         PlayerSpawn,
         RigidBody { body_type: RigidBodyTypeSerde },
         GlbModel { path: String },
+        PointLight {
+            intensity: f32,
+            color: [f32; 4],
+            shadows_enabled: bool,
+            range: f32,
+        },
+        SpotLight {
+            intensity: f32,
+            color: [f32; 4],
+            shadows_enabled: bool,
+            range: f32,
+            inner_angle: f32,
+            outer_angle: f32,
+        },
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
@@ -322,6 +336,8 @@ fn load_scene_from_yaml(
         Cylinder,
         Capsule,
         PlayerSpawn,
+        PointLight,
+        SpotLight,
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
@@ -349,6 +365,17 @@ fn load_scene_from_yaml(
                     height: size.y,
                 }.into()
             }
+            PrimitiveTypeSerde::PointLight => {
+                // Lights don't need meshes in game mode, but provide a sphere if needed
+                Sphere::new(size.x / 2.0).mesh().ico(16).unwrap().into()
+            }
+            PrimitiveTypeSerde::SpotLight => {
+                // Lights don't need meshes in game mode, but provide a cone if needed
+                Cone {
+                    radius: size.x / 2.0,
+                    height: size.y,
+                }.into()
+            }
         }
     }
 
@@ -360,6 +387,8 @@ fn load_scene_from_yaml(
             PrimitiveTypeSerde::Cylinder => Vec3::new(1.0, 2.0, 1.0),
             PrimitiveTypeSerde::Capsule => Vec3::new(0.5, 2.0, 0.5),
             PrimitiveTypeSerde::PlayerSpawn => Vec3::new(0.5, 2.0, 0.5),
+            PrimitiveTypeSerde::PointLight => Vec3::splat(0.3),
+            PrimitiveTypeSerde::SpotLight => Vec3::new(0.3, 0.5, 0.3),
         }
     }
 
@@ -385,6 +414,8 @@ fn load_scene_from_yaml(
         let mut is_player_spawn = false;
         let mut rigid_body_type: Option<RigidBodyTypeSerde> = None;
         let mut glb_model_path: Option<String> = None;
+        let mut point_light_data: Option<(f32, Color, bool, f32)> = None;
+        let mut spot_light_data: Option<(f32, Color, bool, f32, f32, f32)> = None;
 
         for component in entity_data.components {
             match component {
@@ -408,11 +439,51 @@ fn load_scene_from_yaml(
                 ComponentData::GlbModel { path } => {
                     glb_model_path = Some(path);
                 }
+                ComponentData::PointLight { intensity, color, shadows_enabled, range } => {
+                    point_light_data = Some((
+                        intensity,
+                        Color::srgba(color[0], color[1], color[2], color[3]),
+                        shadows_enabled,
+                        range,
+                    ));
+                }
+                ComponentData::SpotLight { intensity, color, shadows_enabled, range, inner_angle, outer_angle } => {
+                    spot_light_data = Some((
+                        intensity,
+                        Color::srgba(color[0], color[1], color[2], color[3]),
+                        shadows_enabled,
+                        range,
+                        inner_angle,
+                        outer_angle,
+                    ));
+                }
             }
         }
 
-        // Handle GLB models first
-        if let Some(glb_path) = glb_model_path {
+        // Handle point lights
+        if let Some((intensity, color, shadows_enabled, range)) = point_light_data {
+            entity_commands.insert(PointLight {
+                intensity,
+                color,
+                shadows_enabled,
+                range,
+                ..default()
+            });
+        }
+        // Handle spot lights
+        else if let Some((intensity, color, shadows_enabled, range, inner_angle, outer_angle)) = spot_light_data {
+            entity_commands.insert(SpotLight {
+                intensity,
+                color,
+                shadows_enabled,
+                range,
+                inner_angle,
+                outer_angle,
+                ..default()
+            });
+        }
+        // Handle GLB models
+        else if let Some(glb_path) = glb_model_path {
             // Spawn GLB entity with physics support
             let scene_handle = asset_server.load(format!("{}#Scene0", glb_path));
             let rb = match rigid_body_type.unwrap_or(RigidBodyTypeSerde::Fixed) {
@@ -485,6 +556,9 @@ fn load_scene_from_yaml(
                 }
                 PrimitiveTypeSerde::PlayerSpawn => {
                     // This shouldn't happen since we check is_player_spawn first
+                }
+                PrimitiveTypeSerde::PointLight | PrimitiveTypeSerde::SpotLight => {
+                    // Lights don't have colliders
                 }
             }
         }

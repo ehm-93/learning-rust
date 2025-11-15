@@ -67,6 +67,18 @@ impl Default for AssetCatalog {
                     default_size: Vec3::new(0.5, 2.0, 0.5), // Arrow: 0.5m wide x 2m tall
                     color: Color::srgb(0.2, 1.0, 0.2), // Bright green for visibility
                 },
+                PrimitiveDefinition {
+                    name: "Point Light".to_string(),
+                    primitive_type: PrimitiveType::PointLight,
+                    default_size: Vec3::splat(0.3), // Small sphere
+                    color: Color::srgb(1.0, 1.0, 0.6), // Warm yellow
+                },
+                PrimitiveDefinition {
+                    name: "Spot Light".to_string(),
+                    primitive_type: PrimitiveType::SpotLight,
+                    default_size: Vec3::new(0.3, 0.5, 0.3), // Cone shape
+                    color: Color::srgb(1.0, 0.9, 0.6), // Warm white
+                },
             ],
         }
     }
@@ -88,6 +100,8 @@ pub enum PrimitiveType {
     Cylinder,
     Capsule,
     PlayerSpawn,
+    PointLight,
+    SpotLight,
 }
 
 impl PrimitiveType {
@@ -100,6 +114,8 @@ impl PrimitiveType {
             PrimitiveType::Cylinder => Vec3::new(1.0, 2.0, 1.0),
             PrimitiveType::Capsule => Vec3::new(0.5, 2.0, 0.5),
             PrimitiveType::PlayerSpawn => Vec3::new(0.5, 2.0, 0.5),
+            PrimitiveType::PointLight => Vec3::splat(0.3),  // Small sphere representation
+            PrimitiveType::SpotLight => Vec3::new(0.3, 0.5, 0.3),  // Cone representation
         }
     }
 
@@ -129,6 +145,17 @@ impl PrimitiveType {
                 // Create a distinctive arrow pointing up (composed of cone + cylinder)
                 // Use a cone for the arrow head and a thin cylinder for the shaft
                 Self::create_arrow_mesh(size)
+            }
+            PrimitiveType::PointLight => {
+                // Small sphere to represent point light
+                Sphere::new(size.x / 2.0).mesh().ico(16).unwrap().into()
+            }
+            PrimitiveType::SpotLight => {
+                // Cone pointing down to represent spotlight
+                Cone {
+                    radius: size.x / 2.0,
+                    height: size.y,
+                }.into()
             }
         };
 

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
 use crate::editor::objects::selection::SelectionSet;
-use crate::editor::core::types::RigidBodyType;
+use crate::editor::core::types::{RigidBodyType, EditorLight};
 
 /// Local UI state for text input buffers
 #[derive(Resource)]
@@ -32,6 +32,18 @@ pub struct InspectorState {
     pub ambient_brightness: String,
     pub ambient_color: [f32; 3],
     pub ambient_color_hex: String,
+
+    // Per-entity light buffers
+    pub point_light_intensity: String,
+    pub point_light_range: String,
+    pub point_light_color: [f32; 3],
+    pub point_light_color_hex: String,
+    pub spot_light_intensity: String,
+    pub spot_light_range: String,
+    pub spot_light_color: [f32; 3],
+    pub spot_light_color_hex: String,
+    pub spot_light_inner_angle: String,
+    pub spot_light_outer_angle: String,
 }
 
 impl Default for InspectorState {
@@ -56,6 +68,16 @@ impl Default for InspectorState {
             ambient_brightness: String::new(),
             ambient_color: [1.0, 1.0, 1.0],
             ambient_color_hex: String::from("ffffff"),
+            point_light_intensity: String::new(),
+            point_light_range: String::new(),
+            point_light_color: [1.0, 1.0, 0.9],
+            point_light_color_hex: String::from("fff4e6"),
+            spot_light_intensity: String::new(),
+            spot_light_range: String::new(),
+            spot_light_color: [1.0, 1.0, 0.9],
+            spot_light_color_hex: String::from("fff4e6"),
+            spot_light_inner_angle: String::new(),
+            spot_light_outer_angle: String::new(),
         }
     }
 }
@@ -73,6 +95,9 @@ pub fn inspector_ui(
     mut directional_light: Query<(&mut DirectionalLight, &mut Transform), Without<crate::editor::core::types::EditorEntity>>,
     mut ambient_light: ResMut<AmbientLight>,
     mut lighting_enabled: ResMut<crate::editor::viewport::LightingEnabled>,
+    editor_light_query: Query<&EditorLight>,
+    mut point_light_query: Query<&mut PointLight>,
+    mut spot_light_query: Query<&mut SpotLight>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -474,6 +499,207 @@ pub fn inspector_ui(
                     }).weak().small());
                 }
             });
+
+            // Light properties (if entity has a light component)
+            if let Ok(editor_light) = editor_light_query.get(entity) {
+                ui.add_space(8.0);
+                ui.separator();
+
+                ui.group(|ui| {
+                    ui.label(format!("Light: {}", editor_light.light_type.display_name()));
+
+                    match editor_light.light_type {
+                        crate::editor::core::types::LightType::Point => {
+                            if let Ok(mut light) = point_light_query.get_mut(entity) {
+                                // Update buffers if entity changed
+                                if inspector_state.last_entity != Some(entity) {
+                                    inspector_state.point_light_intensity = format!("{:.1}", light.intensity);
+                                    inspector_state.point_light_range = format!("{:.1}", light.range);
+                                    let color = light.color.to_srgba();
+                                    inspector_state.point_light_color = [color.red, color.green, color.blue];
+                                    inspector_state.point_light_color_hex = format!(
+                                        "{:02x}{:02x}{:02x}",
+                                        (color.red * 255.0) as u8,
+                                        (color.green * 255.0) as u8,
+                                        (color.blue * 255.0) as u8
+                                    );
+                                }
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Intensity:");
+                                    if edit_float_field_with_steppers(ui, &mut inspector_state.point_light_intensity, 60.0, 100.0) {
+                                        if let Ok(value) = inspector_state.point_light_intensity.parse::<f32>() {
+                                            light.intensity = value.max(0.0);
+                                        }
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Color:");
+                                    if ui.color_edit_button_rgb(&mut inspector_state.point_light_color).changed() {
+                                        light.color = Color::srgb(
+                                            inspector_state.point_light_color[0],
+                                            inspector_state.point_light_color[1],
+                                            inspector_state.point_light_color[2],
+                                        );
+                                        // Update hex representation
+                                        inspector_state.point_light_color_hex = format!(
+                                            "{:02x}{:02x}{:02x}",
+                                            (inspector_state.point_light_color[0] * 255.0) as u8,
+                                            (inspector_state.point_light_color[1] * 255.0) as u8,
+                                            (inspector_state.point_light_color[2] * 255.0) as u8
+                                        );
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Hex:");
+                                    ui.label("#");
+                                    let response = ui.add(egui::TextEdit::singleline(&mut inspector_state.point_light_color_hex).desired_width(60.0));
+                                    if response.lost_focus() || response.changed() {
+                                        // Parse hex color (with or without #)
+                                        let hex = inspector_state.point_light_color_hex.trim_start_matches('#');
+                                        if hex.len() == 6 {
+                                            if let (Ok(r), Ok(g), Ok(b)) = (
+                                                u8::from_str_radix(&hex[0..2], 16),
+                                                u8::from_str_radix(&hex[2..4], 16),
+                                                u8::from_str_radix(&hex[4..6], 16),
+                                            ) {
+                                                inspector_state.point_light_color[0] = r as f32 / 255.0;
+                                                inspector_state.point_light_color[1] = g as f32 / 255.0;
+                                                inspector_state.point_light_color[2] = b as f32 / 255.0;
+                                                light.color = Color::srgb(
+                                                    inspector_state.point_light_color[0],
+                                                    inspector_state.point_light_color[1],
+                                                    inspector_state.point_light_color[2],
+                                                );
+                                            }
+                                        }
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Range:");
+                                    if edit_float_field_with_steppers(ui, &mut inspector_state.point_light_range, 60.0, 1.0) {
+                                        if let Ok(value) = inspector_state.point_light_range.parse::<f32>() {
+                                            light.range = value.max(0.1);
+                                        }
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Shadows:");
+                                    ui.checkbox(&mut light.shadows_enabled, "");
+                                });
+                            }
+                        }
+                        crate::editor::core::types::LightType::Spot => {
+                            if let Ok(mut light) = spot_light_query.get_mut(entity) {
+                                // Update buffers if entity changed
+                                if inspector_state.last_entity != Some(entity) {
+                                    inspector_state.spot_light_intensity = format!("{:.1}", light.intensity);
+                                    inspector_state.spot_light_range = format!("{:.1}", light.range);
+                                    inspector_state.spot_light_inner_angle = format!("{:.3}", light.inner_angle.to_degrees());
+                                    inspector_state.spot_light_outer_angle = format!("{:.3}", light.outer_angle.to_degrees());
+                                    let color = light.color.to_srgba();
+                                    inspector_state.spot_light_color = [color.red, color.green, color.blue];
+                                    inspector_state.spot_light_color_hex = format!(
+                                        "{:02x}{:02x}{:02x}",
+                                        (color.red * 255.0) as u8,
+                                        (color.green * 255.0) as u8,
+                                        (color.blue * 255.0) as u8
+                                    );
+                                }
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Intensity:");
+                                    if edit_float_field_with_steppers(ui, &mut inspector_state.spot_light_intensity, 60.0, 100.0) {
+                                        if let Ok(value) = inspector_state.spot_light_intensity.parse::<f32>() {
+                                            light.intensity = value.max(0.0);
+                                        }
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Color:");
+                                    if ui.color_edit_button_rgb(&mut inspector_state.spot_light_color).changed() {
+                                        light.color = Color::srgb(
+                                            inspector_state.spot_light_color[0],
+                                            inspector_state.spot_light_color[1],
+                                            inspector_state.spot_light_color[2],
+                                        );
+                                        // Update hex representation
+                                        inspector_state.spot_light_color_hex = format!(
+                                            "{:02x}{:02x}{:02x}",
+                                            (inspector_state.spot_light_color[0] * 255.0) as u8,
+                                            (inspector_state.spot_light_color[1] * 255.0) as u8,
+                                            (inspector_state.spot_light_color[2] * 255.0) as u8
+                                        );
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Hex:");
+                                    ui.label("#");
+                                    let response = ui.add(egui::TextEdit::singleline(&mut inspector_state.spot_light_color_hex).desired_width(60.0));
+                                    if response.lost_focus() || response.changed() {
+                                        // Parse hex color (with or without #)
+                                        let hex = inspector_state.spot_light_color_hex.trim_start_matches('#');
+                                        if hex.len() == 6 {
+                                            if let (Ok(r), Ok(g), Ok(b)) = (
+                                                u8::from_str_radix(&hex[0..2], 16),
+                                                u8::from_str_radix(&hex[2..4], 16),
+                                                u8::from_str_radix(&hex[4..6], 16),
+                                            ) {
+                                                inspector_state.spot_light_color[0] = r as f32 / 255.0;
+                                                inspector_state.spot_light_color[1] = g as f32 / 255.0;
+                                                inspector_state.spot_light_color[2] = b as f32 / 255.0;
+                                                light.color = Color::srgb(
+                                                    inspector_state.spot_light_color[0],
+                                                    inspector_state.spot_light_color[1],
+                                                    inspector_state.spot_light_color[2],
+                                                );
+                                            }
+                                        }
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Range:");
+                                    if edit_float_field_with_steppers(ui, &mut inspector_state.spot_light_range, 60.0, 1.0) {
+                                        if let Ok(value) = inspector_state.spot_light_range.parse::<f32>() {
+                                            light.range = value.max(0.1);
+                                        }
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Inner Angle:");
+                                    if edit_float_field_with_steppers(ui, &mut inspector_state.spot_light_inner_angle, 60.0, 5.0) {
+                                        if let Ok(value) = inspector_state.spot_light_inner_angle.parse::<f32>() {
+                                            light.inner_angle = value.to_radians().max(0.0);
+                                        }
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Outer Angle:");
+                                    if edit_float_field_with_steppers(ui, &mut inspector_state.spot_light_outer_angle, 60.0, 5.0) {
+                                        if let Ok(value) = inspector_state.spot_light_outer_angle.parse::<f32>() {
+                                            light.outer_angle = value.to_radians().max(0.0);
+                                        }
+                                    }
+                                });
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Shadows:");
+                                    ui.checkbox(&mut light.shadows_enabled, "");
+                                });
+                            }
+                        }
+                    }
+                });
+            }
         });
 }
 

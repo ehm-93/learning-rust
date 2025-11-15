@@ -5,34 +5,34 @@ metadata:
 global:
   lighting:
     directional:
-      illuminance: 1000.0
+      illuminance: 0.0
       color:
-      - 1.0
-      - 1.0
-      - 1.0
+      - 0.99999994
+      - 0.99999994
+      - 0.99999994
       - 1.0
       position:
       - 4.0
       - 8.0
       - 4.0
       look_at:
-      - -1.0
-      - 0.9289322
-      - -0.9999995
+      - -0.08248329
+      - -0.16496658
+      - -0.08248329
     ambient:
       color:
+      - 0.99999994
+      - 0.99999994
+      - 0.99999994
       - 1.0
-      - 1.0
-      - 1.0
-      - 1.0
-      brightness: 40.0
+      brightness: 100.0
 entities:
-- name: null
+- name: Point Light
   transform:
     position:
-    - 3.5
-    - 8.0
-    - 3.0
+    - 0.0
+    - 2.85
+    - 0.0
     rotation:
     - 0.0
     - 0.0
@@ -43,22 +43,21 @@ entities:
     - 1.0
     - 1.0
   components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
+  - type: PointLight
+    intensity: 1000000.0
+    color:
+    - 0.8509804
+    - 0.9098039
+    - 0.9098039
     - 1.0
-  - type: RigidBody
-    body_type: Dynamic
-- name: null
+    shadows_enabled: true
+    range: 100.0
+- name: Point Light
   transform:
     position:
-    - -2.5
-    - 1.0
-    - 3.0
+    - 0.0
+    - 2.85
+    - -8.0
     rotation:
     - 0.0
     - 0.0
@@ -69,22 +68,21 @@ entities:
     - 1.0
     - 1.0
   components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
+  - type: PointLight
+    intensity: 1000000.0
+    color:
+    - 0.8509804
+    - 0.9098039
+    - 0.9098039
     - 1.0
-  - type: RigidBody
-    body_type: Dynamic
-- name: null
+    shadows_enabled: true
+    range: 100.0
+- name: corp_tunnel
   transform:
     position:
-    - 1.5
-    - 4.0
-    - 3.0
+    - 0.0
+    - 0.0
+    - 0.0
     rotation:
     - 0.0
     - 0.0
@@ -95,22 +93,14 @@ entities:
     - 1.0
     - 1.0
   components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
-    - 1.0
-  - type: RigidBody
-    body_type: Dynamic
-- name: null
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_tunnel_doorway_half
   transform:
     position:
-    - -0.5
-    - 2.0
-    - 3.0
+    - 0.0
+    - 0.0
+    - -10.1
     rotation:
     - 0.0
     - 0.0
@@ -121,22 +111,158 @@ entities:
     - 1.0
     - 1.0
   components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.6
-    - 0.7
-    - 0.8
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
     - 1.0
-  - type: RigidBody
-    body_type: Dynamic
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -4.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_pipe_1m
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -8.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - -10.1
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_tunnel_doorway_half
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - 2.1
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - 2.1
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - -8.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - -4.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
 - name: Player Spawn
   transform:
     position:
-    - 0.0
-    - 1.0
-    - 6.0
+    - 0.03576374
+    - 1.1510487
+    - -3.9562483
     rotation:
     - 0.0
     - 0.0
@@ -156,447 +282,3 @@ entities:
     - 0.2
     - 1.0
   - type: PlayerSpawn
-- name: null
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - 0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 4.0
-    - 4.0
-    - 4.0
-  components:
-  - type: Mesh
-    primitive_type: Plane
-  - type: Material
-    base_color:
-    - 0.5
-    - 0.6
-    - 0.5
-    - 1.0
-- name: null
-  transform:
-    position:
-    - 0.0
-    - 1.0
-    - 0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 2.0
-    - 2.0
-    - 2.0
-  components:
-  - type: Mesh
-    primitive_type: Cube
-  - type: Material
-    base_color:
-    - 0.7
-    - 0.7
-    - 0.7
-    - 1.0
-- name: pipe_2m_8m_hollow_T
-  transform:
-    position:
-    - -16.0
-    - 1.0
-    - -8.0
-    rotation:
-    - 0.0
-    - 1.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models/pipes/pipe_2m_8m_hollow_T.glb
-- name: pipe_2m_8m_hollow_elbow_90
-  transform:
-    position:
-    - -16.0
-    - 1.0
-    - -16.0
-    rotation:
-    - -0.0
-    - -0.0
-    - -0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models/pipes/pipe_2m_8m_hollow_elbow_90.glb
-- name: pipe_2m_8m_hollow
-  transform:
-    position:
-    - -8.0
-    - 1.0
-    - -16.0
-    rotation:
-    - -0.0
-    - 0.70710677
-    - -0.0
-    - 0.70710677
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models/pipes/pipe_2m_8m_hollow.glb
-- name: pipe_2m_8m_hollow
-  transform:
-    position:
-    - -10.5
-    - 1.0
-    - -8.0
-    rotation:
-    - -0.0
-    - 0.70710677
-    - -0.0
-    - 0.70710677
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models/pipes/pipe_2m_8m_hollow.glb
-- name: character_m
-  transform:
-    position:
-    - -0.9473399
-    - 0.0
-    - -18.711811
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 1.0279479
-    - 0.0
-    - -18.726925
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 2.9768257
-    - 4.7683716e-7
-    - -18.72202
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 4.957361
-    - 0.0
-    - -18.712244
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 6.9208593
-    - 0.0
-    - -18.712387
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 8.859737
-    - 0.0
-    - -18.707504
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 10.830458
-    - 0.0
-    - -18.727516
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 12.8182535
-    - -4.7683716e-7
-    - -18.742634
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 14.788712
-    - 0.0
-    - -18.747755
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 16.73446
-    - 0.0
-    - -18.75779
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: character_m
-  transform:
-    position:
-    - 18.696709
-    - 0.0
-    - -18.733072
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\character_m.glb
-- name: corp_pipe_1m
-  transform:
-    position:
-    - 5.5
-    - 2.5
-    - -22.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\corp_pipe_1m.glb
-- name: corp_tunnel
-  transform:
-    position:
-    - 7.0
-    - 0.0
-    - -30.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_tunnel
-  transform:
-    position:
-    - 7.0
-    - 0.0
-    - -26.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_pipe_1m
-  transform:
-    position:
-    - 5.5
-    - 2.5
-    - -30.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\corp_pipe_1m.glb
-- name: corp_pipe_1m
-  transform:
-    position:
-    - 5.5
-    - 2.5
-    - -26.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\corp_pipe_1m.glb
-- name: corp_tunnel
-  transform:
-    position:
-    - 7.0
-    - 0.0
-    - -22.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_door
-  transform:
-    position:
-    - 9.0
-    - 0.01
-    - -22.164295
-    rotation:
-    - 0.0
-    - 1.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: sources\models\corporate\corp_door.glb

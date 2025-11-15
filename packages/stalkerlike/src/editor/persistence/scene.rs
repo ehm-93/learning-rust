@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel};
+use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel, EditorVisualization};
 use crate::editor::objects::primitives::PrimitiveType;
 
 /// Root scene data structure
@@ -179,6 +179,22 @@ pub enum ComponentData {
     RigidBody { body_type: RigidBodyTypeSerde },
     /// GLB/GLTF model component
     GlbModel { path: String },
+    /// Point light component
+    PointLight {
+        intensity: f32,
+        color: [f32; 4],
+        shadows_enabled: bool,
+        range: f32,
+    },
+    /// Spot light component
+    SpotLight {
+        intensity: f32,
+        color: [f32; 4],
+        shadows_enabled: bool,
+        range: f32,
+        inner_angle: f32,
+        outer_angle: f32,
+    },
 }
 
 /// Serializable primitive type
@@ -190,6 +206,8 @@ pub enum PrimitiveTypeSerde {
     Cylinder,
     Capsule,
     PlayerSpawn,
+    PointLight,
+    SpotLight,
 }
 
 /// Serializable rigid body type
@@ -226,6 +244,8 @@ impl From<PrimitiveType> for PrimitiveTypeSerde {
             PrimitiveType::Cylinder => PrimitiveTypeSerde::Cylinder,
             PrimitiveType::Capsule => PrimitiveTypeSerde::Capsule,
             PrimitiveType::PlayerSpawn => PrimitiveTypeSerde::PlayerSpawn,
+            PrimitiveType::PointLight => PrimitiveTypeSerde::PointLight,
+            PrimitiveType::SpotLight => PrimitiveTypeSerde::SpotLight,
         }
     }
 }
@@ -239,6 +259,8 @@ impl From<PrimitiveTypeSerde> for PrimitiveType {
             PrimitiveTypeSerde::Cylinder => PrimitiveType::Cylinder,
             PrimitiveTypeSerde::Capsule => PrimitiveType::Capsule,
             PrimitiveTypeSerde::PlayerSpawn => PrimitiveType::PlayerSpawn,
+            PrimitiveTypeSerde::PointLight => PrimitiveType::PointLight,
+            PrimitiveTypeSerde::SpotLight => PrimitiveType::SpotLight,
         }
     }
 }
@@ -255,6 +277,8 @@ pub fn save_scene(
         Option<&PlayerSpawn>,
         Option<&RigidBodyType>,
         Option<&GlbModel>,
+        Option<&PointLight>,
+        Option<&SpotLight>,
     ), With<EditorEntity>>,
     meshes: Res<Assets<Mesh>>,
     materials: Res<Assets<StandardMaterial>>,
@@ -263,28 +287,35 @@ pub fn save_scene(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut entities = Vec::new();
 
-    for (_entity, transform, name, mesh_handle, material_handle, player_spawn, rigid_body, glb_model) in editor_entities.iter() {
+    for (_entity, transform, name, mesh_handle, material_handle, player_spawn, rigid_body, glb_model, point_light, spot_light) in editor_entities.iter() {
         let mut components = Vec::new();
 
-        // Serialize mesh if present
-        if let Some(mesh3d) = mesh_handle {
-            if let Some(mesh) = meshes.get(&mesh3d.0) {
-                // Try to identify the primitive type from the mesh
-                // For MVP, we'll use a simple heuristic based on vertex count
-                // In the future, we should store this metadata on the entity
-                let primitive_type = identify_primitive_type(mesh);
-                components.push(ComponentData::Mesh {
-                    primitive_type: primitive_type.into(),
-                });
+        // Check if this is a light entity - don't save mesh/material for lights
+        let is_light = point_light.is_some() || spot_light.is_some();
+
+        // Serialize mesh if present (skip for lights)
+        if !is_light {
+            if let Some(mesh3d) = mesh_handle {
+                if let Some(mesh) = meshes.get(&mesh3d.0) {
+                    // Try to identify the primitive type from the mesh
+                    // For MVP, we'll use a simple heuristic based on vertex count
+                    // In the future, we should store this metadata on the entity
+                    let primitive_type = identify_primitive_type(mesh);
+                    components.push(ComponentData::Mesh {
+                        primitive_type: primitive_type.into(),
+                    });
+                }
             }
         }
 
-        // Serialize material if present
-        if let Some(material3d) = material_handle {
-            if let Some(material) = materials.get(&material3d.0) {
-                components.push(ComponentData::Material {
-                    base_color: material.base_color.to_srgba().to_f32_array(),
-                });
+        // Serialize material if present (skip for lights)
+        if !is_light {
+            if let Some(material3d) = material_handle {
+                if let Some(material) = materials.get(&material3d.0) {
+                    components.push(ComponentData::Material {
+                        base_color: material.base_color.to_srgba().to_f32_array(),
+                    });
+                }
             }
         }
 
@@ -304,6 +335,28 @@ pub fn save_scene(
         if let Some(glb) = glb_model {
             components.push(ComponentData::GlbModel {
                 path: glb.path.to_string_lossy().to_string(),
+            });
+        }
+
+        // Serialize point light if present
+        if let Some(light) = point_light {
+            components.push(ComponentData::PointLight {
+                intensity: light.intensity,
+                color: light.color.to_srgba().to_f32_array(),
+                shadows_enabled: light.shadows_enabled,
+                range: light.range,
+            });
+        }
+
+        // Serialize spot light if present
+        if let Some(light) = spot_light {
+            components.push(ComponentData::SpotLight {
+                intensity: light.intensity,
+                color: light.color.to_srgba().to_f32_array(),
+                shadows_enabled: light.shadows_enabled,
+                range: light.range,
+                inner_angle: light.inner_angle,
+                outer_angle: light.outer_angle,
             });
         }
 
@@ -387,14 +440,14 @@ pub fn load_scene(
     });
 
     for entity_data in scene_data.entities {
-        let mut entity_commands = commands.spawn(EditorEntity);
+        let entity_id = commands.spawn(EditorEntity).id();
 
         // Add transform
-        entity_commands.insert(Transform::from(entity_data.transform));
+        commands.entity(entity_id).insert(Transform::from(entity_data.transform));
 
         // Add name if present
         if let Some(name) = entity_data.name {
-            entity_commands.insert(Name::new(name));
+            commands.entity(entity_id).insert(Name::new(name));
         }
 
         // Process components
@@ -403,6 +456,8 @@ pub fn load_scene(
         let mut is_player_spawn = false;
         let mut rigid_body_type: Option<RigidBodyType> = None;
         let mut glb_model_path: Option<String> = None;
+        let mut point_light_data: Option<(f32, Color, bool, f32)> = None;
+        let mut spot_light_data: Option<(f32, Color, bool, f32, f32, f32)> = None;
 
         for component in entity_data.components {
             match component {
@@ -426,6 +481,24 @@ pub fn load_scene(
                 ComponentData::GlbModel { path } => {
                     glb_model_path = Some(path);
                 }
+                ComponentData::PointLight { intensity, color, shadows_enabled, range } => {
+                    point_light_data = Some((
+                        intensity,
+                        Color::srgba(color[0], color[1], color[2], color[3]),
+                        shadows_enabled,
+                        range,
+                    ));
+                }
+                ComponentData::SpotLight { intensity, color, shadows_enabled, range, inner_angle, outer_angle } => {
+                    spot_light_data = Some((
+                        intensity,
+                        Color::srgba(color[0], color[1], color[2], color[3]),
+                        shadows_enabled,
+                        range,
+                        inner_angle,
+                        outer_angle,
+                    ));
+                }
             }
         }
 
@@ -433,11 +506,11 @@ pub fn load_scene(
         if let Some(prim_type) = mesh_type {
             // Create mesh at the primitive's default size - Transform.scale handles any scaling
             let mesh = prim_type.create_mesh(prim_type.default_size());
-            entity_commands.insert(Mesh3d(meshes.add(mesh)));
+            commands.entity(entity_id).insert(Mesh3d(meshes.add(mesh)));
 
             // Add material
             let color = base_color.unwrap_or(Color::srgb(0.7, 0.7, 0.7));
-            entity_commands.insert(MeshMaterial3d(materials.add(StandardMaterial {
+            commands.entity(entity_id).insert(MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: color,
                 ..default()
             })));
@@ -445,22 +518,84 @@ pub fn load_scene(
 
         // Add PlayerSpawn component if marked
         if is_player_spawn {
-            entity_commands.insert(PlayerSpawn);
+            commands.entity(entity_id).insert(PlayerSpawn);
         }
 
         // Add RigidBodyType component if present
         if let Some(rb_type) = rigid_body_type {
-            entity_commands.insert(rb_type);
+            commands.entity(entity_id).insert(rb_type);
         }
 
         // Add GLB model if present
         if let Some(glb_path) = glb_model_path {
             let scene_handle = asset_server.load(format!("{}#Scene0", glb_path));
-            entity_commands.insert((
+            commands.entity(entity_id).insert((
                 GlbModel { path: std::path::PathBuf::from(&glb_path) },
                 SceneRoot(scene_handle),
                 Visibility::Inherited,
             ));
+        }
+
+        // Add point light if present
+        if let Some((intensity, color, shadows_enabled, range)) = point_light_data {
+            commands.entity(entity_id).insert((
+                PointLight {
+                    intensity,
+                    color,
+                    shadows_enabled,
+                    range,
+                    ..default()
+                },
+                crate::editor::core::types::EditorLight {
+                    light_type: crate::editor::core::types::LightType::Point,
+                },
+            ));
+
+            // Add visualization mesh as child
+            let viz_mesh = PrimitiveType::PointLight.create_mesh(PrimitiveType::PointLight.default_size());
+            let viz_entity = commands.spawn((
+                crate::editor::core::types::EditorVisualization,
+                Mesh3d(meshes.add(viz_mesh)),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgb(1.0, 1.0, 0.6),
+                    ..default()
+                })),
+                Transform::default(),
+            )).id();
+
+            commands.entity(entity_id).add_child(viz_entity);
+        }
+
+        // Add spot light if present
+        if let Some((intensity, color, shadows_enabled, range, inner_angle, outer_angle)) = spot_light_data {
+            commands.entity(entity_id).insert((
+                SpotLight {
+                    intensity,
+                    color,
+                    shadows_enabled,
+                    range,
+                    inner_angle,
+                    outer_angle,
+                    ..default()
+                },
+                crate::editor::core::types::EditorLight {
+                    light_type: crate::editor::core::types::LightType::Spot,
+                },
+            ));
+
+            // Add visualization mesh as child
+            let viz_mesh = PrimitiveType::SpotLight.create_mesh(PrimitiveType::SpotLight.default_size());
+            let viz_entity = commands.spawn((
+                crate::editor::core::types::EditorVisualization,
+                Mesh3d(meshes.add(viz_mesh)),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgb(1.0, 0.9, 0.6),
+                    ..default()
+                })),
+                Transform::default(),
+            )).id();
+
+            commands.entity(entity_id).add_child(viz_entity);
         }
     }
 

@@ -52,3 +52,36 @@ impl RigidBodyType {
         }
     }
 }
+
+/// Marker component for light entities
+#[derive(Component, Clone, Debug)]
+pub struct EditorLight {
+    pub light_type: LightType,
+}
+
+/// Marker component for visualization meshes that shouldn't be persisted
+/// Used for light gizmos and other editor-only visual aids
+#[derive(Component, Clone, Debug)]
+pub struct EditorVisualization;
+
+/// Types of lights available in the editor
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LightType {
+    Point,
+    Spot,
+}
+
+impl LightType {
+    /// Get display name for UI
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            LightType::Point => "Point Light",
+            LightType::Spot => "Spot Light",
+        }
+    }
+
+    /// Get all variants for UI display
+    pub fn variants() -> &'static [LightType] {
+        &[LightType::Point, LightType::Spot]
+    }
+}

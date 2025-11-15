@@ -347,6 +347,9 @@ pub fn inspector_ui(
             if let Ok(mut transform) = transform_query.get_mut(entity) {
                     ui.label("Transform:");
 
+                    // Track if inspector made any changes
+                    let mut inspector_changed_transform = false;
+
                     // Position
                     ui.group(|ui| {
                         ui.label("Position:");
@@ -355,6 +358,7 @@ pub fn inspector_ui(
                             if edit_float_field_with_steppers(ui, &mut inspector_state.pos_x, 60.0, 0.1) {
                                 if let Ok(value) = inspector_state.pos_x.parse::<f32>() {
                                     transform.translation.x = value;
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
@@ -363,6 +367,7 @@ pub fn inspector_ui(
                             if edit_float_field_with_steppers(ui, &mut inspector_state.pos_y, 60.0, 0.1) {
                                 if let Ok(value) = inspector_state.pos_y.parse::<f32>() {
                                     transform.translation.y = value;
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
@@ -371,6 +376,7 @@ pub fn inspector_ui(
                             if edit_float_field_with_steppers(ui, &mut inspector_state.pos_z, 60.0, 0.1) {
                                 if let Ok(value) = inspector_state.pos_z.parse::<f32>() {
                                     transform.translation.z = value;
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
@@ -392,6 +398,7 @@ pub fn inspector_ui(
                                         y,
                                         z,
                                     );
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
@@ -406,6 +413,7 @@ pub fn inspector_ui(
                                         value.to_radians(),
                                         z,
                                     );
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
@@ -420,6 +428,7 @@ pub fn inspector_ui(
                                         y,
                                         value.to_radians(),
                                     );
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
@@ -435,6 +444,7 @@ pub fn inspector_ui(
                             if edit_float_field_with_steppers(ui, &mut inspector_state.scale_x, 60.0, 0.1) {
                                 if let Ok(value) = inspector_state.scale_x.parse::<f32>() {
                                     transform.scale.x = value.max(0.01); // Prevent zero/negative scale
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
@@ -443,6 +453,7 @@ pub fn inspector_ui(
                             if edit_float_field_with_steppers(ui, &mut inspector_state.scale_y, 60.0, 0.1) {
                                 if let Ok(value) = inspector_state.scale_y.parse::<f32>() {
                                     transform.scale.y = value.max(0.01);
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
@@ -451,13 +462,15 @@ pub fn inspector_ui(
                             if edit_float_field_with_steppers(ui, &mut inspector_state.scale_z, 60.0, 0.1) {
                                 if let Ok(value) = inspector_state.scale_z.parse::<f32>() {
                                     transform.scale.z = value.max(0.01);
+                                    inspector_changed_transform = true;
                                 }
                             }
                         });
                     });
 
                     // Update buffers if transform was modified externally (e.g., by gizmo)
-                    if transform.is_changed() && !transform.is_added() {
+                    // but NOT if we just modified it through the inspector
+                    if transform.is_changed() && !transform.is_added() && !inspector_changed_transform {
                         update_buffers_from_transform(&mut inspector_state, &transform);
                     }
                 }

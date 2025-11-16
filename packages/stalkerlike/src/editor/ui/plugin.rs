@@ -12,7 +12,7 @@ use super::hierarchy::{
     hierarchy_ui, HierarchyState, AssetBrowserState,
     handle_directory_picker, poll_directory_picker_tasks
 };
-use super::inspector::{inspector_ui, InspectorState};
+use super::inspector::{inspector_ui, InspectorState, init_inspector_registry};
 use super::menu_bar::menu_bar_ui;
 use super::shortcuts::{shortcuts_panel_ui, handle_shortcuts_key, ShortcutsPanel};
 use super::status_bar::status_bar_ui;
@@ -30,6 +30,7 @@ impl Plugin for UiPlugin {
             .init_resource::<HierarchyState>()
             .init_resource::<AssetBrowserState>()
             .init_resource::<InspectorState>()
+            .init_resource::<super::inspector::InspectorRegistry>()
             .init_resource::<ConfirmationDialog>()
             .init_resource::<ErrorDialog>()
             .init_resource::<AutoSaveRecoveryDialog>()
@@ -53,5 +54,8 @@ impl Plugin for UiPlugin {
                 poll_directory_picker_tasks,
                 handle_shortcuts_key,
             ));
+
+        // Initialize inspector registry with component types
+        init_inspector_registry(app);
     }
 }

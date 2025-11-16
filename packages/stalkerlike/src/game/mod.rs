@@ -94,54 +94,6 @@ fn setup_static_world(
     }
 }
 
-/// Helper function to spawn static content
-fn spawn_static_content(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-    asset_server: &Res<AssetServer>,
-) {
-    // Ground plane with physics collider
-    commands.spawn((
-        GameEntity,
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.3, 0.3))),
-        Transform::from_xyz(0.0, 0.0, 0.0),
-        Collider::cuboid(25.0, 0.1, 25.0),
-    ));
-
-    // Load pipe model from GLB file
-    commands.spawn((
-        GameEntity,
-        NeedsCollider, // Marker to add colliders to child meshes
-        SceneRoot(asset_server.load("models/pipes/pipe_2m_8m_hollow.glb#Scene0")),
-        Transform::from_xyz(3.0, 1.0, 0.0),
-        RigidBody::Fixed,
-    ));
-
-    // Load pipe model from GLB file
-    commands.spawn((
-        GameEntity,
-        NeedsCollider, // Marker to add colliders to child meshes
-        SceneRoot(asset_server.load("models/pipes/pipe_2m_8m_hollow_elbow_90.glb#Scene0")),
-        Transform::from_xyz(-10.0, 1.0, -10.0),
-        RigidBody::Fixed,
-    ));
-
-    // Static object (cube) with physics
-    commands.spawn((
-        GameEntity,
-        Mesh3d(meshes.add(Cuboid::new(2.0, 2.0, 2.0))),
-        MeshMaterial3d(materials.add(Color::srgb(0.8, 0.3, 0.3))),
-        Transform::from_xyz(0.0, 1.0, -5.0),
-        RigidBody::Fixed,
-        Collider::cuboid(1.0, 1.0, 1.0),
-    ));
-
-    // Note: Directional and ambient lighting are now loaded from the scene file
-    // See load_scene_from_yaml for lighting setup
-}
-
 /// Spawns dynamic world content for a new game
 /// Only called on NewGame state
 fn setup_world(

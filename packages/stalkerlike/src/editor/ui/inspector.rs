@@ -1,103 +1,861 @@
 use bevy::prelude::*;
+use bevy::ecs::component::Mutable;
 use bevy_egui::{egui, EguiContexts};
+use std::any::TypeId;
+use std::collections::HashMap;
 
 use crate::editor::objects::selection::SelectionSet;
-use crate::editor::core::types::{RigidBodyType, EditorLight};
+use crate::editor::core::types::{RigidBodyType, EditorLight, LightType, EditorEntity};
+use crate::editor::viewport::LightingEnabled;
 
-/// Local UI state for text input buffers
+// ============================================================================
+// Core Property System
+// ============================================================================
+
+/// A type-erased property value that can be edited in the inspector
+#[derive(Debug, Clone)]
+pub enum PropertyValue {
+    Float(f32),
+    Vec3(Vec3),
+    Quat(Quat),  // For rotation
+    Color(Color),
+    Bool(bool),
+    String(String),
+    Enum(String, Vec<String>), // (current, options)
+}
+
+/// Represents a single editable property
+pub struct Property {
+    pub name: String,
+    pub value: PropertyValue,
+    pub metadata: PropertyMetadata,
+}
+
+/// Metadata for controlling how a property is displayed/edited
+#[derive(Clone, Default)]
+pub struct PropertyMetadata {
+    pub step: Option<f32>,
+    pub min: Option<f32>,
+    pub max: Option<f32>,
+    pub tooltip: Option<String>,
+    pub read_only: bool,
+}
+
+// ============================================================================
+// Inspector Traits
+// ============================================================================
+
+/// Trait for components that can be inspected
+pub trait Inspectable: Component {
+    /// Get all properties for this component
+    fn properties(&self) -> Vec<Property>;
+
+    /// Apply a property change
+    fn set_property(&mut self, name: &str, value: PropertyValue);
+
+    /// Get display name for this component
+    fn display_name() -> &'static str where Self: Sized;
+}
+
+/// Trait for custom property editors
+pub trait PropertyEditor: Send + Sync {
+    /// Render the property editor UI
+    /// Returns true if the value was modified
+    fn render(&mut self, ui: &mut egui::Ui, property: &mut Property) -> bool;
+}
+
+// ============================================================================
+// Built-in Property Editors
+// ============================================================================
+
+pub struct FloatEditor {
+    buffer: String,
+    last_value: Option<f32>,
+}
+
+impl Default for FloatEditor {
+    fn default() -> Self {
+        Self {
+            buffer: String::new(),
+            last_value: None,
+        }
+    }
+}
+
+impl PropertyEditor for FloatEditor {
+    fn render(&mut self, ui: &mut egui::Ui, property: &mut Property) -> bool {
+        let PropertyValue::Float(ref mut value) = property.value else {
+            return false;
+        };
+
+        // Update buffer if value changed externally
+        if self.last_value != Some(*value) {
+            self.buffer = format!("{:.3}", value);
+            self.last_value = Some(*value);
+        }
+
+        let mut changed = false;
+        let step = property.metadata.step.unwrap_or(0.1);
+
+        ui.horizontal(|ui| {
+            ui.label(&property.name);
+
+            if !property.metadata.read_only {
+                if ui.small_button("−").clicked() {
+                    *value -= step;
+                    if let Some(min) = property.metadata.min {
+                        *value = value.max(min);
+                    }
+                    self.buffer = format!("{:.3}", value);
+                    changed = true;
+                }
+
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.buffer)
+                        .desired_width(60.0)
+                );
+
+                if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    if let Ok(new_value) = self.buffer.parse::<f32>() {
+                        let mut clamped = new_value;
+                        if let Some(min) = property.metadata.min {
+                            clamped = clamped.max(min);
+                        }
+                        if let Some(max) = property.metadata.max {
+                            clamped = clamped.min(max);
+                        }
+                        *value = clamped;
+                        self.buffer = format!("{:.3}", value);
+                        changed = true;
+                    }
+                }
+
+                if ui.small_button("+").clicked() {
+                    *value += step;
+                    if let Some(max) = property.metadata.max {
+                        *value = value.min(max);
+                    }
+                    self.buffer = format!("{:.3}", value);
+                    changed = true;
+                }
+            } else {
+                ui.label(format!("{:.3}", value));
+            }
+
+            if let Some(tooltip) = &property.metadata.tooltip {
+                ui.label("ⓘ").on_hover_text(tooltip);
+            }
+        });
+
+        changed
+    }
+}
+
+pub struct Vec3Editor {
+    x_editor: FloatEditor,
+    y_editor: FloatEditor,
+    z_editor: FloatEditor,
+}
+
+impl Default for Vec3Editor {
+    fn default() -> Self {
+        Self {
+            x_editor: FloatEditor::default(),
+            y_editor: FloatEditor::default(),
+            z_editor: FloatEditor::default(),
+        }
+    }
+}
+
+impl PropertyEditor for Vec3Editor {
+    fn render(&mut self, ui: &mut egui::Ui, property: &mut Property) -> bool {
+        let PropertyValue::Vec3(ref mut value) = property.value else {
+            return false;
+        };
+
+        let mut changed = false;
+
+        ui.group(|ui| {
+            ui.label(&property.name);
+
+            let mut x_prop = Property {
+                name: "X".to_string(),
+                value: PropertyValue::Float(value.x),
+                metadata: property.metadata.clone(),
+            };
+            changed |= self.x_editor.render(ui, &mut x_prop);
+            if let PropertyValue::Float(x) = x_prop.value {
+                value.x = x;
+            }
+
+            let mut y_prop = Property {
+                name: "Y".to_string(),
+                value: PropertyValue::Float(value.y),
+                metadata: property.metadata.clone(),
+            };
+            changed |= self.y_editor.render(ui, &mut y_prop);
+            if let PropertyValue::Float(y) = y_prop.value {
+                value.y = y;
+            }
+
+            let mut z_prop = Property {
+                name: "Z".to_string(),
+                value: PropertyValue::Float(value.z),
+                metadata: property.metadata.clone(),
+            };
+            changed |= self.z_editor.render(ui, &mut z_prop);
+            if let PropertyValue::Float(z) = z_prop.value {
+                value.z = z;
+            }
+        });
+
+        changed
+    }
+}
+
+pub struct QuatEditor {
+    x_editor: FloatEditor,
+    y_editor: FloatEditor,
+    z_editor: FloatEditor,
+}
+
+impl Default for QuatEditor {
+    fn default() -> Self {
+        Self {
+            x_editor: FloatEditor::default(),
+            y_editor: FloatEditor::default(),
+            z_editor: FloatEditor::default(),
+        }
+    }
+}
+
+impl PropertyEditor for QuatEditor {
+    fn render(&mut self, ui: &mut egui::Ui, property: &mut Property) -> bool {
+        let PropertyValue::Quat(ref mut quat) = property.value else {
+            return false;
+        };
+
+        let mut changed = false;
+
+        ui.group(|ui| {
+            ui.label(&property.name);
+
+            // Convert to Euler angles for editing
+            let (x, y, z) = quat.to_euler(EulerRot::XYZ);
+            let mut euler_degrees = Vec3::new(
+                x.to_degrees(),
+                y.to_degrees(),
+                z.to_degrees()
+            );
+
+            // X rotation
+            ui.horizontal(|ui| {
+                ui.label("X:");
+                let mut x_prop = Property {
+                    name: String::new(),
+                    value: PropertyValue::Float(euler_degrees.x),
+                    metadata: PropertyMetadata {
+                        step: Some(5.0),
+                        ..property.metadata.clone()
+                    },
+                };
+                if self.x_editor.render(ui, &mut x_prop) {
+                    if let PropertyValue::Float(deg) = x_prop.value {
+                        euler_degrees.x = deg;
+                        changed = true;
+                    }
+                }
+            });
+
+            // Y rotation
+            ui.horizontal(|ui| {
+                ui.label("Y:");
+                let mut y_prop = Property {
+                    name: String::new(),
+                    value: PropertyValue::Float(euler_degrees.y),
+                    metadata: PropertyMetadata {
+                        step: Some(5.0),
+                        ..property.metadata.clone()
+                    },
+                };
+                if self.y_editor.render(ui, &mut y_prop) {
+                    if let PropertyValue::Float(deg) = y_prop.value {
+                        euler_degrees.y = deg;
+                        changed = true;
+                    }
+                }
+            });
+
+            // Z rotation
+            ui.horizontal(|ui| {
+                ui.label("Z:");
+                let mut z_prop = Property {
+                    name: String::new(),
+                    value: PropertyValue::Float(euler_degrees.z),
+                    metadata: PropertyMetadata {
+                        step: Some(5.0),
+                        ..property.metadata.clone()
+                    },
+                };
+                if self.z_editor.render(ui, &mut z_prop) {
+                    if let PropertyValue::Float(deg) = z_prop.value {
+                        euler_degrees.z = deg;
+                        changed = true;
+                    }
+                }
+            });
+
+            if changed {
+                *quat = Quat::from_euler(
+                    EulerRot::XYZ,
+                    euler_degrees.x.to_radians(),
+                    euler_degrees.y.to_radians(),
+                    euler_degrees.z.to_radians()
+                );
+            }
+        });
+
+        changed
+    }
+}
+
+pub struct ColorEditor {
+    hex_buffer: String,
+    last_color: Option<Color>,
+}
+
+impl Default for ColorEditor {
+    fn default() -> Self {
+        Self {
+            hex_buffer: String::from("ffffff"),
+            last_color: None,
+        }
+    }
+}
+
+impl PropertyEditor for ColorEditor {
+    fn render(&mut self, ui: &mut egui::Ui, property: &mut Property) -> bool {
+        let PropertyValue::Color(ref mut color) = property.value else {
+            return false;
+        };
+
+        let mut changed = false;
+
+        ui.horizontal(|ui| {
+            ui.label(&property.name);
+
+            let srgba = color.to_srgba();
+            let mut rgb = [srgba.red, srgba.green, srgba.blue];
+
+            if ui.color_edit_button_rgb(&mut rgb).changed() {
+                *color = Color::srgb(rgb[0], rgb[1], rgb[2]);
+                self.hex_buffer = format!("{:02x}{:02x}{:02x}",
+                    (rgb[0] * 255.0) as u8,
+                    (rgb[1] * 255.0) as u8,
+                    (rgb[2] * 255.0) as u8
+                );
+                changed = true;
+            }
+
+            ui.label("#");
+            let response = ui.add(
+                egui::TextEdit::singleline(&mut self.hex_buffer)
+                    .desired_width(60.0)
+                    .char_limit(6)
+            );
+
+            if response.lost_focus() || response.changed() {
+                if let Some(parsed_color) = parse_hex_color(&self.hex_buffer) {
+                    *color = parsed_color;
+                    changed = true;
+                }
+            }
+        });
+
+        changed
+    }
+}
+
+pub struct BoolEditor;
+
+impl PropertyEditor for BoolEditor {
+    fn render(&mut self, ui: &mut egui::Ui, property: &mut Property) -> bool {
+        let PropertyValue::Bool(ref mut value) = property.value else {
+            return false;
+        };
+
+        let mut changed = false;
+
+        ui.horizontal(|ui| {
+            ui.label(&property.name);
+            if ui.checkbox(value, "").changed() {
+                changed = true;
+            }
+
+            if let Some(tooltip) = &property.metadata.tooltip {
+                ui.label("ⓘ").on_hover_text(tooltip);
+            }
+        });
+
+        changed
+    }
+}
+
+pub struct EnumEditor;
+
+impl PropertyEditor for EnumEditor {
+    fn render(&mut self, ui: &mut egui::Ui, property: &mut Property) -> bool {
+        let PropertyValue::Enum(ref mut current, ref options) = property.value else {
+            return false;
+        };
+
+        let mut changed = false;
+
+        ui.horizontal(|ui| {
+            ui.label(&property.name);
+
+            egui::ComboBox::from_id_salt(&property.name)
+                .selected_text(current.as_str())
+                .show_ui(ui, |ui| {
+                    for option in options {
+                        if ui.selectable_label(current == option, option).clicked() {
+                            *current = option.clone();
+                            changed = true;
+                        }
+                    }
+                });
+        });
+
+        changed
+    }
+}
+
+// ============================================================================
+// Inspector Registry
+// ============================================================================
+
+/// Registry for component inspectors
+#[derive(Resource, Default)]
+pub struct InspectorRegistry {
+    /// Maps TypeId to inspector functions
+    inspectors: HashMap<TypeId, Box<dyn ComponentInspector>>,
+}
+
+impl InspectorRegistry {
+    /// Register an inspector for a component type
+    pub fn register<T>(&mut self)
+    where
+        T: Inspectable + Component<Mutability = Mutable> + 'static,
+    {
+        self.inspectors.insert(
+            TypeId::of::<T>(),
+            Box::new(InspectableAdapter::<T>::default()),
+        );
+    }
+
+    /// Get inspector for a type
+    pub fn get(&self, type_id: TypeId) -> Option<&dyn ComponentInspector> {
+        self.inspectors.get(&type_id).map(|b| b.as_ref())
+    }
+}
+
+/// Trait for component inspection
+pub trait ComponentInspector: Send + Sync {
+    /// Get properties from entity
+    fn get_properties(&self, world: &World, entity: Entity) -> Option<Vec<Property>>;
+
+    /// Set property on entity
+    fn set_property(
+        &self,
+        world: &mut World,
+        entity: Entity,
+        name: &str,
+        value: PropertyValue,
+    );
+
+    /// Get display name
+    fn display_name(&self) -> &'static str;
+}
+
+/// Adapter to make Inspectable components work with the registry
+struct InspectableAdapter<T: Inspectable> {
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: Inspectable> Default for InspectableAdapter<T> {
+    fn default() -> Self {
+        Self {
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T> ComponentInspector for InspectableAdapter<T>
+where
+    T: Inspectable + Component<Mutability = Mutable> + 'static,
+{
+    fn get_properties(&self, world: &World, entity: Entity) -> Option<Vec<Property>> {
+        world.get::<T>(entity).map(|component| component.properties())
+    }
+
+    fn set_property(
+        &self,
+        world: &mut World,
+        entity: Entity,
+        name: &str,
+        value: PropertyValue,
+    ) {
+        if let Some(mut component) = world.get_mut::<T>(entity) {
+            component.set_property(name, value);
+        }
+    }
+
+    fn display_name(&self) -> &'static str {
+        T::display_name()
+    }
+}
+
+// ============================================================================
+// Inspector State
+// ============================================================================
+
+/// State for the inspector panel
 #[derive(Resource)]
 pub struct InspectorState {
-    // Position buffers
-    pub pos_x: String,
-    pub pos_y: String,
-    pub pos_z: String,
-    // Rotation buffers (Euler angles in degrees)
-    pub rot_x: String,
-    pub rot_y: String,
-    pub rot_z: String,
-    // Scale buffers
-    pub scale_x: String,
-    pub scale_y: String,
-    pub scale_z: String,
-    // Track last selected entity to detect changes
-    pub last_entity: Option<Entity>,
-
-    // Lighting buffers
-    pub lighting_enabled: bool,
-    pub dir_light_illuminance: String,
-    pub dir_light_color: [f32; 3],
-    pub dir_light_color_hex: String,
-    pub dir_light_rotation_x: String, // Pitch (up/down)
-    pub dir_light_rotation_y: String, // Yaw (left/right)
-    pub ambient_brightness: String,
-    pub ambient_color: [f32; 3],
-    pub ambient_color_hex: String,
-
-    // Per-entity light buffers
-    pub point_light_intensity: String,
-    pub point_light_range: String,
-    pub point_light_color: [f32; 3],
-    pub point_light_color_hex: String,
-    pub spot_light_intensity: String,
-    pub spot_light_range: String,
-    pub spot_light_color: [f32; 3],
-    pub spot_light_color_hex: String,
-    pub spot_light_inner_angle: String,
-    pub spot_light_outer_angle: String,
+    /// Currently selected entity
+    selected_entity: Option<Entity>,
+    /// Property editors for each component
+    editors: HashMap<TypeId, HashMap<String, Box<dyn PropertyEditor>>>,
+    /// Global lighting state (for when nothing is selected)
+    lighting_editors: HashMap<String, Box<dyn PropertyEditor>>,
 }
 
 impl Default for InspectorState {
     fn default() -> Self {
         Self {
-            pos_x: String::new(),
-            pos_y: String::new(),
-            pos_z: String::new(),
-            rot_x: String::new(),
-            rot_y: String::new(),
-            rot_z: String::new(),
-            scale_x: String::new(),
-            scale_y: String::new(),
-            scale_z: String::new(),
-            last_entity: None,
-            lighting_enabled: true, // Start with lighting enabled
-            dir_light_illuminance: String::new(),
-            dir_light_color: [1.0, 1.0, 1.0],
-            dir_light_color_hex: String::from("ffffff"),
-            dir_light_rotation_x: String::new(),
-            dir_light_rotation_y: String::new(),
-            ambient_brightness: String::new(),
-            ambient_color: [1.0, 1.0, 1.0],
-            ambient_color_hex: String::from("ffffff"),
-            point_light_intensity: String::new(),
-            point_light_range: String::new(),
-            point_light_color: [1.0, 1.0, 0.9],
-            point_light_color_hex: String::from("fff4e6"),
-            spot_light_intensity: String::new(),
-            spot_light_range: String::new(),
-            spot_light_color: [1.0, 1.0, 0.9],
-            spot_light_color_hex: String::from("fff4e6"),
-            spot_light_inner_angle: String::new(),
-            spot_light_outer_angle: String::new(),
+            selected_entity: None,
+            editors: HashMap::new(),
+            lighting_editors: HashMap::new(),
         }
     }
 }
 
-/// Render the inspector panel with editable numeric fields
-/// For multi-select, shows aggregate information instead of individual properties
+impl InspectorState {
+    /// Get or create an editor for a property
+    fn get_or_create_editor(
+        &mut self,
+        component_type: TypeId,
+        property_name: &str,
+        property_value: &PropertyValue,
+    ) -> &mut dyn PropertyEditor {
+        let component_editors = self.editors.entry(component_type).or_default();
+
+        component_editors
+            .entry(property_name.to_string())
+            .or_insert_with(|| create_editor_for_value(property_value))
+            .as_mut()
+    }
+
+    fn get_or_create_lighting_editor(
+        &mut self,
+        property_name: &str,
+        property_value: &PropertyValue,
+    ) -> &mut dyn PropertyEditor {
+        self.lighting_editors
+            .entry(property_name.to_string())
+            .or_insert_with(|| create_editor_for_value(property_value))
+            .as_mut()
+    }
+}
+
+fn create_editor_for_value(value: &PropertyValue) -> Box<dyn PropertyEditor> {
+    match value {
+        PropertyValue::Float(_) => Box::new(FloatEditor::default()),
+        PropertyValue::Vec3(_) => Box::new(Vec3Editor::default()),
+        PropertyValue::Quat(_) => Box::new(QuatEditor::default()),
+        PropertyValue::Color(_) => Box::new(ColorEditor::default()),
+        PropertyValue::Bool(_) => Box::new(BoolEditor),
+        PropertyValue::Enum(_, _) => Box::new(EnumEditor),
+        PropertyValue::String(_) => Box::new(FloatEditor::default()), // Fallback
+    }
+}
+
+// ============================================================================
+// Component Implementations
+// ============================================================================
+
+impl Inspectable for Transform {
+    fn properties(&self) -> Vec<Property> {
+        vec![
+            Property {
+                name: "Position".to_string(),
+                value: PropertyValue::Vec3(self.translation),
+                metadata: PropertyMetadata {
+                    step: Some(0.1),
+                    ..default()
+                },
+            },
+            Property {
+                name: "Rotation".to_string(),
+                value: PropertyValue::Quat(self.rotation),
+                metadata: PropertyMetadata::default(),
+            },
+            Property {
+                name: "Scale".to_string(),
+                value: PropertyValue::Vec3(self.scale),
+                metadata: PropertyMetadata {
+                    step: Some(0.1),
+                    min: Some(0.01),
+                    ..default()
+                },
+            },
+        ]
+    }
+
+    fn set_property(&mut self, name: &str, value: PropertyValue) {
+        match name {
+            "Position" => {
+                if let PropertyValue::Vec3(v) = value {
+                    self.translation = v;
+                }
+            }
+            "Rotation" => {
+                if let PropertyValue::Quat(q) = value {
+                    self.rotation = q;
+                }
+            }
+            "Scale" => {
+                if let PropertyValue::Vec3(v) = value {
+                    self.scale = v;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn display_name() -> &'static str {
+        "Transform"
+    }
+}
+
+impl Inspectable for RigidBodyType {
+    fn properties(&self) -> Vec<Property> {
+        vec![
+            Property {
+                name: "Type".to_string(),
+                value: PropertyValue::Enum(
+                    self.display_name().to_string(),
+                    RigidBodyType::variants()
+                        .iter()
+                        .map(|v| v.display_name().to_string())
+                        .collect(),
+                ),
+                metadata: PropertyMetadata::default(),
+            },
+        ]
+    }
+
+    fn set_property(&mut self, name: &str, value: PropertyValue) {
+        if name == "Type" {
+            if let PropertyValue::Enum(selected, _) = value {
+                for variant in RigidBodyType::variants() {
+                    if variant.display_name() == selected {
+                        *self = *variant;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    fn display_name() -> &'static str {
+        "Rigid Body"
+    }
+}
+
+impl Inspectable for PointLight {
+    fn properties(&self) -> Vec<Property> {
+        vec![
+            Property {
+                name: "Intensity".to_string(),
+                value: PropertyValue::Float(self.intensity),
+                metadata: PropertyMetadata {
+                    step: Some(100.0),
+                    min: Some(0.0),
+                    tooltip: Some("Light intensity in lumens".to_string()),
+                    ..default()
+                },
+            },
+            Property {
+                name: "Range".to_string(),
+                value: PropertyValue::Float(self.range),
+                metadata: PropertyMetadata {
+                    step: Some(1.0),
+                    min: Some(0.1),
+                    tooltip: Some("Maximum distance the light affects".to_string()),
+                    ..default()
+                },
+            },
+            Property {
+                name: "Color".to_string(),
+                value: PropertyValue::Color(self.color),
+                metadata: PropertyMetadata::default(),
+            },
+            Property {
+                name: "Shadows".to_string(),
+                value: PropertyValue::Bool(self.shadows_enabled),
+                metadata: PropertyMetadata::default(),
+            },
+        ]
+    }
+
+    fn set_property(&mut self, name: &str, value: PropertyValue) {
+        match name {
+            "Intensity" => {
+                if let PropertyValue::Float(v) = value {
+                    self.intensity = v;
+                }
+            }
+            "Range" => {
+                if let PropertyValue::Float(v) = value {
+                    self.range = v;
+                }
+            }
+            "Color" => {
+                if let PropertyValue::Color(v) = value {
+                    self.color = v;
+                }
+            }
+            "Shadows" => {
+                if let PropertyValue::Bool(v) = value {
+                    self.shadows_enabled = v;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn display_name() -> &'static str {
+        "Point Light"
+    }
+}
+
+impl Inspectable for SpotLight {
+    fn properties(&self) -> Vec<Property> {
+        vec![
+            Property {
+                name: "Intensity".to_string(),
+                value: PropertyValue::Float(self.intensity),
+                metadata: PropertyMetadata {
+                    step: Some(100.0),
+                    min: Some(0.0),
+                    ..default()
+                },
+            },
+            Property {
+                name: "Range".to_string(),
+                value: PropertyValue::Float(self.range),
+                metadata: PropertyMetadata {
+                    step: Some(1.0),
+                    min: Some(0.1),
+                    ..default()
+                },
+            },
+            Property {
+                name: "Inner Angle".to_string(),
+                value: PropertyValue::Float(self.inner_angle.to_degrees()),
+                metadata: PropertyMetadata {
+                    step: Some(5.0),
+                    min: Some(0.0),
+                    max: Some(180.0),
+                    tooltip: Some("Inner cone angle in degrees".to_string()),
+                    ..default()
+                },
+            },
+            Property {
+                name: "Outer Angle".to_string(),
+                value: PropertyValue::Float(self.outer_angle.to_degrees()),
+                metadata: PropertyMetadata {
+                    step: Some(5.0),
+                    min: Some(0.0),
+                    max: Some(180.0),
+                    tooltip: Some("Outer cone angle in degrees".to_string()),
+                    ..default()
+                },
+            },
+            Property {
+                name: "Color".to_string(),
+                value: PropertyValue::Color(self.color),
+                metadata: PropertyMetadata::default(),
+            },
+            Property {
+                name: "Shadows".to_string(),
+                value: PropertyValue::Bool(self.shadows_enabled),
+                metadata: PropertyMetadata::default(),
+            },
+        ]
+    }
+
+    fn set_property(&mut self, name: &str, value: PropertyValue) {
+        match name {
+            "Intensity" => {
+                if let PropertyValue::Float(v) = value {
+                    self.intensity = v;
+                }
+            }
+            "Range" => {
+                if let PropertyValue::Float(v) = value {
+                    self.range = v;
+                }
+            }
+            "Inner Angle" => {
+                if let PropertyValue::Float(degrees) = value {
+                    self.inner_angle = degrees.to_radians();
+                }
+            }
+            "Outer Angle" => {
+                if let PropertyValue::Float(degrees) = value {
+                    self.outer_angle = degrees.to_radians();
+                }
+            }
+            "Color" => {
+                if let PropertyValue::Color(v) = value {
+                    self.color = v;
+                }
+            }
+            "Shadows" => {
+                if let PropertyValue::Bool(v) = value {
+                    self.shadows_enabled = v;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn display_name() -> &'static str {
+        "Spot Light"
+    }
+}
+
+// ============================================================================
+// Inspector UI System
+// ============================================================================
+
 pub fn inspector_ui(
     mut contexts: EguiContexts,
     selection: Res<SelectionSet>,
-    mut transform_query: Query<&mut Transform, With<crate::editor::core::types::EditorEntity>>,
-    name_query: Query<&Name>,
-    mut inspector_state: ResMut<InspectorState>,
-    mut rigid_body_query: Query<Option<&mut RigidBodyType>>,
-    mut commands: Commands,
-    mut directional_light: Query<(&mut DirectionalLight, &mut Transform), Without<crate::editor::core::types::EditorEntity>>,
-    mut ambient_light: ResMut<AmbientLight>,
-    mut lighting_enabled: ResMut<crate::editor::viewport::LightingEnabled>,
-    editor_light_query: Query<&EditorLight>,
+    mut state: ResMut<InspectorState>,
+    _registry: Res<InspectorRegistry>,
+    mut transform_query: Query<&mut Transform, With<EditorEntity>>,
+    mut rigid_body_query: Query<&mut RigidBodyType>,
     mut point_light_query: Query<&mut PointLight>,
     mut spot_light_query: Query<&mut SpotLight>,
+    editor_light_query: Query<&EditorLight>,
+    name_query: Query<&Name>,
+    mut commands: Commands,
+    mut directional_light: Query<(&mut DirectionalLight, &mut Transform), Without<EditorEntity>>,
+    mut ambient_light: ResMut<AmbientLight>,
+    mut lighting_enabled: ResMut<LightingEnabled>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -110,181 +868,16 @@ pub fn inspector_ui(
             ui.heading("Inspector");
             ui.separator();
 
+            // Handle no selection - show global lighting controls
             if selection.is_empty() {
-                inspector_state.last_entity = None;
-
-                // Show global lighting controls
-                ui.label("Global Lighting");
-                ui.separator();
-
-                // Lighting mode toggle
-                ui.horizontal(|ui| {
-                    ui.label("Mode:");
-                    let mut enabled = lighting_enabled.0;
-                    if ui.checkbox(&mut enabled, "Custom Lighting").changed() {
-                        lighting_enabled.0 = enabled;
-                        inspector_state.lighting_enabled = enabled;
-                    }
-                });
-
-                ui.add_space(4.0);
-
-                if !lighting_enabled.0 {
-                    ui.label(egui::RichText::new("Simple mode: 10000 white ambient, no directional").weak().small());
-                } else {
-                    ui.label(egui::RichText::new("Custom mode: Configure lights below").weak().small());
-                }
-
-                ui.add_space(8.0);
-
-                // Initialize lighting buffers if needed
-                if inspector_state.dir_light_illuminance.is_empty() {
-                    if let Ok((dir_light, transform)) = directional_light.single() {
-                        inspector_state.dir_light_illuminance = format!("{:.0}", dir_light.illuminance);
-                        let color = dir_light.color.to_srgba();
-                        inspector_state.dir_light_color = [color.red, color.green, color.blue];
-                        inspector_state.dir_light_color_hex = rgb_to_hex(&inspector_state.dir_light_color);
-                        
-                        // Get rotation as euler angles (pitch and yaw)
-                        let (pitch, yaw, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
-                        inspector_state.dir_light_rotation_x = format!("{:.1}", pitch.to_degrees());
-                        inspector_state.dir_light_rotation_y = format!("{:.1}", yaw.to_degrees());
-                    }
-                    let amb_color = ambient_light.color.to_srgba();
-                    inspector_state.ambient_brightness = format!("{:.0}", ambient_light.brightness);
-                    inspector_state.ambient_color = [amb_color.red, amb_color.green, amb_color.blue];
-                    inspector_state.ambient_color_hex = rgb_to_hex(&inspector_state.ambient_color);
-                    inspector_state.lighting_enabled = lighting_enabled.0;
-                }
-
-                // Only show detailed controls if custom lighting is enabled
-                if lighting_enabled.0 {
-                    // Directional Light controls
-                    ui.group(|ui| {
-                        ui.label("Directional Light:");
-
-                        ui.horizontal(|ui| {
-                            ui.label("Illuminance:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.dir_light_illuminance, 60.0, 1000.0) {
-                                if let Ok(value) = inspector_state.dir_light_illuminance.parse::<f32>() {
-                                    if let Ok((mut dir_light, _)) = directional_light.single_mut() {
-                                        dir_light.illuminance = value.max(0.0);
-                                    }
-                                }
-                            }
-                        });
-
-                        ui.horizontal(|ui| {
-                            ui.label("Color:");
-                            if ui.color_edit_button_rgb(&mut inspector_state.dir_light_color).changed() {
-                                inspector_state.dir_light_color_hex = rgb_to_hex(&inspector_state.dir_light_color);
-                                if let Ok((mut dir_light, _)) = directional_light.single_mut() {
-                                    dir_light.color = Color::srgb(
-                                        inspector_state.dir_light_color[0],
-                                        inspector_state.dir_light_color[1],
-                                        inspector_state.dir_light_color[2],
-                                    );
-                                }
-                            }
-                        });
-
-                        ui.horizontal(|ui| {
-                            ui.label("Hex:");
-                            ui.add(egui::TextEdit::singleline(&mut inspector_state.dir_light_color_hex)
-                                .desired_width(80.0)
-                                .char_limit(6));
-
-                            if ui.small_button("Apply").clicked() {
-                                if let Some(rgb) = hex_to_rgb(&inspector_state.dir_light_color_hex) {
-                                    inspector_state.dir_light_color = rgb;
-                                    if let Ok((mut dir_light, _)) = directional_light.single_mut() {
-                                        dir_light.color = Color::srgb(rgb[0], rgb[1], rgb[2]);
-                                    }
-                                }
-                            }
-                        });
-                        
-                        ui.add_space(4.0);
-                        ui.label(egui::RichText::new("Direction:").small());
-                        
-                        ui.horizontal(|ui| {
-                            ui.label("Pitch:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.dir_light_rotation_x, 50.0, 5.0) {
-                                if let Ok(pitch_deg) = inspector_state.dir_light_rotation_x.parse::<f32>() {
-                                    if let Ok((_, mut transform)) = directional_light.single_mut() {
-                                        // Get current yaw
-                                        let (_current_pitch, yaw, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
-                                        // Set new rotation with updated pitch
-                                        transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch_deg.to_radians(), 0.0);
-                                    }
-                                }
-                            }
-                        });
-                        
-                        ui.horizontal(|ui| {
-                            ui.label("Yaw:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.dir_light_rotation_y, 50.0, 5.0) {
-                                if let Ok(yaw_deg) = inspector_state.dir_light_rotation_y.parse::<f32>() {
-                                    if let Ok((_, mut transform)) = directional_light.single_mut() {
-                                        // Get current pitch
-                                        let (pitch, _current_yaw, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
-                                        // Set new rotation with updated yaw
-                                        transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw_deg.to_radians(), pitch, 0.0);
-                                    }
-                                }
-                            }
-                        });
-                    });
-
-                    ui.add_space(8.0);
-
-                    // Ambient Light controls
-                    ui.group(|ui| {
-                        ui.label("Ambient Light:");
-
-                        ui.horizontal(|ui| {
-                            ui.label("Brightness:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.ambient_brightness, 60.0, 50.0) {
-                                if let Ok(value) = inspector_state.ambient_brightness.parse::<f32>() {
-                                    ambient_light.brightness = value.max(0.0);
-                                }
-                            }
-                        });
-
-                        ui.horizontal(|ui| {
-                            ui.label("Color:");
-                            if ui.color_edit_button_rgb(&mut inspector_state.ambient_color).changed() {
-                                inspector_state.ambient_color_hex = rgb_to_hex(&inspector_state.ambient_color);
-                                ambient_light.color = Color::srgb(
-                                    inspector_state.ambient_color[0],
-                                    inspector_state.ambient_color[1],
-                                    inspector_state.ambient_color[2],
-                                );
-                            }
-                        });
-
-                        ui.horizontal(|ui| {
-                            ui.label("Hex:");
-                            ui.add(egui::TextEdit::singleline(&mut inspector_state.ambient_color_hex)
-                                .desired_width(80.0)
-                                .char_limit(6));
-
-                            if ui.small_button("Apply").clicked() {
-                                if let Some(rgb) = hex_to_rgb(&inspector_state.ambient_color_hex) {
-                                    inspector_state.ambient_color = rgb;
-                                    ambient_light.color = Color::srgb(rgb[0], rgb[1], rgb[2]);
-                                }
-                            }
-                        });
-                    });
-                }
-
+                state.selected_entity = None;
+                show_global_lighting_controls(ui, &mut state, &mut directional_light, &mut ambient_light, &mut lighting_enabled);
                 return;
             }
 
-            // Multi-select: show aggregate information
+            // Handle multi-selection
             if selection.len() > 1 {
-                inspector_state.last_entity = None;
+                state.selected_entity = None;
                 ui.label(format!("Multiple Objects Selected ({})", selection.len()));
                 ui.separator();
 
@@ -317,489 +910,305 @@ pub fn inspector_ui(
                     ui.add_space(8.0);
                     ui.label("Tip: Use gizmo to transform all selected objects together");
                 }
-
                 return;
             }
 
-            // Single selection: show detailed properties
+            // Single selection
             let entity = selection.first().unwrap();
-            ui.label("Selected Object");
-            ui.add_space(4.0);
 
-            // Show entity name if it has one
+            // Update selected entity
+            if state.selected_entity != Some(entity) {
+                state.selected_entity = Some(entity);
+                // Clear editors when selection changes
+                state.editors.clear();
+            }
+
+            // Display entity info
             if let Ok(name) = name_query.get(entity) {
                 ui.label(format!("Name: {}", name));
             } else {
                 ui.label(format!("Entity: {:?}", entity));
             }
-
             ui.separator();
 
-            // Update buffers if selection changed
-            if inspector_state.last_entity != Some(entity) {
-                inspector_state.last_entity = Some(entity);
-                if let Ok(transform) = transform_query.get(entity) {
-                    update_buffers_from_transform(&mut inspector_state, &transform);
-                }
-            }
-
-            // Editable transform fields
+            // Transform component (always present)
             if let Ok(mut transform) = transform_query.get_mut(entity) {
-                    ui.label("Transform:");
+                let mut properties = transform.properties();
+                let mut changed_properties = Vec::new();
 
-                    // Track if inspector made any changes
-                    let mut inspector_changed_transform = false;
+                ui.collapsing("Transform", |ui| {
+                    for mut property in &mut properties {
+                        let editor = state.get_or_create_editor(
+                            TypeId::of::<Transform>(),
+                            &property.name,
+                            &property.value,
+                        );
 
-                    // Position
-                    ui.group(|ui| {
-                        ui.label("Position:");
-                        ui.horizontal(|ui| {
-                            ui.label("X:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.pos_x, 60.0, 0.1) {
-                                if let Ok(value) = inspector_state.pos_x.parse::<f32>() {
-                                    transform.translation.x = value;
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label("Y:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.pos_y, 60.0, 0.1) {
-                                if let Ok(value) = inspector_state.pos_y.parse::<f32>() {
-                                    transform.translation.y = value;
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label("Z:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.pos_z, 60.0, 0.1) {
-                                if let Ok(value) = inspector_state.pos_z.parse::<f32>() {
-                                    transform.translation.z = value;
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                    });
-
-                    ui.add_space(8.0);
-
-                    // Rotation (Euler angles in degrees)
-                    ui.group(|ui| {
-                        ui.label("Rotation (degrees):");
-                        ui.horizontal(|ui| {
-                            ui.label("X:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.rot_x, 60.0, 5.0) {
-                                if let Ok(value) = inspector_state.rot_x.parse::<f32>() {
-                                    let (_, y, z) = transform.rotation.to_euler(EulerRot::XYZ);
-                                    transform.rotation = Quat::from_euler(
-                                        EulerRot::XYZ,
-                                        value.to_radians(),
-                                        y,
-                                        z,
-                                    );
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label("Y:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.rot_y, 60.0, 5.0) {
-                                if let Ok(value) = inspector_state.rot_y.parse::<f32>() {
-                                    let (x, _, z) = transform.rotation.to_euler(EulerRot::XYZ);
-                                    transform.rotation = Quat::from_euler(
-                                        EulerRot::XYZ,
-                                        x,
-                                        value.to_radians(),
-                                        z,
-                                    );
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label("Z:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.rot_z, 60.0, 5.0) {
-                                if let Ok(value) = inspector_state.rot_z.parse::<f32>() {
-                                    let (x, y, _) = transform.rotation.to_euler(EulerRot::XYZ);
-                                    transform.rotation = Quat::from_euler(
-                                        EulerRot::XYZ,
-                                        x,
-                                        y,
-                                        value.to_radians(),
-                                    );
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                    });
-
-                    ui.add_space(8.0);
-
-                    // Scale
-                    ui.group(|ui| {
-                        ui.label("Scale:");
-                        ui.horizontal(|ui| {
-                            ui.label("X:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.scale_x, 60.0, 0.1) {
-                                if let Ok(value) = inspector_state.scale_x.parse::<f32>() {
-                                    transform.scale.x = value.max(0.01); // Prevent zero/negative scale
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label("Y:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.scale_y, 60.0, 0.1) {
-                                if let Ok(value) = inspector_state.scale_y.parse::<f32>() {
-                                    transform.scale.y = value.max(0.01);
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label("Z:");
-                            if edit_float_field_with_steppers(ui, &mut inspector_state.scale_z, 60.0, 0.1) {
-                                if let Ok(value) = inspector_state.scale_z.parse::<f32>() {
-                                    transform.scale.z = value.max(0.01);
-                                    inspector_changed_transform = true;
-                                }
-                            }
-                        });
-                    });
-
-                    // Update buffers if transform was modified externally (e.g., by gizmo)
-                    // but NOT if we just modified it through the inspector
-                    if transform.is_changed() && !transform.is_added() && !inspector_changed_transform {
-                        update_buffers_from_transform(&mut inspector_state, &transform);
-                    }
-                }
-
-            ui.add_space(8.0);
-            ui.separator();
-
-            // Rigid Body Type selector
-            ui.group(|ui| {
-                ui.label("Physics:");
-
-                if let Ok(rigid_body_opt) = rigid_body_query.get_mut(entity) {
-                    let current_type = rigid_body_opt.map(|rb| *rb).unwrap_or_default();
-
-                    ui.horizontal(|ui| {
-                        ui.label("Rigid Body:");
-
-                        egui::ComboBox::from_id_salt("rigid_body_selector")
-                            .selected_text(current_type.display_name())
-                            .show_ui(ui, |ui| {
-                                for &variant in RigidBodyType::variants() {
-                                    let response = ui.selectable_label(
-                                        current_type == variant,
-                                        variant.display_name()
-                                    );
-
-                                    if response.clicked() && current_type != variant {
-                                        // Add or update the component
-                                        commands.entity(entity).insert(variant);
-                                    }
-                                }
-                            });
-                    });
-
-                    ui.add_space(4.0);
-                    ui.label(egui::RichText::new(match current_type {
-                        RigidBodyType::Fixed => "Static - does not move",
-                        RigidBodyType::Dynamic => "Dynamic - affected by physics",
-                    }).weak().small());
-                }
-            });
-
-            // Light properties (if entity has a light component)
-            if let Ok(editor_light) = editor_light_query.get(entity) {
-                ui.add_space(8.0);
-                ui.separator();
-
-                ui.group(|ui| {
-                    ui.label(format!("Light: {}", editor_light.light_type.display_name()));
-
-                    match editor_light.light_type {
-                        crate::editor::core::types::LightType::Point => {
-                            if let Ok(mut light) = point_light_query.get_mut(entity) {
-                                // Update buffers if entity changed
-                                if inspector_state.last_entity != Some(entity) {
-                                    inspector_state.point_light_intensity = format!("{:.1}", light.intensity);
-                                    inspector_state.point_light_range = format!("{:.1}", light.range);
-                                    let color = light.color.to_srgba();
-                                    inspector_state.point_light_color = [color.red, color.green, color.blue];
-                                    inspector_state.point_light_color_hex = format!(
-                                        "{:02x}{:02x}{:02x}",
-                                        (color.red * 255.0) as u8,
-                                        (color.green * 255.0) as u8,
-                                        (color.blue * 255.0) as u8
-                                    );
-                                }
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Intensity:");
-                                    if edit_float_field_with_steppers(ui, &mut inspector_state.point_light_intensity, 60.0, 100.0) {
-                                        if let Ok(value) = inspector_state.point_light_intensity.parse::<f32>() {
-                                            light.intensity = value.max(0.0);
-                                        }
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Color:");
-                                    if ui.color_edit_button_rgb(&mut inspector_state.point_light_color).changed() {
-                                        light.color = Color::srgb(
-                                            inspector_state.point_light_color[0],
-                                            inspector_state.point_light_color[1],
-                                            inspector_state.point_light_color[2],
-                                        );
-                                        // Update hex representation
-                                        inspector_state.point_light_color_hex = format!(
-                                            "{:02x}{:02x}{:02x}",
-                                            (inspector_state.point_light_color[0] * 255.0) as u8,
-                                            (inspector_state.point_light_color[1] * 255.0) as u8,
-                                            (inspector_state.point_light_color[2] * 255.0) as u8
-                                        );
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Hex:");
-                                    ui.label("#");
-                                    let response = ui.add(egui::TextEdit::singleline(&mut inspector_state.point_light_color_hex).desired_width(60.0));
-                                    if response.lost_focus() || response.changed() {
-                                        // Parse hex color (with or without #)
-                                        let hex = inspector_state.point_light_color_hex.trim_start_matches('#');
-                                        if hex.len() == 6 {
-                                            if let (Ok(r), Ok(g), Ok(b)) = (
-                                                u8::from_str_radix(&hex[0..2], 16),
-                                                u8::from_str_radix(&hex[2..4], 16),
-                                                u8::from_str_radix(&hex[4..6], 16),
-                                            ) {
-                                                inspector_state.point_light_color[0] = r as f32 / 255.0;
-                                                inspector_state.point_light_color[1] = g as f32 / 255.0;
-                                                inspector_state.point_light_color[2] = b as f32 / 255.0;
-                                                light.color = Color::srgb(
-                                                    inspector_state.point_light_color[0],
-                                                    inspector_state.point_light_color[1],
-                                                    inspector_state.point_light_color[2],
-                                                );
-                                            }
-                                        }
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Range:");
-                                    if edit_float_field_with_steppers(ui, &mut inspector_state.point_light_range, 60.0, 1.0) {
-                                        if let Ok(value) = inspector_state.point_light_range.parse::<f32>() {
-                                            light.range = value.max(0.1);
-                                        }
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Shadows:");
-                                    ui.checkbox(&mut light.shadows_enabled, "");
-                                });
-                            }
-                        }
-                        crate::editor::core::types::LightType::Spot => {
-                            if let Ok(mut light) = spot_light_query.get_mut(entity) {
-                                // Update buffers if entity changed
-                                if inspector_state.last_entity != Some(entity) {
-                                    inspector_state.spot_light_intensity = format!("{:.1}", light.intensity);
-                                    inspector_state.spot_light_range = format!("{:.1}", light.range);
-                                    inspector_state.spot_light_inner_angle = format!("{:.3}", light.inner_angle.to_degrees());
-                                    inspector_state.spot_light_outer_angle = format!("{:.3}", light.outer_angle.to_degrees());
-                                    let color = light.color.to_srgba();
-                                    inspector_state.spot_light_color = [color.red, color.green, color.blue];
-                                    inspector_state.spot_light_color_hex = format!(
-                                        "{:02x}{:02x}{:02x}",
-                                        (color.red * 255.0) as u8,
-                                        (color.green * 255.0) as u8,
-                                        (color.blue * 255.0) as u8
-                                    );
-                                }
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Intensity:");
-                                    if edit_float_field_with_steppers(ui, &mut inspector_state.spot_light_intensity, 60.0, 100.0) {
-                                        if let Ok(value) = inspector_state.spot_light_intensity.parse::<f32>() {
-                                            light.intensity = value.max(0.0);
-                                        }
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Color:");
-                                    if ui.color_edit_button_rgb(&mut inspector_state.spot_light_color).changed() {
-                                        light.color = Color::srgb(
-                                            inspector_state.spot_light_color[0],
-                                            inspector_state.spot_light_color[1],
-                                            inspector_state.spot_light_color[2],
-                                        );
-                                        // Update hex representation
-                                        inspector_state.spot_light_color_hex = format!(
-                                            "{:02x}{:02x}{:02x}",
-                                            (inspector_state.spot_light_color[0] * 255.0) as u8,
-                                            (inspector_state.spot_light_color[1] * 255.0) as u8,
-                                            (inspector_state.spot_light_color[2] * 255.0) as u8
-                                        );
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Hex:");
-                                    ui.label("#");
-                                    let response = ui.add(egui::TextEdit::singleline(&mut inspector_state.spot_light_color_hex).desired_width(60.0));
-                                    if response.lost_focus() || response.changed() {
-                                        // Parse hex color (with or without #)
-                                        let hex = inspector_state.spot_light_color_hex.trim_start_matches('#');
-                                        if hex.len() == 6 {
-                                            if let (Ok(r), Ok(g), Ok(b)) = (
-                                                u8::from_str_radix(&hex[0..2], 16),
-                                                u8::from_str_radix(&hex[2..4], 16),
-                                                u8::from_str_radix(&hex[4..6], 16),
-                                            ) {
-                                                inspector_state.spot_light_color[0] = r as f32 / 255.0;
-                                                inspector_state.spot_light_color[1] = g as f32 / 255.0;
-                                                inspector_state.spot_light_color[2] = b as f32 / 255.0;
-                                                light.color = Color::srgb(
-                                                    inspector_state.spot_light_color[0],
-                                                    inspector_state.spot_light_color[1],
-                                                    inspector_state.spot_light_color[2],
-                                                );
-                                            }
-                                        }
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Range:");
-                                    if edit_float_field_with_steppers(ui, &mut inspector_state.spot_light_range, 60.0, 1.0) {
-                                        if let Ok(value) = inspector_state.spot_light_range.parse::<f32>() {
-                                            light.range = value.max(0.1);
-                                        }
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Inner Angle:");
-                                    if edit_float_field_with_steppers(ui, &mut inspector_state.spot_light_inner_angle, 60.0, 5.0) {
-                                        if let Ok(value) = inspector_state.spot_light_inner_angle.parse::<f32>() {
-                                            light.inner_angle = value.to_radians().max(0.0);
-                                        }
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Outer Angle:");
-                                    if edit_float_field_with_steppers(ui, &mut inspector_state.spot_light_outer_angle, 60.0, 5.0) {
-                                        if let Ok(value) = inspector_state.spot_light_outer_angle.parse::<f32>() {
-                                            light.outer_angle = value.to_radians().max(0.0);
-                                        }
-                                    }
-                                });
-
-                                ui.horizontal(|ui| {
-                                    ui.label("Shadows:");
-                                    ui.checkbox(&mut light.shadows_enabled, "");
-                                });
-                            }
+                        if editor.render(ui, &mut property) {
+                            changed_properties.push((property.name.clone(), property.value.clone()));
                         }
                     }
                 });
+
+                // Apply changes
+                for (name, value) in changed_properties {
+                    transform.set_property(&name, value);
+                }
+            }
+
+            ui.add_space(8.0);
+
+            // RigidBody component
+            if let Ok(rigid_body) = rigid_body_query.get_mut(entity) {
+                let mut properties = rigid_body.properties();
+
+                ui.collapsing("Physics", |ui| {
+                    for mut property in &mut properties {
+                        let editor = state.get_or_create_editor(
+                            TypeId::of::<RigidBodyType>(),
+                            &property.name,
+                            &property.value,
+                        );
+
+                        if editor.render(ui, &mut property) {
+                            // For enums, we need to handle component replacement
+                            if let PropertyValue::Enum(ref selected, _) = property.value {
+                                for variant in RigidBodyType::variants() {
+                                    if variant.display_name() == selected {
+                                        commands.entity(entity).insert(*variant);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    ui.add_space(4.0);
+                    ui.label(egui::RichText::new(match *rigid_body {
+                        RigidBodyType::Fixed => "Static - does not move",
+                        RigidBodyType::Dynamic => "Dynamic - affected by physics",
+                    }).weak().small());
+                });
+            }
+
+            // Light components
+            if let Ok(editor_light) = editor_light_query.get(entity) {
+                ui.add_space(8.0);
+
+                match editor_light.light_type {
+                    LightType::Point => {
+                        if let Ok(mut light) = point_light_query.get_mut(entity) {
+                            let mut properties = light.properties();
+                            let mut changed_properties = Vec::new();
+
+                            ui.collapsing("Point Light", |ui| {
+                                for mut property in &mut properties {
+                                    let editor = state.get_or_create_editor(
+                                        TypeId::of::<PointLight>(),
+                                        &property.name,
+                                        &property.value,
+                                    );
+
+                                    if editor.render(ui, &mut property) {
+                                        changed_properties.push((property.name.clone(), property.value.clone()));
+                                    }
+                                }
+                            });
+
+                            for (name, value) in changed_properties {
+                                light.set_property(&name, value);
+                            }
+                        }
+                    }
+                    LightType::Spot => {
+                        if let Ok(mut light) = spot_light_query.get_mut(entity) {
+                            let mut properties = light.properties();
+                            let mut changed_properties = Vec::new();
+
+                            ui.collapsing("Spot Light", |ui| {
+                                for mut property in &mut properties {
+                                    let editor = state.get_or_create_editor(
+                                        TypeId::of::<SpotLight>(),
+                                        &property.name,
+                                        &property.value,
+                                    );
+
+                                    if editor.render(ui, &mut property) {
+                                        changed_properties.push((property.name.clone(), property.value.clone()));
+                                    }
+                                }
+                            });
+
+                            for (name, value) in changed_properties {
+                                light.set_property(&name, value);
+                            }
+                        }
+                    }
+                }
             }
         });
 }
 
-/// Helper function to render an editable float field with validation
-/// Returns true if the value was changed (Enter pressed or focus lost)
-fn edit_float_field(ui: &mut egui::Ui, buffer: &mut String, width: f32) -> bool {
-    let mut response = ui.add(
-        egui::TextEdit::singleline(buffer)
-            .desired_width(width)
-            .char_limit(12),
-    );
-
-    // Validate on text change (highlight invalid input)
-    let is_valid = buffer.parse::<f32>().is_ok() || buffer.is_empty();
-
-    // Add visual feedback in the same row
-    if !is_valid {
-        response = response.on_hover_text("Invalid number");
-    }
-
-    // Apply changes on Enter key
-    let enter_pressed = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-
-    enter_pressed && is_valid
-}
-
-/// Helper function to render an editable float field with +/- stepper buttons
-/// Returns true if the value was changed
-fn edit_float_field_with_steppers(
+// Global lighting controls when nothing is selected
+fn show_global_lighting_controls(
     ui: &mut egui::Ui,
-    buffer: &mut String,
-    width: f32,
-    step: f32,
-) -> bool {
-    let mut changed = false;
+    state: &mut InspectorState,
+    directional_light: &mut Query<(&mut DirectionalLight, &mut Transform), Without<EditorEntity>>,
+    ambient_light: &mut ResMut<AmbientLight>,
+    lighting_enabled: &mut ResMut<LightingEnabled>,
+) {
+    ui.label("Global Lighting");
+    ui.separator();
 
-    // Decrement button
-    if ui.small_button("−").clicked() {
-        if let Ok(value) = buffer.parse::<f32>() {
-            *buffer = format!("{:.3}", value - step);
-            changed = true;
+    // Lighting mode toggle
+    ui.horizontal(|ui| {
+        ui.label("Mode:");
+        if ui.checkbox(&mut lighting_enabled.0, "Custom Lighting").changed() {
+            // Mode changed
         }
+    });
+
+    ui.add_space(4.0);
+
+    if !lighting_enabled.0 {
+        ui.label(egui::RichText::new("Simple mode: 10000 white ambient, no directional").weak().small());
+    } else {
+        ui.label(egui::RichText::new("Custom mode: Configure lights below").weak().small());
     }
 
-    // Text field
-    changed |= edit_float_field(ui, buffer, width);
+    ui.add_space(8.0);
 
-    // Increment button
-    if ui.small_button("+").clicked() {
-        if let Ok(value) = buffer.parse::<f32>() {
-            *buffer = format!("{:.3}", value + step);
-            changed = true;
-        }
+    if !lighting_enabled.0 {
+        return;
     }
 
-    changed
+    // Directional Light controls
+    if let Ok((mut dir_light, mut transform)) = directional_light.single_mut() {
+        ui.group(|ui| {
+            ui.label("Directional Light:");
+
+            // Illuminance
+            let mut illum_prop = Property {
+                name: "Illuminance".to_string(),
+                value: PropertyValue::Float(dir_light.illuminance),
+                metadata: PropertyMetadata {
+                    step: Some(1000.0),
+                    min: Some(0.0),
+                    ..default()
+                },
+            };
+
+            let editor = state.get_or_create_lighting_editor("dir_illuminance", &illum_prop.value);
+            if editor.render(ui, &mut illum_prop) {
+                if let PropertyValue::Float(v) = illum_prop.value {
+                    dir_light.illuminance = v;
+                }
+            }
+
+            // Color
+            let mut color_prop = Property {
+                name: "Color".to_string(),
+                value: PropertyValue::Color(dir_light.color),
+                metadata: PropertyMetadata::default(),
+            };
+
+            let editor = state.get_or_create_lighting_editor("dir_color", &color_prop.value);
+            if editor.render(ui, &mut color_prop) {
+                if let PropertyValue::Color(c) = color_prop.value {
+                    dir_light.color = c;
+                }
+            }
+
+            // Direction (as euler angles)
+            ui.label(egui::RichText::new("Direction:").small());
+
+            let (pitch, yaw, _) = transform.rotation.to_euler(EulerRot::YXZ);
+            let mut pitch_deg = pitch.to_degrees();
+            let mut yaw_deg = yaw.to_degrees();
+
+            // Pitch
+            let mut pitch_prop = Property {
+                name: "Pitch".to_string(),
+                value: PropertyValue::Float(pitch_deg),
+                metadata: PropertyMetadata {
+                    step: Some(5.0),
+                    ..default()
+                },
+            };
+
+            let editor = state.get_or_create_lighting_editor("dir_pitch", &pitch_prop.value);
+            if editor.render(ui, &mut pitch_prop) {
+                if let PropertyValue::Float(v) = pitch_prop.value {
+                    pitch_deg = v;
+                    transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw_deg.to_radians(), pitch_deg.to_radians(), 0.0);
+                }
+            }
+
+            // Yaw
+            let mut yaw_prop = Property {
+                name: "Yaw".to_string(),
+                value: PropertyValue::Float(yaw_deg),
+                metadata: PropertyMetadata {
+                    step: Some(5.0),
+                    ..default()
+                },
+            };
+
+            let editor = state.get_or_create_lighting_editor("dir_yaw", &yaw_prop.value);
+            if editor.render(ui, &mut yaw_prop) {
+                if let PropertyValue::Float(v) = yaw_prop.value {
+                    yaw_deg = v;
+                    transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw_deg.to_radians(), pitch_deg.to_radians(), 0.0);
+                }
+            }
+        });
+    }
+
+    ui.add_space(8.0);
+
+    // Ambient Light controls
+    ui.group(|ui| {
+        ui.label("Ambient Light:");
+
+        // Brightness
+        let mut brightness_prop = Property {
+            name: "Brightness".to_string(),
+            value: PropertyValue::Float(ambient_light.brightness),
+            metadata: PropertyMetadata {
+                step: Some(50.0),
+                min: Some(0.0),
+                ..default()
+            },
+        };
+
+        let editor = state.get_or_create_lighting_editor("ambient_brightness", &brightness_prop.value);
+        if editor.render(ui, &mut brightness_prop) {
+            if let PropertyValue::Float(v) = brightness_prop.value {
+                ambient_light.brightness = v;
+            }
+        }
+
+        // Color
+        let mut color_prop = Property {
+            name: "Color".to_string(),
+            value: PropertyValue::Color(ambient_light.color),
+            metadata: PropertyMetadata::default(),
+        };
+
+        let editor = state.get_or_create_lighting_editor("ambient_color", &color_prop.value);
+        if editor.render(ui, &mut color_prop) {
+            if let PropertyValue::Color(c) = color_prop.value {
+                ambient_light.color = c;
+            }
+        }
+    });
 }
 
-/// Update text buffers from transform (when selection changes or transform modified externally)
-fn update_buffers_from_transform(state: &mut InspectorState, transform: &Transform) {
-    // Position
-    state.pos_x = format!("{:.3}", transform.translation.x);
-    state.pos_y = format!("{:.3}", transform.translation.y);
-    state.pos_z = format!("{:.3}", transform.translation.z);
+// ============================================================================
+// Helper Functions
+// ============================================================================
 
-    // Rotation (convert to degrees)
-    let (x, y, z) = transform.rotation.to_euler(EulerRot::XYZ);
-    state.rot_x = format!("{:.3}", x.to_degrees());
-    state.rot_y = format!("{:.3}", y.to_degrees());
-    state.rot_z = format!("{:.3}", z.to_degrees());
-
-    // Scale
-    state.scale_x = format!("{:.3}", transform.scale.x);
-    state.scale_y = format!("{:.3}", transform.scale.y);
-    state.scale_z = format!("{:.3}", transform.scale.z);
-}
-
-/// Convert RGB [0-1] to hex string
-fn rgb_to_hex(rgb: &[f32; 3]) -> String {
-    format!("{:02x}{:02x}{:02x}",
-        (rgb[0] * 255.0).round() as u8,
-        (rgb[1] * 255.0).round() as u8,
-        (rgb[2] * 255.0).round() as u8)
-}
-
-/// Parse hex string to RGB [0-1], returns None if invalid
-fn hex_to_rgb(hex: &str) -> Option<[f32; 3]> {
+fn parse_hex_color(hex: &str) -> Option<Color> {
     let hex = hex.trim_start_matches('#');
     if hex.len() != 6 {
         return None;
@@ -809,5 +1218,25 @@ fn hex_to_rgb(hex: &str) -> Option<[f32; 3]> {
     let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
     let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
 
-    Some([r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0])
+    Some(Color::srgb(
+        r as f32 / 255.0,
+        g as f32 / 255.0,
+        b as f32 / 255.0
+    ))
+}
+
+// ============================================================================
+// Plugin
+// ============================================================================
+
+/// Initialize the inspector registry with all inspectable components
+pub fn init_inspector_registry(app: &mut App) {
+    app.init_resource::<InspectorRegistry>();
+
+    let mut registry = app.world_mut().resource_mut::<InspectorRegistry>();
+    registry.register::<Transform>();
+    registry.register::<RigidBodyType>();
+    registry.register::<PointLight>();
+    registry.register::<SpotLight>();
+    // Add more components as needed
 }

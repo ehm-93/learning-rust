@@ -1061,10 +1061,11 @@ fn show_global_lighting_controls(
     ui.separator();
 
     // Lighting mode toggle
+    let mut lighting_state = lighting_enabled.0;
     ui.horizontal(|ui| {
         ui.label("Mode:");
-        if ui.checkbox(&mut lighting_enabled.0, "Custom Lighting").changed() {
-            // Mode changed
+        if ui.checkbox(&mut lighting_state, "Custom Lighting").changed() {
+            lighting_enabled.0 = lighting_state;
         }
     });
 

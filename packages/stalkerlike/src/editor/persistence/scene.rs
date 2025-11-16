@@ -284,6 +284,8 @@ pub fn save_scene(
     materials: Res<Assets<StandardMaterial>>,
     directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
     ambient_light: Res<AmbientLight>,
+    lighting_enabled: &Res<crate::editor::viewport::LightingEnabled>,
+    saved_lighting_state: &Res<crate::editor::viewport::SavedLightingState>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut entities = Vec::new();
 
@@ -367,18 +369,19 @@ pub fn save_scene(
         });
     }
 
-    // Capture lighting state (always saves the custom lighting values, not the toggle state)
+    // Capture lighting state - use saved custom values if in simple mode, current values if in custom mode
     let lighting = if let Ok((dir_light, dir_transform)) = directional_light.single() {
         LightingData {
             directional: DirectionalLightData {
-                illuminance: dir_light.illuminance,
-                color: dir_light.color.to_srgba().to_f32_array(),
+                // Use saved custom values when in simple mode, current values when in custom mode
+                illuminance: if lighting_enabled.0 { dir_light.illuminance } else { saved_lighting_state.dir_illuminance },
+                color: if lighting_enabled.0 { dir_light.color.to_srgba().to_f32_array() } else { saved_lighting_state.dir_color.to_srgba().to_f32_array() },
                 position: dir_transform.translation.to_array(),
                 look_at: (dir_transform.translation + dir_transform.forward() * 10.0).to_array(),
             },
             ambient: AmbientLightData {
-                color: ambient_light.color.to_srgba().to_f32_array(),
-                brightness: ambient_light.brightness,
+                color: if lighting_enabled.0 { ambient_light.color.to_srgba().to_f32_array() } else { saved_lighting_state.ambient_color.to_srgba().to_f32_array() },
+                brightness: if lighting_enabled.0 { ambient_light.brightness } else { saved_lighting_state.ambient_brightness },
             },
         }
     } else {

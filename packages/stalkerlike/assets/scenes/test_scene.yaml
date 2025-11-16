@@ -4,6 +4,7 @@ metadata:
   description: null
 global:
   lighting:
+    enabled: true
     directional:
       illuminance: 0.0
       color:
@@ -32,31 +33,6 @@ entities:
     position:
     - 0.0
     - 2.75
-    - 0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: PointLight
-    intensity: 10000.0
-    color:
-    - 0.8509804
-    - 0.9098039
-    - 0.9098039
-    - 1.0
-    shadows_enabled: true
-    range: 20.0
-- name: Point Light
-  transform:
-    position:
-    - 0.0
-    - 2.75
     - -8.0
     rotation:
     - 0.0
@@ -69,7 +45,7 @@ entities:
     - 1.0
   components:
   - type: PointLight
-    intensity: 10000.0
+    intensity: 15000.0
     color:
     - 0.8509804
     - 0.9098039
@@ -95,24 +71,6 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
-- name: corp_light_fluor
-  transform:
-    position:
-    - 0.0
-    - 3.0
-    - 0.0
-    rotation:
-    - 1.0
-    - -0.0
-    - 0.0
-    - -4.371139e-8
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\light\corp_light_fluor.glb
 - name: corp_pipe_1m
   transform:
     position:
@@ -131,6 +89,24 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\corp_pipe_1m.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - -8.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
 - name: corp_pipe_1m
   transform:
     position:
@@ -190,7 +166,7 @@ entities:
     position:
     - 0.0
     - 0.0
-    - -8.0
+    - -4.0
     rotation:
     - 0.0
     - 0.0
@@ -262,7 +238,7 @@ entities:
     position:
     - 0.0
     - 0.0
-    - -4.0
+    - 0.0
     rotation:
     - 0.0
     - 0.0
@@ -311,12 +287,12 @@ entities:
   components:
   - type: GlbModel
     path: models\pipes\conduit.glb
-- name: corp_tunnel
+- name: corp_table_sm
   transform:
     position:
+    - 1.4473457
     - 0.0
-    - 0.0
-    - 0.0
+    - -3.3415856
     rotation:
     - 0.0
     - 0.0
@@ -328,7 +304,61 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_md
+  transform:
+    position:
+    - 1.0003527
+    - 0.0
+    - -7.949912
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_md.glb
+- name: corp_table_lg
+  transform:
+    position:
+    - -1.4706883
+    - 0.0
+    - -8.486736
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_light_fluor
+  transform:
+    position:
+    - 0.0
+    - 3.0
+    - 0.0
+    rotation:
+    - 1.0
+    - -0.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
 - name: Player Spawn
   transform:
     position:
@@ -354,3 +384,28 @@ entities:
     - 0.2
     - 1.0
   - type: PlayerSpawn
+- name: Point Light
+  transform:
+    position:
+    - -0.0
+    - 2.75
+    - 0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: PointLight
+    intensity: 15000.0
+    color:
+    - 0.8509804
+    - 0.9098039
+    - 0.9098039
+    - 1.0
+    shadows_enabled: true
+    range: 20.0

@@ -136,6 +136,8 @@ pub fn save_scene_system(
     materials: Res<Assets<StandardMaterial>>,
     directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
     ambient_light: Res<AmbientLight>,
+    lighting_enabled: Res<crate::editor::viewport::LightingEnabled>,
+    saved_lighting_state: Res<crate::editor::viewport::SavedLightingState>,
 ) {
     // Check for Ctrl+S
     if keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight) {
@@ -160,7 +162,7 @@ pub fn save_scene_system(
                 }
             }
 
-            match save_scene(path.clone(), editor_entities, meshes, materials, directional_light, ambient_light) {
+            match save_scene(path.clone(), editor_entities, meshes, materials, directional_light, ambient_light, &lighting_enabled, &saved_lighting_state) {
                 Ok(()) => {
                     info!("Scene saved to {}", path.display());
                     current_file.set_path(path.clone());
@@ -293,6 +295,8 @@ pub fn handle_save(
     materials: Res<Assets<StandardMaterial>>,
     directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
     ambient_light: Res<AmbientLight>,
+    lighting_enabled: Res<crate::editor::viewport::LightingEnabled>,
+    saved_lighting_state: Res<crate::editor::viewport::SavedLightingState>,
 ) {
     for _ in events.read() {
         // Skip save if no file is open - should not happen since button is disabled
@@ -317,7 +321,7 @@ pub fn handle_save(
             }
         }
 
-        match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials), directional_light, Res::clone(&ambient_light)) {
+        match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials), directional_light, Res::clone(&ambient_light), &lighting_enabled, &saved_lighting_state) {
             Ok(()) => {
                 info!("Scene saved to {}", path.display());
                 current_file.set_path(path);
@@ -527,6 +531,8 @@ pub fn poll_save_as_tasks(
     materials: Res<Assets<StandardMaterial>>,
     directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
     ambient_light: Res<AmbientLight>,
+    lighting_enabled: Res<crate::editor::viewport::LightingEnabled>,
+    saved_lighting_state: Res<crate::editor::viewport::SavedLightingState>,
 ) {
     for (task_entity, mut task) in tasks.iter_mut() {
         if let Some(result) = block_on(futures_lite::future::poll_once(&mut task.0)) {
@@ -546,9 +552,10 @@ pub fn poll_save_as_tasks(
                     }
                 }
 
-                match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials), directional_light, Res::clone(&ambient_light)) {
+                match save_scene(path.clone(), editor_entities, Res::clone(&meshes), Res::clone(&materials), directional_light, Res::clone(&ambient_light), &lighting_enabled, &saved_lighting_state) {
                     Ok(()) => {
                         info!("Scene saved as {}", path.display());
+
                         current_file.set_path(path.clone());
                         current_file.mark_clean();
 
@@ -683,6 +690,8 @@ pub fn autosave_system(
     materials: Res<Assets<StandardMaterial>>,
     directional_light: Query<(&DirectionalLight, &Transform), Without<EditorEntity>>,
     ambient_light: Res<AmbientLight>,
+    lighting_enabled: Res<crate::editor::viewport::LightingEnabled>,
+    saved_lighting_state: Res<crate::editor::viewport::SavedLightingState>,
 ) {
     // Tick the timer
     timer.timer.tick(time.delta());
@@ -719,9 +728,10 @@ pub fn autosave_system(
             }
         }
 
-        match save_scene(autosave_path.clone(), editor_entities, meshes, materials, directional_light, ambient_light) {
+        match save_scene(autosave_path.clone(), editor_entities, meshes, materials, directional_light, ambient_light, &lighting_enabled, &saved_lighting_state) {
             Ok(()) => {
                 info!("Autosaved scene to {}", autosave_path.display());
+
                 notification.show(format!("Autosaved to {}", autosave_path.file_name().unwrap_or_default().to_string_lossy()));
                 // Note: We don't mark the file as clean since autosave is a backup,
                 // not a real save. The user still needs to save manually.

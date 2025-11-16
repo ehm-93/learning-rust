@@ -97,7 +97,7 @@ fn update_lighting_mode(
     }
 
     if lighting_enabled.0 {
-        // Switching to custom lighting mode - restore saved values
+        // Switching TO custom lighting mode - restore from saved state
         for mut dir_light in directional_lights.iter_mut() {
             dir_light.illuminance = saved_state.dir_illuminance;
             dir_light.color = saved_state.dir_color;
@@ -105,7 +105,7 @@ fn update_lighting_mode(
         ambient_light.brightness = saved_state.ambient_brightness;
         ambient_light.color = saved_state.ambient_color;
     } else {
-        // Switching to simple mode - save current values first, then apply simple lighting
+        // Switching to simple mode - save current custom values BEFORE changing
         if let Ok(dir_light) = directional_lights.single() {
             saved_state.dir_illuminance = dir_light.illuminance;
             saved_state.dir_color = dir_light.color;
@@ -113,7 +113,7 @@ fn update_lighting_mode(
         saved_state.ambient_brightness = ambient_light.brightness;
         saved_state.ambient_color = ambient_light.color;
 
-        // Apply simple mode: bright white ambient, no directional
+        // Now apply simple mode: bright white ambient, no directional
         for mut dir_light in directional_lights.iter_mut() {
             dir_light.illuminance = 0.0; // Disable directional light
         }

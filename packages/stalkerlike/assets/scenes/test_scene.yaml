@@ -4,7 +4,6 @@ metadata:
   description: null
 global:
   lighting:
-    enabled: true
     directional:
       illuminance: 0.0
       color:
@@ -31,6 +30,56 @@ entities:
 - name: Point Light
   transform:
     position:
+    - -0.0
+    - 2.75
+    - 0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: PointLight
+    intensity: 15000.0
+    color:
+    - 0.8509804
+    - 0.9098039
+    - 0.9098039
+    - 1.0
+    shadows_enabled: true
+    range: 20.0
+- name: Point Light
+  transform:
+    position:
+    - 0.0
+    - 2.75
+    - -12.2
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: PointLight
+    intensity: 15000.0
+    color:
+    - 1.0
+    - 1.0
+    - 0.9
+    - 1.0
+    shadows_enabled: true
+    range: 20.0
+- name: Point Light
+  transform:
+    position:
     - 0.0
     - 2.75
     - -8.0
@@ -53,6 +102,96 @@ entities:
     - 1.0
     shadows_enabled: true
     range: 20.0
+- name: corp_tunnel
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - 0.0
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_table_lg
+  transform:
+    position:
+    - 2.483624
+    - 0.0
+    - -12.262973
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_pipe_1m Copy Copy
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -16.2
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - -10.1
+    rotation:
+    - -6.181724e-8
+    - -0.70710677
+    - 6.181724e-8
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - 2.1
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
 - name: corp_tunnel_doorway_half
   transform:
     position:
@@ -94,7 +233,7 @@ entities:
     position:
     - 0.0
     - 0.0
-    - -8.0
+    - -4.0
     rotation:
     - 0.0
     - 0.0
@@ -125,48 +264,12 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\corp_pipe_1m.glb
-- name: corp_pipe_1m
-  transform:
-    position:
-    - -1.5
-    - 2.5
-    - -8.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\corp_pipe_1m.glb
-- name: corp_tunnel_doorway_half
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - -10.1
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
 - name: corp_tunnel
   transform:
     position:
     - 0.0
     - 0.0
-    - -4.0
+    - -8.0
     rotation:
     - 0.0
     - 0.0
@@ -179,12 +282,12 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\tunnel\corp_tunnel.glb
-- name: corp_door
+- name: corp_door Copy Copy Copy Copy
   transform:
     position:
     - 1.4
-    - 0.0
-    - 2.1
+    - -7.1638743e-7
+    - -18.3
     rotation:
     - 0.0
     - 1.0
@@ -197,30 +300,30 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\door\corp_door.glb
-- name: corp_door
+- name: corp_pipe_1m Copy
   transform:
     position:
-    - 1.4
-    - 0.0
-    - -10.1
+    - -1.5
+    - 2.5
+    - -12.2
     rotation:
     - 0.0
-    - 1.0
     - 0.0
-    - -4.371139e-8
+    - 0.0
+    - 1.0
     scale:
     - 1.0
     - 1.0
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\door\corp_door.glb
-- name: corp_light_fluor
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_light_fluor Copy
   transform:
     position:
-    - 0.0
+    - -7.4505806e-8
     - 3.0
-    - -8.0
+    - -12.2
     rotation:
     - 1.0
     - -0.0
@@ -233,12 +336,12 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\light\corp_light_fluor.glb
-- name: corp_tunnel
+- name: corp_tunnel_doorway_half
   transform:
     position:
     - 0.0
     - 0.0
-    - 0.0
+    - -10.1
     rotation:
     - 0.0
     - 0.0
@@ -250,7 +353,7 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
 - name: button_wall
   transform:
     position:
@@ -287,12 +390,12 @@ entities:
   components:
   - type: GlbModel
     path: models\pipes\conduit.glb
-- name: corp_table_sm
+- name: corp_pipe_1m
   transform:
     position:
-    - 1.4473457
-    - 0.0
-    - -3.3415856
+    - -1.5
+    - 2.5
+    - -8.0
     rotation:
     - 0.0
     - 0.0
@@ -304,31 +407,49 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\corp_table_sm.glb
-- name: corp_table_md
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_door Copy Copy
   transform:
     position:
-    - 1.0003527
-    - 0.0
-    - -7.949912
+    - 4.1
+    - -7.1638743e-7
+    - -15.6
     rotation:
-    - -0.0
+    - 0.0
+    - -0.70710677
+    - 0.0
     - 0.70710677
-    - -0.0
-    - 0.70710677
     scale:
     - 1.0
     - 1.0
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\corp_table_md.glb
-- name: corp_table_lg
+    path: models\corporate\door\corp_door.glb
+- name: corp_tunnel_doorway
   transform:
     position:
-    - -1.4706883
+    - 4.1
+    - -4.4798628e-7
+    - -14.2
+    rotation:
+    - 6.181724e-8
+    - -0.70710677
+    - 6.181724e-8
+    - -0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway.glb
+- name: corp_tunnel_doorway_half
+  transform:
+    position:
     - 0.0
-    - -8.486736
+    - 2.3841858e-7
+    - -18.3
     rotation:
     - 0.0
     - 0.0
@@ -340,7 +461,43 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\corp_table_lg.glb
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+- name: corp_door Copy Copy
+  transform:
+    position:
+    - -4.1
+    - -4.6891603e-7
+    - -12.8
+    rotation:
+    - 6.181724e-8
+    - -0.70710677
+    - 6.181724e-8
+    - -0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_light_fluor
+  transform:
+    position:
+    - 0.0
+    - 3.0
+    - -8.0
+    rotation:
+    - 1.0
+    - -0.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
 - name: corp_light_fluor
   transform:
     position:
@@ -359,6 +516,150 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\light\corp_light_fluor.glb
+- name: corp_door Copy
+  transform:
+    position:
+    - 4.1
+    - -4.6891603e-7
+    - -12.8
+    rotation:
+    - 6.181724e-8
+    - -0.70710677
+    - 6.181724e-8
+    - -0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_table_md
+  transform:
+    position:
+    - -0.64511234
+    - 0.0
+    - -11.206237
+    rotation:
+    - -0.0
+    - -0.0
+    - -0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_md.glb
+- name: corp_tunnel_doorway Copy
+  transform:
+    position:
+    - -4.1
+    - -4.4798628e-7
+    - -14.2
+    rotation:
+    - 6.181724e-8
+    - -0.70710677
+    - 6.181724e-8
+    - -0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway.glb
+- name: corp_door Copy Copy Copy
+  transform:
+    position:
+    - -4.1
+    - -7.1638743e-7
+    - -15.6
+    rotation:
+    - 0.0
+    - -0.70710677
+    - 0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - -20.4
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_pipe_1m Copy Copy Copy
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -20.4
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 2.9058979
+    - 0.0
+    - -17.129286
+    rotation:
+    - -0.0
+    - 0.38268346
+    - -0.0
+    - 0.9238795
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_room_sm
+  transform:
+    position:
+    - -1.0
+    - 0.0
+    - -12.2
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_room_sm.glb
 - name: Player Spawn
   transform:
     position:
@@ -384,28 +685,3 @@ entities:
     - 0.2
     - 1.0
   - type: PlayerSpawn
-- name: Point Light
-  transform:
-    position:
-    - -0.0
-    - 2.75
-    - 0.0
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: PointLight
-    intensity: 15000.0
-    color:
-    - 0.8509804
-    - 0.9098039
-    - 0.9098039
-    - 1.0
-    shadows_enabled: true
-    range: 20.0

@@ -1,11 +1,12 @@
 //! Scene data structures and serialization logic
 
 use bevy::prelude::*;
+use bevy::asset::LoadState;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel, EditorVisualization};
+use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel, EditorVisualization, MissingAsset};
 use crate::editor::objects::primitives::PrimitiveType;
 
 /// Root scene data structure

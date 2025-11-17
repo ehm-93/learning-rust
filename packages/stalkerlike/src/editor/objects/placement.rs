@@ -20,9 +20,10 @@
 //! 5. ESC cancels placement mode
 
 use bevy::prelude::*;
+use bevy::asset::LoadState;
 use std::path::PathBuf;
 
-use crate::editor::core::types::{EditorEntity, PlayerSpawn, GlbModel, EditorLight, LightType, EditorVisualization};
+use crate::editor::core::types::{EditorEntity, PlayerSpawn, GlbModel, EditorLight, LightType, EditorVisualization, MissingAsset};
 use crate::editor::viewport::{camera::EditorCamera, grid::{snap_to_grid, GridConfig}, raycasting::ray_plane_intersection};
 use crate::editor::objects::primitives::{PrimitiveDefinition, PrimitiveType};
 
@@ -299,20 +300,47 @@ pub fn place_object(
                         }
                     }
                     PlacementAsset::GlbModel { name, path } => {
-                        // Spawn the actual GLB model
+                        // Check if asset exists before spawning
                         let glb_path_str = path.to_string_lossy().to_string();
-                        let scene_handle = asset_server.load(format!("{}#Scene0", glb_path_str));
-
-                        commands.spawn((
-                            EditorEntity,
-                            GlbModel { path: path.clone() },
-                            Name::new(name.clone()),
-                            SceneRoot(scene_handle),
-                            *preview_transform,
-                            Visibility::Inherited,
-                        ));
-
-                        info!("Placed GLB {} at {:?}", name, preview_transform.translation);
+                        let glb_handle: Handle<Scene> = asset_server.load(format!("{}#Scene0", glb_path_str));
+                        
+                        match asset_server.get_load_state(&glb_handle) {
+                            Some(LoadState::Failed(_)) => {
+                                // Asset failed to load - spawn red error cube
+                                error!("Failed to load GLB asset: {}", glb_path_str);
+                                
+                                let error_mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+                                let error_material = materials.add(StandardMaterial {
+                                    base_color: Color::srgb(1.0, 0.0, 0.0),
+                                    emissive: Color::srgb(1.0, 0.0, 0.0).into(),
+                                    ..default()
+                                });
+                                
+                                commands.spawn((
+                                    EditorEntity,
+                                    MissingAsset { path: path.clone() },
+                                    Name::new(format!("MISSING: {}", name)),
+                                    Mesh3d(error_mesh),
+                                    MeshMaterial3d(error_material),
+                                    *preview_transform,
+                                ));
+                                
+                                info!("Spawned error placeholder for missing asset: {}", glb_path_str);
+                            }
+                            _ => {
+                                // Asset exists or is loading - spawn normally
+                                commands.spawn((
+                                    EditorEntity,
+                                    GlbModel { path: path.clone() },
+                                    Name::new(name.clone()),
+                                    SceneRoot(glb_handle),
+                                    *preview_transform,
+                                    Visibility::Inherited,
+                                ));
+                                
+                                info!("Placed GLB {} at {:?}", name, preview_transform.translation);
+                            }
+                        }
                     }
                 }
             }

@@ -18,6 +18,8 @@ pub struct AssetBrowserSections {
     pub models_expanded: bool,
     /// Which model folders are expanded (by directory path)
     pub expanded_folders: HashMap<PathBuf, bool>,
+    /// Search filter text (case-insensitive)
+    pub search_filter: String,
 }
 
 impl Default for AssetBrowserSections {
@@ -26,6 +28,7 @@ impl Default for AssetBrowserSections {
             primitives_expanded: true,
             models_expanded: true,
             expanded_folders: HashMap::new(),
+            search_filter: String::new(),
         }
     }
 }
@@ -50,16 +53,29 @@ impl AssetFolder {
     }
 }
 
-/// Build a folder tree from flat asset list
-fn build_folder_tree(assets: &[crate::editor::ui::hierarchy::GlbAsset]) -> Vec<AssetFolder> {
+/// Check if asset name matches filter (case-insensitive)
+fn matches_filter(name: &str, filter: &str) -> bool {
+    if filter.is_empty() {
+        return true;
+    }
+    name.to_lowercase().contains(&filter.to_lowercase())
+}
+
+/// Build a folder tree from flat asset list, filtered by search
+fn build_folder_tree(assets: &[crate::editor::ui::hierarchy::GlbAsset], filter: &str) -> Vec<AssetFolder> {
     if assets.is_empty() {
         return Vec::new();
     }
 
-    // Group assets by their directory
+    // Group assets by their directory (filter by search)
     let mut folder_map: HashMap<PathBuf, Vec<usize>> = HashMap::new();
 
     for (idx, asset) in assets.iter().enumerate() {
+        // Skip assets that don't match filter
+        if !matches_filter(&asset.name, filter) {
+            continue;
+        }
+
         let parent_dir = if let Some(parent) = asset.relative_path.parent() {
             parent.to_path_buf()
         } else {
@@ -256,6 +272,20 @@ pub fn asset_browser_ui(
             ui.heading("Assets");
             ui.separator();
 
+            // === SEARCH BAR ===
+            ui.horizontal(|ui| {
+                ui.label("🔍");
+                let response = ui.text_edit_singleline(&mut sections.search_filter);
+                if response.changed() {
+                    // Search filter changed - no need to do anything else
+                    // The filter will be applied when rendering below
+                }
+                if ui.button("✖").clicked() {
+                    sections.search_filter.clear();
+                }
+            });
+            ui.add_space(4.0);
+
             egui::ScrollArea::vertical()
                 .id_salt("asset_browser_scroll")
                 .show(ui, |ui| {
@@ -274,19 +304,32 @@ pub fn asset_browser_ui(
 
                     if sections.primitives_expanded {
                         ui.add_space(4.0);
-                        for primitive in &asset_catalog.primitives {
+                        // Filter primitives by search
+                        let filtered_primitives: Vec<_> = asset_catalog.primitives
+                            .iter()
+                            .filter(|p| matches_filter(&p.name, &sections.search_filter))
+                            .collect();
+
+                        if filtered_primitives.is_empty() && !sections.search_filter.is_empty() {
                             ui.horizontal(|ui| {
-                                ui.add_space(20.0); // Indent under header
-                                if ui.button(&primitive.name).clicked() {
-                                    start_placement(
-                                        &mut placement_state,
-                                        primitive.clone(),
-                                        &mut commands,
-                                        &mut meshes,
-                                        &mut materials,
-                                    );
-                                }
+                                ui.add_space(20.0);
+                                ui.colored_label(egui::Color32::GRAY, "No matches");
                             });
+                        } else {
+                            for primitive in filtered_primitives {
+                                ui.horizontal(|ui| {
+                                    ui.add_space(20.0); // Indent under header
+                                    if ui.button(&primitive.name).clicked() {
+                                        start_placement(
+                                            &mut placement_state,
+                                            primitive.clone(),
+                                            &mut commands,
+                                            &mut meshes,
+                                            &mut materials,
+                                        );
+                                    }
+                                });
+                            }
                         }
                     }
 
@@ -319,23 +362,30 @@ pub fn asset_browser_ui(
                         } else {
                             ui.add_space(4.0);
 
-                            // Build folder tree from assets
-                            let folder_tree = build_folder_tree(&asset_browser_state.glb_assets);
+                            // Build folder tree from assets (filtered)
+                            let folder_tree = build_folder_tree(&asset_browser_state.glb_assets, &sections.search_filter);
 
-                            // Render folder tree
-                            for folder in &folder_tree {
-                                render_folder_node(
-                                    ui,
-                                    folder,
-                                    &asset_browser_state.glb_assets,
-                                    &mut sections,
-                                    &mut placement_state,
-                                    &mut commands,
-                                    &mut meshes,
-                                    &mut materials,
-                                    &asset_server,
-                                    0,
-                                );
+                            if folder_tree.is_empty() && !sections.search_filter.is_empty() {
+                                ui.horizontal(|ui| {
+                                    ui.add_space(20.0);
+                                    ui.colored_label(egui::Color32::GRAY, "No matches");
+                                });
+                            } else {
+                                // Render folder tree
+                                for folder in &folder_tree {
+                                    render_folder_node(
+                                        ui,
+                                        folder,
+                                        &asset_browser_state.glb_assets,
+                                        &mut sections,
+                                        &mut placement_state,
+                                        &mut commands,
+                                        &mut meshes,
+                                        &mut materials,
+                                        &asset_server,
+                                        0,
+                                    );
+                                }
                             }
                         }
                     }

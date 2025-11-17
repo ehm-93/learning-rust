@@ -2,12 +2,13 @@
 
 use bevy::prelude::*;
 use bevy::tasks::{block_on, AsyncComputeTaskPool, Task};
+use bevy::asset::LoadState;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use crate::editor::persistence::scene::{save_scene, load_scene};
 use crate::editor::persistence::events::{NewFileEvent, OpenFileEvent, SaveEvent, SaveAsEvent};
-use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel};
+use crate::editor::core::types::{EditorEntity, PlayerSpawn, RigidBodyType, GlbModel, MissingAsset};
 use crate::editor::ui::confirmation_dialog::{ConfirmationDialog, ErrorDialog, PendingAction, AutoSaveRecoveryDialog, AutoSaveChoice};
 
 /// Resource for showing autosave notifications
@@ -740,6 +741,50 @@ pub fn autosave_system(
                 error!("Autosave failed: {}", e);
                 notification.show(format!("Autosave failed: {}", e));
             }
+        }
+    }
+}
+
+/// System to check for missing GLB assets and replace with error placeholders
+/// Runs periodically to detect failed asset loads
+pub fn check_missing_assets(
+    mut commands: Commands,
+    glb_entities: Query<(Entity, &GlbModel, &SceneRoot, Option<&Name>), Without<MissingAsset>>,
+    asset_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for (entity, glb_model, scene_root, name) in glb_entities.iter() {
+        // Check if the scene asset failed to load
+        if let Some(LoadState::Failed(_)) = asset_server.get_load_state(&scene_root.0) {
+            warn!("GLB asset failed to load: {:?}", glb_model.path);
+            
+            // Remove the SceneRoot component
+            commands.entity(entity).remove::<SceneRoot>();
+            
+            // Add MissingAsset marker
+            commands.entity(entity).insert(MissingAsset { 
+                path: glb_model.path.clone() 
+            });
+            
+            // Create red error cube
+            let error_mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+            let error_material = materials.add(StandardMaterial {
+                base_color: Color::srgb(1.0, 0.0, 0.0),
+                emissive: Color::srgb(1.0, 0.0, 0.0).into(),
+                ..default()
+            });
+            
+            commands.entity(entity).insert((
+                Mesh3d(error_mesh),
+                MeshMaterial3d(error_material),
+            ));
+            
+            // Update name to indicate missing asset
+            let asset_name = name.map(|n| n.as_str()).unwrap_or("Unknown");
+            commands.entity(entity).insert(Name::new(format!("MISSING: {}", asset_name)));
+            
+            error!("Replaced missing GLB asset with error placeholder: {:?}", glb_model.path);
         }
     }
 }

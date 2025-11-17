@@ -64,6 +64,14 @@ pub struct EditorLight {
 #[derive(Component, Clone, Debug)]
 pub struct EditorVisualization;
 
+/// Marker component for entities with missing assets
+/// Used to identify models that failed to load
+#[derive(Component, Clone, Debug)]
+pub struct MissingAsset {
+    /// The path that couldn't be loaded
+    pub path: PathBuf,
+}
+
 /// Types of lights available in the editor
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LightType {

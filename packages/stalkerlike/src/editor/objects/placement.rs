@@ -303,19 +303,19 @@ pub fn place_object(
                         // Check if asset exists before spawning
                         let glb_path_str = path.to_string_lossy().to_string();
                         let glb_handle: Handle<Scene> = asset_server.load(format!("{}#Scene0", glb_path_str));
-                        
+
                         match asset_server.get_load_state(&glb_handle) {
                             Some(LoadState::Failed(_)) => {
                                 // Asset failed to load - spawn red error cube
                                 error!("Failed to load GLB asset: {}", glb_path_str);
-                                
+
                                 let error_mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
                                 let error_material = materials.add(StandardMaterial {
                                     base_color: Color::srgb(1.0, 0.0, 0.0),
                                     emissive: Color::srgb(1.0, 0.0, 0.0).into(),
                                     ..default()
                                 });
-                                
+
                                 commands.spawn((
                                     EditorEntity,
                                     MissingAsset { path: path.clone() },
@@ -324,7 +324,7 @@ pub fn place_object(
                                     MeshMaterial3d(error_material),
                                     *preview_transform,
                                 ));
-                                
+
                                 info!("Spawned error placeholder for missing asset: {}", glb_path_str);
                             }
                             _ => {
@@ -337,7 +337,7 @@ pub fn place_object(
                                     *preview_transform,
                                     Visibility::Inherited,
                                 ));
-                                
+
                                 info!("Placed GLB {} at {:?}", name, preview_transform.translation);
                             }
                         }

@@ -48,13 +48,13 @@
 - [x] Test: 50 models across 5 folders → all appear organized in asset browser
 
 **Search & Filter** (High Priority)
-- [ ] Add search bar above asset sections in asset browser
-- [ ] Filter `asset_catalog.primitives` and `asset_browser_state.glb_assets` by name
-- [ ] Case-insensitive matching, update on text change
-- [ ] Clear button resets filter
-- [ ] Check asset existence before spawning: `asset_server.get_load_state()`
-- [ ] On load failure: spawn red cube + `MissingAsset` marker + log error
-- [ ] Test: Delete GLB → load scene → red placeholder appears with "MISSING: {path}"
+- [x] Add search bar above asset sections in asset browser
+- [x] Filter `asset_catalog.primitives` and `asset_browser_state.glb_assets` by name
+- [x] Case-insensitive matching, update on text change
+- [x] Clear button resets filter
+- [x] Check asset existence before spawning: `asset_server.get_load_state()`
+- [x] On load failure: spawn red cube + `MissingAsset` marker + log error
+- [x] Test: Delete GLB → load scene → red placeholder appears with "MISSING: {path}"
 
 **Inspector Metadata & Material Verification** (Medium Priority)
 - [ ] Detect `GlbModel` component in inspector system

@@ -758,15 +758,15 @@ pub fn check_missing_assets(
         // Check if the scene asset failed to load
         if let Some(LoadState::Failed(_)) = asset_server.get_load_state(&scene_root.0) {
             warn!("GLB asset failed to load: {:?}", glb_model.path);
-            
+
             // Remove the SceneRoot component
             commands.entity(entity).remove::<SceneRoot>();
-            
+
             // Add MissingAsset marker
-            commands.entity(entity).insert(MissingAsset { 
-                path: glb_model.path.clone() 
+            commands.entity(entity).insert(MissingAsset {
+                path: glb_model.path.clone()
             });
-            
+
             // Create red error cube
             let error_mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
             let error_material = materials.add(StandardMaterial {
@@ -774,16 +774,16 @@ pub fn check_missing_assets(
                 emissive: Color::srgb(1.0, 0.0, 0.0).into(),
                 ..default()
             });
-            
+
             commands.entity(entity).insert((
                 Mesh3d(error_mesh),
                 MeshMaterial3d(error_material),
             ));
-            
+
             // Update name to indicate missing asset
             let asset_name = name.map(|n| n.as_str()).unwrap_or("Unknown");
             commands.entity(entity).insert(Name::new(format!("MISSING: {}", asset_name)));
-            
+
             error!("Replaced missing GLB asset with error placeholder: {:?}", glb_model.path);
         }
     }

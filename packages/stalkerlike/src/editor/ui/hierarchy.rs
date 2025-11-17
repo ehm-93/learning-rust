@@ -31,6 +31,8 @@ pub struct HierarchyState {
     pub name_buffer: String,
     /// Height of the hierarchy section (resizable)
     pub hierarchy_height: f32,
+    /// Whether the inspector section is collapsed
+    pub inspector_collapsed: bool,
 }
 
 impl Default for HierarchyState {
@@ -40,6 +42,7 @@ impl Default for HierarchyState {
             renaming: None,
             name_buffer: String::new(),
             hierarchy_height: 400.0, // Default height
+            inspector_collapsed: false,
         }
     }
 }
@@ -317,6 +320,24 @@ pub fn hierarchy_ui(
             }
 
             ui.add_space(4.0);
+
+            // === INSPECTOR SECTION ===
+            ui.add_space(8.0);
+            ui.separator();
+            
+            ui.horizontal(|ui| {
+                let arrow = if hierarchy_state.inspector_collapsed { "▶" } else { "▼" };
+                if ui.small_button(arrow).clicked() {
+                    hierarchy_state.inspector_collapsed = !hierarchy_state.inspector_collapsed;
+                }
+                ui.heading("Inspector");
+            });
+            ui.separator();
+            
+            if !hierarchy_state.inspector_collapsed {
+                ui.label("(Inspector content will render here)");
+                ui.add_space(200.0);
+            }
 
             // === ASSET DIRECTORY MANAGEMENT ===
             ui.add_space(8.0);

@@ -1170,24 +1170,24 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\corp_stool.glb
-- name: corp_panel_wall_4m_3m
+- name: corp_tunnel_doorway_half
   transform:
     position:
-    - 1.7729265e-8
     - 0.0
-    - 18.2
+    - 0.0
+    - -10.1
     rotation:
     - 0.0
-    - 1.0
     - 0.0
-    - -4.371139e-8
+    - 0.0
+    - 1.0
     scale:
     - 1.0
     - 1.0
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_panel_wall_4m_3m.glb
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
 - name: corp_tunnel_doorway
   transform:
     position:
@@ -2826,24 +2826,24 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\corp_stool.glb
-- name: corp_table_lg
+- name: gun
   transform:
     position:
-    - 3.4838037
-    - 0.0
-    - 5.3271756
+    - -1.5308884
+    - 1.1883378
+    - 12.5813675
     rotation:
-    - -0.0
-    - 0.70710677
-    - -0.0
-    - 0.70710677
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
     scale:
     - 1.0
     - 1.0
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\corp_table_lg.glb
+    path: models\corporate\gun.glb
 - name: corp_table_lg Copy
   transform:
     position:
@@ -3132,6 +3132,60 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+- name: corp_panel_wall_4m_3m
+  transform:
+    position:
+    - 1.7729265e-8
+    - 0.0
+    - 18.2
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_panel_wall_4m_3m.glb
+- name: corp_table_lg
+  transform:
+    position:
+    - 3.4838037
+    - 0.0
+    - 5.3271756
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: character_m
+  transform:
+    position:
+    - -0.18046856
+    - -0.102416635
+    - 9.939573
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\character_m.glb
 - name: corp_room_md Copy
   transform:
     position:
@@ -3150,21 +3204,3 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\tunnel\corp_room_md.glb
-- name: corp_tunnel_doorway_half
-  transform:
-    position:
-    - 0.0
-    - 0.0
-    - -10.1
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
-    - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb

@@ -19,8 +19,6 @@ use std::path::PathBuf;
 use crate::editor::core::types::EditorEntity;
 use crate::editor::objects::selection::{SelectionSet, Selected};
 use crate::editor::objects::grouping::Group;
-use crate::editor::objects::placement::{start_placement, start_placement_asset, PlacementState, PlacementAsset};
-use crate::editor::objects::primitives::AssetCatalog;
 
 /// Resource to track which entities have their children expanded in the hierarchy
 #[derive(Resource)]
@@ -239,18 +237,12 @@ pub fn hierarchy_ui(
         Has<Locked>,
     )>,
     keyboard: Res<ButtonInput<KeyCode>>,
-    // Asset browser resources
-    asset_catalog: Res<AssetCatalog>,
-    mut placement_state: ResMut<PlacementState>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
 
-    egui::SidePanel::left("hierarchy")
+    egui::SidePanel::right("hierarchy")
         .default_width(250.0)
         .resizable(true)
         .show(ctx, |ui| {
@@ -326,15 +318,15 @@ pub fn hierarchy_ui(
 
             ui.add_space(4.0);
 
-            // === ASSET BROWSER SECTION ===
+            // === ASSET DIRECTORY MANAGEMENT ===
             ui.add_space(8.0);
             ui.separator();
-            ui.heading("Assets");
+            ui.heading("Asset Directory");
             ui.separator();
 
             // Asset directory selection
             ui.horizontal(|ui| {
-                ui.label("Asset Directory:");
+                ui.label("Models Directory:");
                 if ui.button("Browse...").clicked() {
                     // Trigger directory picker (will be handled by a system)
                     asset_browser_state.pending_directory_task = true;
@@ -352,89 +344,6 @@ pub fn hierarchy_ui(
                 });
             } else {
                 ui.colored_label(egui::Color32::GRAY, "No directory selected");
-            }
-
-            ui.add_space(8.0);
-
-            // GLB/GLTF Models Section
-            if !asset_browser_state.glb_assets.is_empty() {
-                ui.separator();
-                let _header_response = ui.horizontal(|ui| {
-                    let arrow = if asset_browser_state.glb_section_expanded { "▼" } else { "▶" };
-                    if ui.small_button(arrow).clicked() {
-                        asset_browser_state.glb_section_expanded = !asset_browser_state.glb_section_expanded;
-                    }
-                    ui.label("3D Models");
-                });
-
-                if asset_browser_state.glb_section_expanded {
-                    ui.add_space(4.0);
-                    egui::ScrollArea::vertical()
-                        .id_salt("glb_assets_scroll")
-                        .max_height(200.0)
-                        .show(ui, |ui| {
-                            for glb_asset in &asset_browser_state.glb_assets.clone() {
-                                let button_text = format!("🎨 {}", glb_asset.name);
-                                if ui.button(button_text).clicked() {
-                                    info!("Starting placement for GLB: {:?} (relative: {:?})",
-                                          glb_asset.path, glb_asset.relative_path);
-
-                                    // Use the placement system for GLB models
-                                    // Use relative_path to avoid "unapproved path" errors in Bevy 0.16
-                                    start_placement_asset(
-                                        &mut placement_state,
-                                        PlacementAsset::GlbModel {
-                                            name: glb_asset.name.clone(),
-                                            path: glb_asset.relative_path.clone(),
-                                        },
-                                        &mut commands,
-                                        &mut meshes,
-                                        &mut materials,
-                                        Some(&asset_server),
-                                    );
-                                }
-                            }
-                        });
-                }
-            }
-
-            ui.add_space(8.0);
-            ui.separator();
-
-            // Primitives Section
-            ui.label("Primitives");
-            ui.add_space(4.0);
-
-            // Render asset buttons in a scrollable area
-            egui::ScrollArea::vertical()
-                .id_salt("assets_scroll")
-                .show(ui, |ui| {
-                for primitive in &asset_catalog.primitives {
-                    if ui.button(&primitive.name).clicked() {
-                        start_placement(
-                            &mut placement_state,
-                            primitive.clone(),
-                            &mut commands,
-                            &mut meshes,
-                            &mut materials,
-                        );
-                    }
-                }
-            });
-
-            if placement_state.active {
-                ui.add_space(8.0);
-                ui.separator();
-                ui.colored_label(egui::Color32::YELLOW, "Placement Mode");
-                if let Some(asset) = &placement_state.selected_asset {
-                    let asset_name = match asset {
-                        PlacementAsset::Primitive(prim) => &prim.name,
-                        PlacementAsset::GlbModel { name, .. } => name,
-                    };
-                    ui.label(format!("Placing: {}", asset_name));
-                }
-                ui.label("Click to place");
-                ui.label("ESC to cancel");
             }
         });
 

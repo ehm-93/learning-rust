@@ -39,13 +39,13 @@
 #### Implementation Tasks
 
 **Asset Browser UI Integration** (Critical)
-- [ ] Refactor `asset_browser.rs` to show primitives + models in separate collapsible sections
-- [ ] Build folder tree from `AssetBrowserState.glb_assets` using `relative_path`
-- [ ] Group assets by directory (e.g., "pipes/", "industrial/", "structural/")
-- [ ] Add expand/collapse arrows for categories
-- [ ] Click asset → call existing `start_placement_asset()` with `PlacementAsset::GlbModel`
-- [ ] Remove GLB display from hierarchy panel (keep scanning logic)
-- [ ] Test: 50 models across 5 folders → all appear organized in asset browser
+- [x] Refactor `asset_browser.rs` to show primitives + models in separate collapsible sections
+- [x] Build folder tree from `AssetBrowserState.glb_assets` using `relative_path`
+- [x] Group assets by directory (e.g., "pipes/", "industrial/", "structural/")
+- [x] Add expand/collapse arrows for categories
+- [x] Click asset → call existing `start_placement_asset()` with `PlacementAsset::GlbModel`
+- [x] Remove GLB display from hierarchy panel (keep scanning logic)
+- [x] Test: 50 models across 5 folders → all appear organized in asset browser
 
 **Search & Filter** (High Priority)
 - [ ] Add search bar above asset sections in asset browser

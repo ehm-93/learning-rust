@@ -6,6 +6,8 @@
 1. GLB models work but won't scale (no search, no hierarchy, minimal UI - usable for <10 models, breaks at 50+)
 2. Gizmo drag operations fail ~70% of the time (unreliable interaction)
 
+TODO: undo/redo, add/remove components, click-drag transforms, (unique) entity counter, prefabs, scripting, drop-in testing, cut-paste
+
 **Solution**: Build proper asset browser with search/hierarchy for GLB catalog + fix gizmo picking/drag lifecycle.
 
 **Timeline**: 3-4 weeks

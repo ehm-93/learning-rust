@@ -117,7 +117,7 @@ fn update_lighting_mode(
         for mut dir_light in directional_lights.iter_mut() {
             dir_light.illuminance = 0.0; // Disable directional light
         }
-        ambient_light.brightness = 10000.0;
+        ambient_light.brightness = 1000.0;
         ambient_light.color = Color::WHITE;
     }
 }

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, PrimaryEguiContext};
 use bevy_rapier3d::prelude::*;
+use bevy_screen_diagnostics::{ScreenDiagnosticsPlugin, ScreenFrameDiagnosticsPlugin};
 
 mod components;
 mod persistence;
@@ -8,7 +9,7 @@ mod player;
 mod resources;
 mod ui;
 
-use components::{Saveable, GameEntity};
+use components::{GameEntity};
 use persistence::PersistencePlugin;
 use player::PlayerPlugin;
 use resources::*;
@@ -26,6 +27,10 @@ impl Plugin for GamePlugin {
             .add_plugins(EguiPlugin::default())
             .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
             // .add_plugins(RapierDebugRenderPlugin::default())
+            .add_plugins(ScreenDiagnosticsPlugin::default())
+            .add_plugins((
+                ScreenFrameDiagnosticsPlugin,
+            ))
 
             // Game plugins
             .add_plugins(PlayerPlugin)

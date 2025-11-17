@@ -25,14 +25,14 @@ global:
       - 0.99999994
       - 0.99999994
       - 1.0
-      brightness: 40.0
+      brightness: 0.0
 entities:
-- name: Point Light
+- name: Point Light Copy Copy Copy
   transform:
     position:
-    - -0.0
+    - -4.333
     - 2.75
-    - 0.0
+    - 14.533
     rotation:
     - 0.0
     - 0.0
@@ -46,18 +46,68 @@ entities:
   - type: PointLight
     intensity: 15000.0
     color:
-    - 0.8509804
-    - 0.9098039
-    - 0.9098039
+    - 1.0
+    - 1.0
+    - 0.9
+    - 1.0
+    shadows_enabled: true
+    range: 20.0
+- name: Point Light Copy
+  transform:
+    position:
+    - 4.333
+    - 2.75
+    - 5.533
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: PointLight
+    intensity: 15000.0
+    color:
+    - 1.0
+    - 1.0
+    - 0.9
     - 1.0
     shadows_enabled: true
     range: 20.0
 - name: Point Light
   transform:
     position:
-    - 0.0
+    - -4.333
     - 2.75
-    - -12.2
+    - 5.533
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: PointLight
+    intensity: 15000.0
+    color:
+    - 1.0
+    - 1.0
+    - 0.9
+    - 1.0
+    shadows_enabled: true
+    range: 20.0
+- name: Point Light Copy Copy
+  transform:
+    position:
+    - 4.333
+    - 2.75
+    - 14.533
     rotation:
     - 0.0
     - 0.0
@@ -94,19 +144,19 @@ entities:
     - 1.0
   components:
   - type: PointLight
-    intensity: 15000.0
+    intensity: 20000.0
     color:
-    - 0.8509804
-    - 0.9098039
-    - 0.9098039
+    - 1.0
+    - 1.0
+    - 1.0
     - 1.0
     shadows_enabled: true
     range: 20.0
-- name: corp_tunnel
+- name: Point Light
   transform:
     position:
-    - 0.0
-    - 0.0
+    - -0.0
+    - 2.75
     - 0.0
     rotation:
     - 0.0
@@ -118,8 +168,108 @@ entities:
     - 1.0
     - 1.0
   components:
+  - type: PointLight
+    intensity: 20000.0
+    color:
+    - 0.8509804
+    - 0.9098039
+    - 0.9098039
+    - 1.0
+    shadows_enabled: true
+    range: 20.0
+- name: Point Light Copy
+  transform:
+    position:
+    - 0.0
+    - 2.75
+    - -16.2
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: PointLight
+    intensity: 20000.0
+    color:
+    - 1.0
+    - 1.0
+    - 0.9
+    - 1.0
+    shadows_enabled: true
+    range: 20.0
+- name: Point Light
+  transform:
+    position:
+    - 0.0
+    - 2.75
+    - -12.2
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: PointLight
+    intensity: 20000.0
+    color:
+    - 1.0
+    - 1.0
+    - 0.9
+    - 1.0
+    shadows_enabled: true
+    range: 20.0
+- name: Player Spawn
+  transform:
+    position:
+    - 0.03576374
+    - 1.1510487
+    - -3.9562483
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: Mesh
+    primitive_type: Sphere
+  - type: Material
+    base_color:
+    - 0.2
+    - 1.0
+    - 0.2
+    - 1.0
+  - type: PlayerSpawn
+- name: corp_light_fluor Copy Copy Copy
+  transform:
+    position:
+    - 4.333
+    - 3.0
+    - 14.533
+    rotation:
+    - 0.0
+    - -0.0
+    - 1.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel.glb
+    path: models\corporate\light\corp_light_fluor.glb
 - name: corp_table_lg
   transform:
     position:
@@ -138,51 +288,15 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\corp_table_lg.glb
-- name: corp_pipe_1m Copy Copy
+- name: corp_light_fluor Copy Copy
   transform:
     position:
-    - -1.5
-    - 2.5
+    - 0.0
+    - 3.0
     - -16.2
     rotation:
-    - 0.0
-    - 0.0
-    - 0.0
     - 1.0
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\corp_pipe_1m.glb
-- name: corp_door
-  transform:
-    position:
-    - 1.4
-    - 0.0
-    - -10.1
-    rotation:
-    - -6.181724e-8
-    - -0.70710677
-    - 6.181724e-8
-    - 0.70710677
-    scale:
-    - 1.0
-    - 1.0
-    - 1.0
-  components:
-  - type: GlbModel
-    path: models\corporate\door\corp_door.glb
-- name: corp_door
-  transform:
-    position:
-    - 1.4
-    - 0.0
-    - 2.1
-    rotation:
-    - 0.0
-    - 1.0
+    - -0.0
     - 0.0
     - -4.371139e-8
     scale:
@@ -191,13 +305,49 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\door\corp_door.glb
-- name: corp_tunnel_doorway_half
+    path: models\corporate\light\corp_light_fluor.glb
+- name: corp_door
   transform:
     position:
-    - 0.0
+    - 1.4
     - 0.0
     - 2.1
+    rotation:
+    - 0.0
+    - -0.70710677
+    - 0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_light_fluor Copy
+  transform:
+    position:
+    - -4.333
+    - 3.0
+    - 5.533
+    rotation:
+    - 0.0
+    - -0.0
+    - 1.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
+- name: corp_room_sm
+  transform:
+    position:
+    - -1.0
+    - 0.0
+    - -12.2
     rotation:
     - 0.0
     - 0.0
@@ -209,7 +359,7 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+    path: models\corporate\tunnel\corp_room_sm.glb
 - name: corp_pipe_1m
   transform:
     position:
@@ -318,30 +468,30 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\corp_pipe_1m.glb
-- name: corp_light_fluor Copy
+- name: corp_stool
   transform:
     position:
-    - -7.4505806e-8
-    - 3.0
-    - -12.2
-    rotation:
-    - 1.0
-    - -0.0
+    - 2.566973
     - 0.0
-    - -4.371139e-8
+    - -11.736718
+    rotation:
+    - 0.0
+    - -0.309017
+    - 0.0
+    - 0.95105654
     scale:
     - 1.0
     - 1.0
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\light\corp_light_fluor.glb
+    path: models\corporate\corp_stool.glb
 - name: corp_tunnel_doorway_half
   transform:
     position:
     - 0.0
-    - 0.0
-    - -10.1
+    - 2.3841858e-7
+    - -18.3
     rotation:
     - 0.0
     - 0.0
@@ -444,12 +594,12 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\tunnel\corp_tunnel_doorway.glb
-- name: corp_tunnel_doorway_half
+- name: corp_tunnel
   transform:
     position:
     - 0.0
-    - 2.3841858e-7
-    - -18.3
+    - 0.0
+    - 0.0
     rotation:
     - 0.0
     - 0.0
@@ -461,7 +611,7 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+    path: models\corporate\tunnel\corp_tunnel.glb
 - name: corp_door Copy Copy
   transform:
     position:
@@ -642,12 +792,48 @@ entities:
   components:
   - type: GlbModel
     path: models\corporate\corp_table_sm.glb
-- name: corp_room_sm
+- name: corp_stool
   transform:
     position:
-    - -1.0
+    - 2.097787
     - 0.0
-    - -12.2
+    - -17.534805
+    rotation:
+    - -0.0
+    - 0.46947157
+    - -0.0
+    - 0.88294756
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.5260406
+    - 0.0
+    - -16.623688
+    rotation:
+    - -0.0
+    - 0.1305262
+    - -0.0
+    - 0.9914449
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_pipe_1m Copy Copy
+  transform:
+    position:
+    - -1.5
+    - 2.5
+    - -16.2
     rotation:
     - 0.0
     - 0.0
@@ -659,13 +845,121 @@ entities:
     - 1.0
   components:
   - type: GlbModel
-    path: models\corporate\tunnel\corp_room_sm.glb
-- name: Player Spawn
+    path: models\corporate\corp_pipe_1m.glb
+- name: corp_light_fluor Copy
   transform:
     position:
-    - 0.03576374
-    - 1.1510487
-    - -3.9562483
+    - -7.4505806e-8
+    - 3.0
+    - -12.2
+    rotation:
+    - 1.0
+    - -0.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
+- name: corp_door
+  transform:
+    position:
+    - 1.4
+    - 0.0
+    - -10.1
+    rotation:
+    - -6.158201e-8
+    - 0.64278764
+    - 6.158201e-8
+    - -0.76604444
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\door\corp_door.glb
+- name: corp_stool Copy
+  transform:
+    position:
+    - -3.5030177
+    - 0.0
+    - 2.71645
+    rotation:
+    - -0.0
+    - 0.104528464
+    - -0.0
+    - 0.9945219
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_table_lg
+  transform:
+    position:
+    - -4.0810137
+    - 0.0
+    - 5.152757
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_stool
+  transform:
+    position:
+    - -6.269338
+    - 2.3841858e-7
+    - 2.6861367
+    rotation:
+    - -0.0
+    - 0.25881907
+    - -0.0
+    - 0.9659258
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -7.5301905
+    - -1.1920929e-7
+    - 3.9105864
+    rotation:
+    - 0.0
+    - -0.34202015
+    - 0.0
+    - 0.9396926
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - -5.5
+    - 0.0
+    - 2.711
     rotation:
     - 0.0
     - 0.0
@@ -676,12 +970,2201 @@ entities:
     - 1.0
     - 1.0
   components:
-  - type: Mesh
-    primitive_type: Sphere
-  - type: Material
-    base_color:
-    - 0.2
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_lg Copy
+  transform:
+    position:
+    - -4.157798
+    - 0.0
+    - 12.135203
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
     - 1.0
-    - 0.2
     - 1.0
-  - type: PlayerSpawn
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.7519403
+    - 0.0
+    - 2.71645
+    rotation:
+    - 0.0
+    - -0.104528464
+    - 0.0
+    - 0.9945219
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool Copy Copy
+  transform:
+    position:
+    - -2.0877767
+    - 0.0
+    - 2.71645
+    rotation:
+    - -0.0
+    - 0.87881714
+    - -0.0
+    - 0.47715876
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_table_sm Copy
+  transform:
+    position:
+    - -2.763308
+    - 0.0
+    - 2.711
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_stool
+  transform:
+    position:
+    - -7.519604
+    - 0.0
+    - 5.428431
+    rotation:
+    - -0.0
+    - 0.34202015
+    - -0.0
+    - 0.9396926
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -3.0552993
+    - 0.0
+    - 4.4013653
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.1682615
+    - 0.0
+    - 4.4176893
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -5.1338
+    - 0.0
+    - 4.380096
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -3.080235
+    - 0.0
+    - 5.913404
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -5.0269756
+    - 0.0
+    - 5.9992366
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.0289536
+    - 0.0
+    - 5.8190355
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_panel_wall_4m_3m
+  transform:
+    position:
+    - 1.7729265e-8
+    - 0.0
+    - 18.2
+    rotation:
+    - 0.0
+    - 1.0
+    - 0.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_panel_wall_4m_3m.glb
+- name: corp_tunnel_doorway
+  transform:
+    position:
+    - -8.1
+    - 0.0
+    - 10.204261
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway.glb
+- name: corp_tunnel_doorway
+  transform:
+    position:
+    - 8.1
+    - 0.0
+    - 10.2
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - -10.2
+    - 0.0
+    - 10.2
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_tunnel
+  transform:
+    position:
+    - 10.2
+    - 0.0
+    - 10.2
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - -7.260188
+    - 0.0
+    - 7.3019385
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - -7.1562023
+    - 0.0
+    - 12.694194
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - -7.245128
+    - 0.0
+    - 15.601546
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - -5.471039
+    - 0.0
+    - 17.593699
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - -2.892232
+    - 0.0
+    - 17.571001
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 0.04064703
+    - 0.0
+    - 17.501455
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 6.02522
+    - 0.0
+    - 17.49944
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 3.085462
+    - 0.0
+    - 17.59627
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 7.3390603
+    - 0.0
+    - 15.453144
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 7.3041077
+    - 0.0
+    - 13.138301
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 7.3689404
+    - 0.0
+    - 7.35913
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 7.2587647
+    - 0.0
+    - 4.584735
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 5.454052
+    - 0.0
+    - 2.8335085
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - 3.118363
+    - 0.0
+    - 2.6488428
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_table_lg
+  transform:
+    position:
+    - -4.119795
+    - 0.0
+    - 7.7956305
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_table_md Copy
+  transform:
+    position:
+    - -0.2027133
+    - 0.0
+    - 12.186734
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_md.glb
+- name: corp_table_lg Copy Copy
+  transform:
+    position:
+    - -3.8912396
+    - 0.0
+    - 14.790567
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_stool
+  transform:
+    position:
+    - -3.0663357
+    - 0.0
+    - 14.075874
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_table_md
+  transform:
+    position:
+    - 0.052934885
+    - 0.0
+    - 14.811662
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_md.glb
+- name: corp_table_lg Copy Copy Copy Copy
+  transform:
+    position:
+    - 3.8654752
+    - 0.0
+    - 14.7510395
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_table_sm
+  transform:
+    position:
+    - -7.485
+    - 0.0
+    - 4.7
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_sm.glb
+- name: corp_stool
+  transform:
+    position:
+    - -7.4803963
+    - 0.0
+    - 8.176119
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -7.2728343
+    - 0.0
+    - 6.4319544
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -5.1555867
+    - 0.0
+    - 7.144082
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.1290565
+    - 0.0
+    - 7.240016
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -3.1126242
+    - 2.3841858e-7
+    - 7.0306134
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -5.1198797
+    - 0.0
+    - 8.536209
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.2951713
+    - 0.0
+    - 8.388836
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -3.2453642
+    - 0.0
+    - 8.69433
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.3441277
+    - 0.0
+    - 2.7909555
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.8375208
+    - 0.0
+    - 2.5277882
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.802038
+    - 0.0
+    - 2.7685723
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 6.0298853
+    - 0.0
+    - 2.528349
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 7.4346
+    - 0.0
+    - 3.7457957
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 7.051847
+    - 0.0
+    - 5.3188496
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 7.4691234
+    - 0.0
+    - 8.07763
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 7.563471
+    - 0.0
+    - 6.5923314
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 7.3896284
+    - 0.0
+    - 16.320604
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 7.248727
+    - 0.0
+    - 14.923069
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 7.361698
+    - 0.0
+    - 13.776105
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 7.352544
+    - 0.0
+    - 12.535366
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 6.666899
+    - 0.0
+    - 17.616488
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 5.335279
+    - 0.0
+    - 17.533329
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.75065
+    - -2.3841858e-7
+    - 17.893612
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.3987086
+    - 0.0
+    - 17.132755
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 0.8099987
+    - 0.0
+    - 17.443731
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -0.6549427
+    - 0.0
+    - 17.785545
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -2.1945386
+    - 0.0
+    - 17.601551
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -3.608581
+    - 0.0
+    - 17.663843
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.8119993
+    - 0.0
+    - 17.425064
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -6.11225
+    - 0.0
+    - 17.786171
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -7.5260115
+    - 0.0
+    - 16.587605
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -7.238028
+    - 0.0
+    - 14.793686
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -7.4083395
+    - 0.0
+    - 13.431213
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -7.447136
+    - 0.0
+    - 11.917086
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -5.3508353
+    - 0.0
+    - 15.725748
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.0637946
+    - 0.0
+    - 15.465933
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -2.732805
+    - 0.0
+    - 15.723674
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -5.063598
+    - 0.0
+    - 14.180441
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.163773
+    - 0.0
+    - 14.064006
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_table_lg Copy Copy Copy Copy Copy
+  transform:
+    position:
+    - 3.9016628
+    - 0.0
+    - 11.905681
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.670082
+    - 0.0
+    - 15.711008
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.676621
+    - 0.0
+    - 15.615725
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.7920628
+    - 0.0
+    - 15.8460865
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.8907573
+    - 0.0
+    - 14.103518
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.90413
+    - 0.0
+    - 14.205391
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.926633
+    - 0.0
+    - 14.002906
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.9791944
+    - 0.0
+    - 12.64296
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.0566664
+    - 0.0
+    - 12.629627
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.990706
+    - 0.0
+    - 12.858774
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.0018475
+    - 0.0
+    - 11.264738
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.9795613
+    - 0.0
+    - 11.214742
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.97801
+    - 0.0
+    - 11.212032
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 0.6161014
+    - 0.0
+    - 15.805361
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -0.36079222
+    - 0.0
+    - 15.681767
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 0.50109303
+    - 0.0
+    - 14.039816
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -0.41951215
+    - 0.0
+    - 14.109636
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 0.404554
+    - 0.0
+    - 12.920694
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -0.7002663
+    - 0.0
+    - 12.829773
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -0.710194
+    - 0.0
+    - 11.446873
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 0.22509566
+    - 0.0
+    - 11.37769
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -5.125516
+    - 0.0
+    - 13.062799
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.139904
+    - 0.0
+    - 12.804138
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -3.0730033
+    - 0.0
+    - 12.95401
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -3.2749925
+    - 0.0
+    - 11.267906
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -4.130492
+    - 0.0
+    - 11.194742
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - -5.0636253
+    - 0.0
+    - 11.180904
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_table_lg
+  transform:
+    position:
+    - 3.4838037
+    - 0.0
+    - 5.3271756
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_table_lg Copy
+  transform:
+    position:
+    - 3.6459813
+    - 0.0
+    - 7.814806
+    rotation:
+    - -0.0
+    - 0.70710677
+    - -0.0
+    - 0.70710677
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_table_lg.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.679488
+    - -2.3841858e-7
+    - 8.422449
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.6556003
+    - 0.0
+    - 8.307459
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.6111963
+    - 0.0
+    - 8.545811
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.4200983
+    - 0.0
+    - 7.095146
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.321828
+    - 0.0
+    - 7.159833
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.318893
+    - 0.0
+    - 7.228486
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.561521
+    - 0.0
+    - 4.6322436
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.5936694
+    - 0.0
+    - 4.753257
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.5651278
+    - 0.0
+    - 4.52998
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 4.6056557
+    - 0.0
+    - 5.885998
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 3.357274
+    - 0.0
+    - 5.867414
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_stool
+  transform:
+    position:
+    - 2.5528936
+    - 0.0
+    - 6.224187
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\corp_stool.glb
+- name: corp_light_fluor
+  transform:
+    position:
+    - 4.333
+    - 3.0
+    - 5.533
+    rotation:
+    - 0.0
+    - -0.0
+    - 1.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
+- name: corp_light_fluor Copy Copy
+  transform:
+    position:
+    - -4.333
+    - 3.0
+    - 14.533
+    rotation:
+    - 0.0
+    - -0.0
+    - 1.0
+    - -4.371139e-8
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\light\corp_light_fluor.glb
+- name: corp_tunnel_doorway_half
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - 2.1
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
+- name: corp_room_md Copy
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - 10.2
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_room_md.glb
+- name: corp_tunnel_doorway_half
+  transform:
+    position:
+    - 0.0
+    - 0.0
+    - -10.1
+    rotation:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    scale:
+    - 1.0
+    - 1.0
+    - 1.0
+  components:
+  - type: GlbModel
+    path: models\corporate\tunnel\corp_tunnel_doorway_half.glb
